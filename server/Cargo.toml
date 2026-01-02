@@ -1,0 +1,26 @@
+[package]
+name = "stitchwork-server"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = "0.8"
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sea-orm = { version = "2.0.0-rc.1", features = [
+    "sqlx-postgres",
+    "runtime-tokio-rustls",
+    "entity-registry",
+    "schema-sync",
+    "with-uuid",
+    "with-chrono",
+    "with-rust_decimal"
+] }
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+rust_decimal = { version = "1", features = ["db-postgres", "serde"] }
+tower-http = { version = "0.6", features = ["cors"] }
+dotenvy = "0.15"
+tracing = "0.1"
+tracing-subscriber = "0.3"
