@@ -1,0 +1,536 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "StitchWork API",
+    "version": "1.0.0",
+    "description": "计件工资管理系统 API"
+  },
+  "servers": [
+    { "url": "http://localhost:3000/api" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "ApiResponse": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "integer" },
+          "message": { "type": "string" },
+          "data": {}
+        }
+      },
+      "ListData": {
+        "type": "object",
+        "properties": {
+          "list": { "type": "array", "items": {} },
+          "total": { "type": "integer" }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["username", "password"],
+        "properties": {
+          "username": { "type": "string" },
+          "password": { "type": "string" }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "token": { "type": "string" },
+          "userId": { "type": "string", "format": "uuid" }
+        }
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "required": ["username", "password"],
+        "properties": {
+          "username": { "type": "string" },
+          "password": { "type": "string" }
+        }
+      },
+      "CreateStaffRequest": {
+        "type": "object",
+        "required": ["username", "password"],
+        "properties": {
+          "username": { "type": "string" },
+          "password": { "type": "string" },
+          "displayName": { "type": "string" },
+          "phone": { "type": "string" }
+        }
+      },
+      "InviteCodeResponse": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string" },
+          "expiresAt": { "type": "integer", "format": "int64" }
+        }
+      },
+      "BindBossRequest": {
+        "type": "object",
+        "required": ["inviteCode"],
+        "properties": {
+          "inviteCode": { "type": "string" }
+        }
+      },
+      "CustomerDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "phone": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CreateCustomerDto": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string" },
+          "phone": { "type": "string" }
+        }
+      },
+      "UpdateCustomerDto": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "phone": { "type": "string" }
+        }
+      },
+      "OrderDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "customerId": { "type": "string", "format": "uuid" },
+          "productName": { "type": "string" },
+          "quantity": { "type": "integer" },
+          "unitPrice": { "type": "string" },
+          "status": { "type": "string" },
+          "receivedAt": { "type": "string", "format": "date-time" },
+          "deliveredAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CreateOrderDto": {
+        "type": "object",
+        "required": ["customerId", "productName", "quantity", "unitPrice"],
+        "properties": {
+          "customerId": { "type": "string", "format": "uuid" },
+          "productName": { "type": "string" },
+          "quantity": { "type": "integer" },
+          "unitPrice": { "type": "string" }
+        }
+      },
+      "UpdateOrderDto": {
+        "type": "object",
+        "properties": {
+          "productName": { "type": "string" },
+          "quantity": { "type": "integer" },
+          "unitPrice": { "type": "string" },
+          "status": { "type": "string" }
+        }
+      },
+      "UpdateOrderStatusDto": {
+        "type": "object",
+        "required": ["status"],
+        "properties": {
+          "status": { "type": "string" }
+        }
+      },
+      "ProcessDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "orderId": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "piecePrice": { "type": "string" }
+        }
+      },
+      "CreateProcessDto": {
+        "type": "object",
+        "required": ["orderId", "name", "piecePrice"],
+        "properties": {
+          "orderId": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "piecePrice": { "type": "string" }
+        }
+      },
+      "UpdateProcessDto": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "piecePrice": { "type": "string" }
+        }
+      },
+      "PieceRecordDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "processId": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string", "format": "uuid" },
+          "quantity": { "type": "integer" },
+          "amount": { "type": "string" },
+          "recordedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CreatePieceRecordDto": {
+        "type": "object",
+        "required": ["processId", "userId", "quantity"],
+        "properties": {
+          "processId": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string", "format": "uuid" },
+          "quantity": { "type": "integer" }
+        }
+      },
+      "UpdatePieceRecordDto": {
+        "type": "object",
+        "properties": {
+          "quantity": { "type": "integer" }
+        }
+      },
+      "PayrollDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string", "format": "uuid" },
+          "amount": { "type": "string" },
+          "note": { "type": "string" },
+          "paidAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CreatePayrollDto": {
+        "type": "object",
+        "required": ["userId", "amount"],
+        "properties": {
+          "userId": { "type": "string", "format": "uuid" },
+          "amount": { "type": "string" },
+          "note": { "type": "string" }
+        }
+      },
+      "UpdatePayrollDto": {
+        "type": "object",
+        "properties": {
+          "amount": { "type": "string" },
+          "note": { "type": "string" }
+        }
+      }
+    },
+    "parameters": {
+      "page": { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+      "pageSize": { "name": "pageSize", "in": "query", "schema": { "type": "integer", "default": 20 } },
+      "sortBy": { "name": "sortBy", "in": "query", "schema": { "type": "string" } },
+      "sortOrder": { "name": "sortOrder", "in": "query", "schema": { "type": "string", "default": "desc" } },
+      "search": { "name": "search", "in": "query", "schema": { "type": "string" } },
+      "startDate": { "name": "startDate", "in": "query", "schema": { "type": "string" } },
+      "endDate": { "name": "endDate", "in": "query", "schema": { "type": "string" } }
+    }
+  },
+  "paths": {
+    "/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "用户登录",
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginRequest" } } } },
+        "responses": { "200": { "description": "成功", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginResponse" } } } } }
+      }
+    },
+    "/register": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "用户注册",
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RegisterRequest" } } } },
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/staff": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "老板创建员工账号",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateStaffRequest" } } } },
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/invite-code": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "老板生成邀请码",
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "成功", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/InviteCodeResponse" } } } } }
+      }
+    },
+    "/bind-boss": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "员工绑定老板",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BindBossRequest" } } } },
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/customers": {
+      "get": {
+        "tags": ["Customer"],
+        "summary": "获取客户列表",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/page" },
+          { "$ref": "#/components/parameters/pageSize" },
+          { "$ref": "#/components/parameters/sortBy" },
+          { "$ref": "#/components/parameters/sortOrder" },
+          { "$ref": "#/components/parameters/search" }
+        ],
+        "responses": { "200": { "description": "成功" } }
+      },
+      "post": {
+        "tags": ["Customer"],
+        "summary": "创建客户",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateCustomerDto" } } } },
+        "responses": { "200": { "description": "成功", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CustomerDto" } } } } }
+      }
+    },
+    "/customers/{id}": {
+      "get": {
+        "tags": ["Customer"],
+        "summary": "获取单个客户",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": { "200": { "description": "成功", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CustomerDto" } } } } }
+      },
+      "put": {
+        "tags": ["Customer"],
+        "summary": "更新客户",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateCustomerDto" } } } },
+        "responses": { "200": { "description": "成功", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CustomerDto" } } } } }
+      },
+      "delete": {
+        "tags": ["Customer"],
+        "summary": "删除客户",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/orders": {
+      "get": {
+        "tags": ["Order"],
+        "summary": "获取订单列表",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/page" },
+          { "$ref": "#/components/parameters/pageSize" },
+          { "$ref": "#/components/parameters/sortBy" },
+          { "$ref": "#/components/parameters/sortOrder" },
+          { "$ref": "#/components/parameters/search" },
+          { "$ref": "#/components/parameters/startDate" },
+          { "$ref": "#/components/parameters/endDate" }
+        ],
+        "responses": { "200": { "description": "成功" } }
+      },
+      "post": {
+        "tags": ["Order"],
+        "summary": "创建订单",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateOrderDto" } } } },
+        "responses": { "200": { "description": "成功", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OrderDto" } } } } }
+      }
+    },
+    "/orders/{id}": {
+      "get": {
+        "tags": ["Order"],
+        "summary": "获取单个订单",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": { "200": { "description": "成功", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OrderDto" } } } } }
+      },
+      "put": {
+        "tags": ["Order"],
+        "summary": "更新订单",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateOrderDto" } } } },
+        "responses": { "200": { "description": "成功", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OrderDto" } } } } }
+      },
+      "delete": {
+        "tags": ["Order"],
+        "summary": "删除订单",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/orders/{id}/status": {
+      "patch": {
+        "tags": ["Order"],
+        "summary": "更新订单状态",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateOrderStatusDto" } } } },
+        "responses": { "200": { "description": "成功", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OrderDto" } } } } }
+      }
+    },
+    "/processes": {
+      "get": {
+        "tags": ["Process"],
+        "summary": "获取工序列表",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/page" },
+          { "$ref": "#/components/parameters/pageSize" },
+          { "$ref": "#/components/parameters/sortBy" },
+          { "$ref": "#/components/parameters/sortOrder" },
+          { "$ref": "#/components/parameters/search" }
+        ],
+        "responses": { "200": { "description": "成功" } }
+      },
+      "post": {
+        "tags": ["Process"],
+        "summary": "创建工序",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateProcessDto" } } } },
+        "responses": { "200": { "description": "成功", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProcessDto" } } } } }
+      }
+    },
+    "/processes/{id}": {
+      "get": {
+        "tags": ["Process"],
+        "summary": "获取单个工序",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": { "200": { "description": "成功", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProcessDto" } } } } }
+      },
+      "put": {
+        "tags": ["Process"],
+        "summary": "更新工序",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateProcessDto" } } } },
+        "responses": { "200": { "description": "成功", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProcessDto" } } } } }
+      },
+      "delete": {
+        "tags": ["Process"],
+        "summary": "删除工序",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/piece-records": {
+      "get": {
+        "tags": ["PieceRecord"],
+        "summary": "获取计件记录列表",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/page" },
+          { "$ref": "#/components/parameters/pageSize" },
+          { "$ref": "#/components/parameters/sortBy" },
+          { "$ref": "#/components/parameters/sortOrder" },
+          { "$ref": "#/components/parameters/search" },
+          { "$ref": "#/components/parameters/startDate" },
+          { "$ref": "#/components/parameters/endDate" }
+        ],
+        "responses": { "200": { "description": "成功" } }
+      },
+      "post": {
+        "tags": ["PieceRecord"],
+        "summary": "创建计件记录",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreatePieceRecordDto" } } } },
+        "responses": { "200": { "description": "成功", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PieceRecordDto" } } } } }
+      }
+    },
+    "/piece-records/{id}": {
+      "get": {
+        "tags": ["PieceRecord"],
+        "summary": "获取单个计件记录",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": { "200": { "description": "成功", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PieceRecordDto" } } } } }
+      },
+      "put": {
+        "tags": ["PieceRecord"],
+        "summary": "更新计件记录",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdatePieceRecordDto" } } } },
+        "responses": { "200": { "description": "成功", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PieceRecordDto" } } } } }
+      },
+      "delete": {
+        "tags": ["PieceRecord"],
+        "summary": "删除计件记录",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": { "200": { "description": "成功" } }
+      }
+    },
+    "/payrolls": {
+      "get": {
+        "tags": ["Payroll"],
+        "summary": "获取工资列表",
+        "description": "老板看所有，员工只看自己的",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/page" },
+          { "$ref": "#/components/parameters/pageSize" },
+          { "$ref": "#/components/parameters/sortBy" },
+          { "$ref": "#/components/parameters/sortOrder" },
+          { "$ref": "#/components/parameters/search" },
+          { "$ref": "#/components/parameters/startDate" },
+          { "$ref": "#/components/parameters/endDate" }
+        ],
+        "responses": { "200": { "description": "成功" } }
+      },
+      "post": {
+        "tags": ["Payroll"],
+        "summary": "创建工资记录",
+        "description": "仅老板可操作",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreatePayrollDto" } } } },
+        "responses": { "200": { "description": "成功", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PayrollDto" } } } } }
+      }
+    },
+    "/payrolls/{id}": {
+      "get": {
+        "tags": ["Payroll"],
+        "summary": "获取单个工资记录",
+        "description": "老板看所有，员工只能看自己的",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": { "200": { "description": "成功", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PayrollDto" } } } } }
+      },
+      "put": {
+        "tags": ["Payroll"],
+        "summary": "更新工资记录",
+        "description": "仅老板可操作",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdatePayrollDto" } } } },
+        "responses": { "200": { "description": "成功", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PayrollDto" } } } } }
+      },
+      "delete": {
+        "tags": ["Payroll"],
+        "summary": "删除工资记录",
+        "description": "仅老板可操作",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": { "200": { "description": "成功" } }
+      }
+    }
+  },
+  "tags": [
+    { "name": "Auth", "description": "认证相关" },
+    { "name": "Customer", "description": "客户管理" },
+    { "name": "Order", "description": "订单管理" },
+    { "name": "Process", "description": "工序管理" },
+    { "name": "PieceRecord", "description": "计件记录" },
+    { "name": "Payroll", "description": "工资管理" }
+  ]
+}

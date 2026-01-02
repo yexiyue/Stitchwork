@@ -1,14 +1,23 @@
 use axum::{routing::get, Router};
-use sea_orm::{Database, DatabaseConnection};
+use sea_orm::{Database, DbConn};
+use std::collections::HashMap;
 use std::sync::Arc;
+use tokio::sync::RwLock;
 use tower_http::cors::{Any, CorsLayer};
+use uuid::Uuid;
 
+mod common;
 mod entity;
-mod routes;
+mod error;
+mod service;
+
+/// 邀请码存储: code -> (boss_id, expires_at)
+pub type InviteCodes = RwLock<HashMap<String, (Uuid, i64)>>;
 
 #[derive(Clone)]
 pub struct AppState {
-    pub db: DatabaseConnection,
+    pub db: DbConn,
+    pub invite_codes: Arc<InviteCodes>,
 }
 
 #[tokio::main]
@@ -17,7 +26,9 @@ async fn main() {
     dotenvy::dotenv().ok();
 
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let db = Database::connect(&database_url)
+    let mut opt = sea_orm::ConnectOptions::new(&database_url);
+    opt.sqlx_logging(true);
+    let db = Database::connect(opt)
         .await
         .expect("Failed to connect to database");
 
@@ -27,7 +38,10 @@ async fn main() {
         .await
         .expect("Failed to sync schema");
 
-    let state = Arc::new(AppState { db });
+    let state = Arc::new(AppState {
+        db,
+        invite_codes: Arc::new(RwLock::new(HashMap::new())),
+    });
 
     let cors = CorsLayer::new()
         .allow_origin(Any)
@@ -36,12 +50,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/health", get(|| async { "OK" }))
-        .merge(routes::customer::router())
-        .merge(routes::worker::router())
-        .merge(routes::order::router())
-        .merge(routes::process::router())
-        .merge(routes::piece_record::router())
-        .merge(routes::payroll::router())
+        .merge(service::routes())
         .layer(cors)
         .with_state(state);
 

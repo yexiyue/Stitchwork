@@ -230,6 +230,80 @@ pub struct Model {
 }
 ```
 
+### 自引用关系 (Self-Referencing)
+
+通过中间表实现用户之间的雇佣关系（boss-staff）：
+
+```rust
+// user.rs - 老板可以有多个员工
+#[sea_orm::model]
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
+#[sea_orm(table_name = "user")]
+pub struct Model {
+    #[sea_orm(primary_key)]
+    pub id: Uuid,
+    pub username: String,
+    // ...
+
+    #[sea_orm(self_ref, via = "employment", from = "Boss", to = "Staff")]
+    pub staff: HasMany<Entity>,
+}
+```
+
+中间表需要用 `relation_enum` 区分两个指向同一实体的外键：
+
+```rust
+// employment.rs - 雇佣关系中间表
+#[sea_orm::model]
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
+#[sea_orm(table_name = "employment")]
+pub struct Model {
+    #[sea_orm(primary_key)]
+    pub id: Uuid,
+    pub boss_id: Uuid,
+    pub staff_id: Uuid,
+    pub created_at: DateTime,
+
+    #[sea_orm(belongs_to, relation_enum = "Boss", from = "boss_id", to = "id")]
+    pub boss: Option<super::user::Entity>,
+    #[sea_orm(belongs_to, relation_enum = "Staff", from = "staff_id", to = "id")]
+    pub staff: Option<super::user::Entity>,
+}
+```
+
+### Diamond Relations（菱形关系）
+
+当一个实体有多个外键指向同一目标实体时，需要用 `relation_enum` 区分：
+
+```rust
+// bakery.rs - 面包店有 manager 和 cashier，都是 worker
+#[sea_orm::model]
+pub struct Model {
+    #[sea_orm(primary_key)]
+    pub id: i32,
+    pub manager_id: i32,
+    pub cashier_id: i32,
+
+    #[sea_orm(belongs_to, relation_enum = "Manager", from = "manager_id", to = "id")]
+    pub manager: HasOne<super::worker::Entity>,
+    #[sea_orm(belongs_to, relation_enum = "Cashier", from = "cashier_id", to = "id")]
+    pub cashier: HasOne<super::worker::Entity>,
+}
+
+// worker.rs - 反向关系也需要指定 via_rel
+#[sea_orm::model]
+pub struct Model {
+    #[sea_orm(primary_key)]
+    pub id: i32,
+    pub name: String,
+
+    #[sea_orm(has_many, relation_enum = "BakeryManager", via_rel = "Manager")]
+    pub manager_of: HasMany<super::bakery::Entity>,
+    #[sea_orm(has_many, relation_enum = "BakeryCashier", via_rel = "Cashier")]
+    pub cashier_of: HasMany<super::bakery::Entity>,
+}
+```
+
 ## 常用属性
 
 | 属性 | 说明 |
