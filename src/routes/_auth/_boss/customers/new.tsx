@@ -1,9 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Form, Input, Button, NavBar, Dialog, Toast } from "antd-mobile";
+import { Form, Input, Button, NavBar, Dialog, Toast, TextArea } from "antd-mobile";
 import { useCreateCustomer } from "@/hooks";
 import type { CreateCustomerDto } from "@/types";
 
-export const Route = createFileRoute("/_auth/_boss/customers_/new")({
+export const Route = createFileRoute("/_auth/_boss/customers/new")({
   component: NewCustomerPage,
 });
 
@@ -40,7 +40,7 @@ function NewCustomerPage() {
             <Input placeholder="请输入电话" clearable />
           </Form.Item>
           <Form.Item name="description" label="备注">
-            <Input placeholder="请输入备注" clearable />
+            <TextArea placeholder="请输入备注" rows={3} />
           </Form.Item>
         </Form>
       </div>

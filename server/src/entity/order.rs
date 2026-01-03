@@ -7,6 +7,7 @@ use strum::{Display, EnumString};
     Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, EnumString, Display, DeriveValueType,
 )]
 #[serde(rename_all = "camelCase")]
+#[strum(serialize_all = "camelCase")]
 #[sea_orm(value_type = "String")]
 pub enum OrderStatus {
     Pending,

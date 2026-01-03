@@ -10,3 +10,7 @@ body,
 .adm-pull-to-refresh {
   height: 100%;
 }
+
+.adm-image-uploader-upload-button-wrap {
+  display: block;
+}

@@ -5,7 +5,7 @@ export interface Order {
   customerId: string;
   productName: string;
   description?: string;
-  images?: unknown;
+  images?: string[];
   quantity: number;
   unitPrice: string;
   status: OrderStatus;
@@ -17,7 +17,7 @@ export interface CreateOrderDto {
   customerId: string;
   productName: string;
   description?: string;
-  images?: unknown;
+  images?: string[];
   quantity: number;
   unitPrice: string;
 }
@@ -25,7 +25,7 @@ export interface CreateOrderDto {
 export interface UpdateOrderDto {
   productName?: string;
   description?: string;
-  images?: unknown;
+  images?: string[];
   quantity?: number;
   unitPrice?: string;
   status?: string;

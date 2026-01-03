@@ -7,3 +7,4 @@ export { pieceRecordApi } from "./piece-record";
 export { payrollApi } from "./payroll";
 export { statsApi } from "./stats";
 export { shareApi } from "./share";
+export { uploadApi } from "./upload";

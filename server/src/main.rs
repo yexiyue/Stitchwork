@@ -9,7 +9,10 @@ use uuid::Uuid;
 mod common;
 mod entity;
 mod error;
+mod s3;
 mod service;
+
+pub use s3::S3Client;
 
 /// 邀请码存储: code -> (boss_id, expires_at)
 pub type InviteCodes = RwLock<HashMap<String, (Uuid, i64)>>;
@@ -18,6 +21,7 @@ pub type InviteCodes = RwLock<HashMap<String, (Uuid, i64)>>;
 pub struct AppState {
     pub db: DbConn,
     pub invite_codes: Arc<InviteCodes>,
+    pub s3: Option<S3Client>,
 }
 
 #[tokio::main]
@@ -38,9 +42,16 @@ async fn main() {
         .await
         .expect("Failed to sync schema");
 
+    // S3 客户端（可选）
+    let s3 = s3::S3Config::from_env().map(|c| S3Client::new(&c));
+    if s3.is_some() {
+        tracing::info!("S3 client initialized");
+    }
+
     let state = Arc::new(AppState {
         db,
         invite_codes: Arc::new(RwLock::new(HashMap::new())),
+        s3,
     });
 
     let cors = CorsLayer::new()

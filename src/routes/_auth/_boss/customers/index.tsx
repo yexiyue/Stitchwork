@@ -7,7 +7,7 @@ import {
   Toast,
   SearchBar,
 } from "antd-mobile";
-import { Plus, Search, X } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { useDeleteCustomer } from "@/hooks";
 import type { Customer } from "@/types";
 import { Avatar, RelativeTime, VirtualList } from "@/components";
@@ -19,7 +19,7 @@ import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import type { SearchBarRef } from "antd-mobile/es/components/search-bar";
 
-export const Route = createFileRoute("/_auth/_boss/customers")({
+export const Route = createFileRoute("/_auth/_boss/customers/")({
   component: CustomersPage,
 });
 
@@ -214,13 +214,17 @@ function CustomersPage() {
                   </div>
                 }
                 description={
-                  <span className="line-clamp-1">
-                    {customer.phone && <span>{customer.phone}</span>}
-                    {customer.phone && customer.description && " · "}
-                    {customer.description}
-                  </span>
+                  <div className="flex justify-between items-center">
+                    <span className="line-clamp-1">
+                      {customer.phone && <span>{customer.phone}</span>}
+                      {customer.phone && customer.description && " · "}
+                      {customer.description}
+                    </span>
+                    <span className="text-xs text-gray-400 shrink-0 ml-2">
+                      <RelativeTime date={customer.createdAt} />
+                    </span>
+                  </div>
                 }
-                extra={<RelativeTime date={customer.createdAt} />}
                 onClick={() => showCustomerDetail(customer)}
                 clickable
               >

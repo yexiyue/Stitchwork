@@ -20,11 +20,15 @@ sea-orm = { version = "2.0.0-rc.1", features = [
     "schema-sync",
     "with-uuid",
     "with-chrono",
-    "with-rust_decimal"
+    "with-rust_decimal",
 ] }
 uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
-rust_decimal = { version = "1", features = ["db-postgres", "serde", "serde-with-str"] }
+rust_decimal = { version = "1", features = [
+    "db-postgres",
+    "serde",
+    "serde-with-str",
+] }
 tower-http = { version = "0.6", features = ["cors"] }
 dotenvy = "0.15"
 tracing = "0.1"
@@ -33,3 +37,5 @@ thiserror = "2"
 jsonwebtoken = "9"
 argon2 = "0.5"
 strum = { version = "0.26", features = ["derive"] }
+aws-sdk-s3 = "1.119.0"
+aws-config = { version = "1", features = ["behavior-version-latest"] }

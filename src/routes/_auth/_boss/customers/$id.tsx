@@ -3,7 +3,7 @@ import { Form, Input, Button, NavBar, Dialog, Toast } from "antd-mobile";
 import { useCustomer, useUpdateCustomer } from "@/hooks";
 import type { UpdateCustomerDto } from "@/types";
 
-export const Route = createFileRoute("/_auth/_boss/customers_/$id")({
+export const Route = createFileRoute("/_auth/_boss/customers/$id")({
   component: EditCustomerPage,
 });
 

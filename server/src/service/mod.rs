@@ -6,6 +6,7 @@ pub mod piece_record;
 pub mod process;
 pub mod share;
 pub mod stats;
+pub mod upload;
 
 use axum::{middleware, Router};
 use std::sync::Arc;
@@ -23,6 +24,7 @@ pub fn routes() -> Router<Arc<AppState>> {
         .merge(payroll::router())
         .merge(stats::router())
         .merge(share::router())
+        .merge(upload::router())
         .layer(middleware::from_fn(auth::auth_middleware));
 
     Router::new().nest(
