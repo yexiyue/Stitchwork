@@ -27,7 +27,7 @@ function ProfilePage() {
 
       {isBoss && (
         <List header="管理">
-          <List.Item prefix={<Users size={20} />} onClick={() => {}}>
+          <List.Item prefix={<Users size={20} />} onClick={() => navigate({ to: "/customers" })}>
             客户管理
           </List.Item>
           <List.Item prefix={<UserPlus size={20} />} onClick={() => {}}>

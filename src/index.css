@@ -5,3 +5,8 @@ body,
 #root {
   height: 100vh;
 }
+
+.adm-pull-to-refresh-content,
+.adm-pull-to-refresh {
+  height: 100%;
+}

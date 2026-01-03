@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Card, Badge } from "antd-mobile";
-import { Home, ClipboardCheck, FileEdit } from "lucide-react";
+import { Home, ClipboardCheck, FileEdit, Users } from "lucide-react";
 import { useAuthStore, selectIsBoss } from "@/stores/auth";
 
 export const Route = createFileRoute("/_auth/")({
@@ -29,6 +29,15 @@ function IndexPage() {
                 <ClipboardCheck size={32} className="text-orange-500" />
               </Badge>
               <span>待审核</span>
+            </div>
+          </Card>
+        )}
+
+        {isBoss && (
+          <Card className="cursor-pointer" onClick={() => navigate({ to: "/customers" })}>
+            <div className="flex flex-col items-center gap-2 py-2">
+              <Users size={32} className="text-green-500" />
+              <span>客户管理</span>
             </div>
           </Card>
         )}

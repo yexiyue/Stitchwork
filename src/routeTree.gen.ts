@@ -20,6 +20,9 @@ import { Route as AuthBossRouteImport } from './routes/_auth/_boss'
 import { Route as AuthStaffRecordRouteImport } from './routes/_auth/_staff/record'
 import { Route as AuthBossPendingRouteImport } from './routes/_auth/_boss/pending'
 import { Route as AuthBossOrdersRouteImport } from './routes/_auth/_boss/orders'
+import { Route as AuthBossCustomersRouteImport } from './routes/_auth/_boss/customers'
+import { Route as AuthBossCustomersNewRouteImport } from './routes/_auth/_boss/customers_.new'
+import { Route as AuthBossCustomersIdRouteImport } from './routes/_auth/_boss/customers_.$id'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
@@ -73,6 +76,21 @@ const AuthBossOrdersRoute = AuthBossOrdersRouteImport.update({
   path: '/orders',
   getParentRoute: () => AuthBossRoute,
 } as any)
+const AuthBossCustomersRoute = AuthBossCustomersRouteImport.update({
+  id: '/customers',
+  path: '/customers',
+  getParentRoute: () => AuthBossRoute,
+} as any)
+const AuthBossCustomersNewRoute = AuthBossCustomersNewRouteImport.update({
+  id: '/customers_/new',
+  path: '/customers/new',
+  getParentRoute: () => AuthBossRoute,
+} as any)
+const AuthBossCustomersIdRoute = AuthBossCustomersIdRouteImport.update({
+  id: '/customers_/$id',
+  path: '/customers/$id',
+  getParentRoute: () => AuthBossRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
@@ -80,9 +98,12 @@ export interface FileRoutesByFullPath {
   '/processes': typeof AuthProcessesRoute
   '/profile': typeof AuthProfileRoute
   '/': typeof AuthIndexRoute
+  '/customers': typeof AuthBossCustomersRoute
   '/orders': typeof AuthBossOrdersRoute
   '/pending': typeof AuthBossPendingRoute
   '/record': typeof AuthStaffRecordRoute
+  '/customers/$id': typeof AuthBossCustomersIdRoute
+  '/customers/new': typeof AuthBossCustomersNewRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -90,9 +111,12 @@ export interface FileRoutesByTo {
   '/processes': typeof AuthProcessesRoute
   '/profile': typeof AuthProfileRoute
   '/': typeof AuthIndexRoute
+  '/customers': typeof AuthBossCustomersRoute
   '/orders': typeof AuthBossOrdersRoute
   '/pending': typeof AuthBossPendingRoute
   '/record': typeof AuthStaffRecordRoute
+  '/customers/$id': typeof AuthBossCustomersIdRoute
+  '/customers/new': typeof AuthBossCustomersNewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -104,9 +128,12 @@ export interface FileRoutesById {
   '/_auth/processes': typeof AuthProcessesRoute
   '/_auth/profile': typeof AuthProfileRoute
   '/_auth/': typeof AuthIndexRoute
+  '/_auth/_boss/customers': typeof AuthBossCustomersRoute
   '/_auth/_boss/orders': typeof AuthBossOrdersRoute
   '/_auth/_boss/pending': typeof AuthBossPendingRoute
   '/_auth/_staff/record': typeof AuthStaffRecordRoute
+  '/_auth/_boss/customers_/$id': typeof AuthBossCustomersIdRoute
+  '/_auth/_boss/customers_/new': typeof AuthBossCustomersNewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -116,9 +143,12 @@ export interface FileRouteTypes {
     | '/processes'
     | '/profile'
     | '/'
+    | '/customers'
     | '/orders'
     | '/pending'
     | '/record'
+    | '/customers/$id'
+    | '/customers/new'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -126,9 +156,12 @@ export interface FileRouteTypes {
     | '/processes'
     | '/profile'
     | '/'
+    | '/customers'
     | '/orders'
     | '/pending'
     | '/record'
+    | '/customers/$id'
+    | '/customers/new'
   id:
     | '__root__'
     | '/_auth'
@@ -139,9 +172,12 @@ export interface FileRouteTypes {
     | '/_auth/processes'
     | '/_auth/profile'
     | '/_auth/'
+    | '/_auth/_boss/customers'
     | '/_auth/_boss/orders'
     | '/_auth/_boss/pending'
     | '/_auth/_staff/record'
+    | '/_auth/_boss/customers_/$id'
+    | '/_auth/_boss/customers_/new'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -229,17 +265,44 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthBossOrdersRouteImport
       parentRoute: typeof AuthBossRoute
     }
+    '/_auth/_boss/customers': {
+      id: '/_auth/_boss/customers'
+      path: '/customers'
+      fullPath: '/customers'
+      preLoaderRoute: typeof AuthBossCustomersRouteImport
+      parentRoute: typeof AuthBossRoute
+    }
+    '/_auth/_boss/customers_/new': {
+      id: '/_auth/_boss/customers_/new'
+      path: '/customers/new'
+      fullPath: '/customers/new'
+      preLoaderRoute: typeof AuthBossCustomersNewRouteImport
+      parentRoute: typeof AuthBossRoute
+    }
+    '/_auth/_boss/customers_/$id': {
+      id: '/_auth/_boss/customers_/$id'
+      path: '/customers/$id'
+      fullPath: '/customers/$id'
+      preLoaderRoute: typeof AuthBossCustomersIdRouteImport
+      parentRoute: typeof AuthBossRoute
+    }
   }
 }
 
 interface AuthBossRouteChildren {
+  AuthBossCustomersRoute: typeof AuthBossCustomersRoute
   AuthBossOrdersRoute: typeof AuthBossOrdersRoute
   AuthBossPendingRoute: typeof AuthBossPendingRoute
+  AuthBossCustomersIdRoute: typeof AuthBossCustomersIdRoute
+  AuthBossCustomersNewRoute: typeof AuthBossCustomersNewRoute
 }
 
 const AuthBossRouteChildren: AuthBossRouteChildren = {
+  AuthBossCustomersRoute: AuthBossCustomersRoute,
   AuthBossOrdersRoute: AuthBossOrdersRoute,
   AuthBossPendingRoute: AuthBossPendingRoute,
+  AuthBossCustomersIdRoute: AuthBossCustomersIdRoute,
+  AuthBossCustomersNewRoute: AuthBossCustomersNewRoute,
 }
 
 const AuthBossRouteWithChildren = AuthBossRoute._addFileChildren(

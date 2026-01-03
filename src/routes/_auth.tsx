@@ -33,7 +33,19 @@ function AuthLayout() {
   const isBoss = useAuthStore(selectIsBoss);
   const tabs = isBoss ? bossTabs : staffTabs;
 
-  const activeKey = tabs.find((t) => t.key === location.pathname)?.key || "/";
+  // 子页面映射到对应的 tab
+  const subPageMap: Record<string, string> = {
+    "/customers": "/profile",
+  };
+  const mappedPath = Object.entries(subPageMap).find(([prefix]) =>
+    location.pathname.startsWith(prefix)
+  )?.[1];
+
+  const activeKey = tabs.find((t) =>
+    t.key === location.pathname ||
+    t.key === mappedPath ||
+    (t.key !== "/" && location.pathname.startsWith(t.key))
+  )?.key || "/";
 
   return (
     <div className="flex h-full flex-col">
