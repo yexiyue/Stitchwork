@@ -18,4 +18,8 @@ export const pieceRecordApi = {
     client.put<PieceRecord>(`/api/piece-records/${id}`, data),
   delete: (id: string) =>
     client.delete<void>(`/api/piece-records/${id}`),
+  approve: (id: string) =>
+    client.post<PieceRecord>(`/api/piece-records/${id}/approve`),
+  reject: (id: string) =>
+    client.post<PieceRecord>(`/api/piece-records/${id}/reject`),
 };

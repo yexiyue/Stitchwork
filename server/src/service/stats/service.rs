@@ -8,6 +8,8 @@ use super::dto::{
     WorkerProductionList, WorkerStatsParams,
 };
 use crate::entity::{customer, order, piece_record, process, user};
+use crate::entity::order::OrderStatus;
+use crate::entity::piece_record::PieceRecordStatus;
 use crate::error::{AppError, Result};
 
 pub async fn order_stats(db: &DbConn, order_id: Uuid, boss_id: Uuid) -> Result<OrderStats> {
@@ -32,6 +34,7 @@ pub async fn order_stats(db: &DbConn, order_id: Uuid, boss_id: Uuid) -> Result<O
             .select_only()
             .column_as(piece_record::Column::Quantity.sum(), "sum")
             .filter(piece_record::Column::ProcessId.eq(proc.id))
+            .filter(piece_record::Column::Status.eq(PieceRecordStatus::Approved))
             .into_tuple()
             .one(db)
             .await?;
@@ -73,11 +76,11 @@ pub async fn customer_summary(db: &DbConn, boss_id: Uuid) -> Result<CustomerSumm
             .await?;
 
         let total = orders.len() as i64;
-        let pending = orders.iter().filter(|o| o.status == "pending").count() as i64;
-        let processing = orders.iter().filter(|o| o.status == "processing").count() as i64;
+        let pending = orders.iter().filter(|o| o.status == OrderStatus::Pending).count() as i64;
+        let processing = orders.iter().filter(|o| o.status == OrderStatus::Processing).count() as i64;
         let completed = orders
             .iter()
-            .filter(|o| o.status == "completed" || o.status == "delivered")
+            .filter(|o| o.status == OrderStatus::Completed || o.status == OrderStatus::Delivered)
             .count() as i64;
 
         list.push(CustomerSummary {
@@ -98,7 +101,9 @@ pub async fn worker_production(
     boss_id: Uuid,
     params: WorkerStatsParams,
 ) -> Result<WorkerProductionList> {
-    let mut query = piece_record::Entity::find().filter(piece_record::Column::BossId.eq(boss_id));
+    let mut query = piece_record::Entity::find()
+        .filter(piece_record::Column::BossId.eq(boss_id))
+        .filter(piece_record::Column::Status.eq(PieceRecordStatus::Approved));
 
     if let Some(ref start) = params.start_date {
         if let Ok(date) = NaiveDate::parse_from_str(start, "%Y-%m-%d") {

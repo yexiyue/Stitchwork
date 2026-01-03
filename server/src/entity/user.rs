@@ -1,12 +1,14 @@
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
+use strum::{Display, EnumString};
 
-#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
-#[sea_orm(rs_type = "String", db_type = "String(StringLen::None)")]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, EnumString, Display, DeriveValueType,
+)]
+#[serde(rename_all = "camelCase")]
+#[sea_orm(value_type = "String")]
 pub enum Role {
-    #[sea_orm(string_value = "boss")]
     Boss,
-    #[sea_orm(string_value = "staff")]
     Staff,
 }
 

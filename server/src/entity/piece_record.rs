@@ -1,6 +1,29 @@
 use rust_decimal::Decimal;
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
+use strum::{Display, EnumString};
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, EnumString, Display, DeriveValueType,
+)]
+#[serde(rename_all = "camelCase")]
+#[sea_orm(value_type = "String")]
+pub enum PieceRecordStatus {
+    Pending,
+    Approved,
+    Rejected,
+}
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, EnumString, Display, DeriveValueType,
+)]
+#[serde(rename_all = "camelCase")]
+#[sea_orm(value_type = "String")]
+pub enum RecordedBy {
+    BySelf,
+    ByBoss,
+}
+
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -14,6 +37,8 @@ pub struct Model {
     pub quantity: i32,
     #[sea_orm(column_type = "Decimal(Some((10, 2)))")]
     pub amount: Decimal,
+    pub status: PieceRecordStatus,
+    pub recorded_by: RecordedBy,
     pub recorded_at: DateTimeUtc,
 
     #[serde(skip)]

@@ -17,4 +17,5 @@ export interface QueryParams {
   search?: string;
   startDate?: string;
   endDate?: string;
+  status?: string;
 }

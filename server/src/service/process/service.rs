@@ -1,6 +1,6 @@
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DbConn, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
-    QuerySelect, Set,
+    Set,
 };
 use uuid::Uuid;
 
@@ -8,7 +8,7 @@ use super::dto::{CreateProcessDto, ProcessQueryParams, UpdateProcessDto};
 use crate::common::{ListData, QueryParams};
 use crate::entity::process::{self, Column, Model};
 use crate::entity::user::Role;
-use crate::entity::{order, piece_record};
+use crate::entity::{employment, order};
 use crate::error::{AppError, Result};
 use crate::service::auth::Claims;
 
@@ -26,16 +26,13 @@ pub async fn list(
             query = query.filter(Column::BossId.eq(claims.sub));
         }
         Role::Staff => {
-            // Staff 只能看参与过的工序
-            let process_ids: Vec<Uuid> = piece_record::Entity::find()
-                .select_only()
-                .column(piece_record::Column::ProcessId)
-                .distinct()
-                .filter(piece_record::Column::UserId.eq(claims.sub))
-                .into_tuple()
-                .all(db)
-                .await?;
-            query = query.filter(Column::Id.is_in(process_ids));
+            // Staff 可以看到工坊所有工序
+            let emp = employment::Entity::find()
+                .filter(employment::Column::StaffId.eq(claims.sub))
+                .one(db)
+                .await?
+                .ok_or(AppError::Forbidden)?;
+            query = query.filter(Column::BossId.eq(emp.boss_id));
         }
     }
 

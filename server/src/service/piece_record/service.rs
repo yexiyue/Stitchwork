@@ -8,10 +8,11 @@ use uuid::Uuid;
 
 use super::dto::{CreatePieceRecordDto, UpdatePieceRecordDto};
 use crate::common::{ListData, QueryParams};
+use crate::entity::order::OrderStatus;
 use crate::entity::user::Role;
 use crate::entity::{
     order,
-    piece_record::{self, Column, Model},
+    piece_record::{self, Column, Model, PieceRecordStatus, RecordedBy},
     process,
 };
 use crate::error::{AppError, Result};
@@ -27,6 +28,19 @@ pub async fn list(db: &DbConn, params: QueryParams, claims: &Claims) -> Result<L
         }
         Role::Staff => {
             query = query.filter(Column::UserId.eq(claims.sub));
+        }
+    }
+
+    // 按状态过滤
+    if let Some(ref status) = params.status {
+        let status_enum = match status.as_str() {
+            "pending" => Some(PieceRecordStatus::Pending),
+            "approved" => Some(PieceRecordStatus::Approved),
+            "rejected" => Some(PieceRecordStatus::Rejected),
+            _ => None,
+        };
+        if let Some(s) = status_enum {
+            query = query.filter(Column::Status.eq(s));
         }
     }
 
@@ -59,7 +73,7 @@ pub async fn list(db: &DbConn, params: QueryParams, claims: &Claims) -> Result<L
     Ok(ListData { list, total })
 }
 
-pub async fn create(db: &DbConn, dto: CreatePieceRecordDto) -> Result<Model> {
+pub async fn create(db: &DbConn, dto: CreatePieceRecordDto, claims: &Claims) -> Result<Model> {
     let proc = process::Entity::find_by_id(dto.process_id)
         .one(db)
         .await?
@@ -70,16 +84,22 @@ pub async fn create(db: &DbConn, dto: CreatePieceRecordDto) -> Result<Model> {
         .one(db)
         .await?
         .ok_or_else(|| AppError::NotFound(format!("Order {} not found", proc.order_id)))?;
-    if ord.status == "pending" {
+    if ord.status == OrderStatus::Pending {
         let order_model = order::ActiveModel {
             id: Set(ord.id),
-            status: Set("processing".to_string()),
+            status: Set(OrderStatus::Processing),
             ..Default::default()
         };
         order_model.update(db).await?;
     }
 
     let amount = proc.piece_price * Decimal::from(dto.quantity);
+
+    // 根据角色设置 status 和 recorded_by
+    let (status, recorded_by) = match claims.role {
+        Role::Boss => (PieceRecordStatus::Approved, RecordedBy::ByBoss),
+        Role::Staff => (PieceRecordStatus::Pending, RecordedBy::BySelf),
+    };
 
     let model = piece_record::ActiveModel {
         id: Set(Uuid::new_v4()),
@@ -88,6 +108,8 @@ pub async fn create(db: &DbConn, dto: CreatePieceRecordDto) -> Result<Model> {
         boss_id: Set(proc.boss_id),
         quantity: Set(dto.quantity),
         amount: Set(amount),
+        status: Set(status),
+        recorded_by: Set(recorded_by),
         recorded_at: Set(chrono::Utc::now()),
     };
     Ok(model.insert(db).await?)
@@ -136,4 +158,38 @@ pub async fn delete(db: &DbConn, id: Uuid, boss_id: Uuid) -> Result<()> {
     }
     piece_record::Entity::delete_by_id(id).exec(db).await?;
     Ok(())
+}
+
+pub async fn approve(db: &DbConn, id: Uuid, boss_id: Uuid) -> Result<Model> {
+    let record = piece_record::Entity::find_by_id(id)
+        .one(db)
+        .await?
+        .ok_or_else(|| AppError::NotFound(format!("PieceRecord {} not found", id)))?;
+    if record.boss_id != boss_id {
+        return Err(AppError::Forbidden);
+    }
+    if record.status != PieceRecordStatus::Pending {
+        return Err(AppError::BadRequest("Only pending records can be approved".to_string()));
+    }
+
+    let mut model: piece_record::ActiveModel = record.into();
+    model.status = Set(PieceRecordStatus::Approved);
+    Ok(model.update(db).await?)
+}
+
+pub async fn reject(db: &DbConn, id: Uuid, boss_id: Uuid) -> Result<Model> {
+    let record = piece_record::Entity::find_by_id(id)
+        .one(db)
+        .await?
+        .ok_or_else(|| AppError::NotFound(format!("PieceRecord {} not found", id)))?;
+    if record.boss_id != boss_id {
+        return Err(AppError::Forbidden);
+    }
+    if record.status != PieceRecordStatus::Pending {
+        return Err(AppError::BadRequest("Only pending records can be rejected".to_string()));
+    }
+
+    let mut model: piece_record::ActiveModel = record.into();
+    model.status = Set(PieceRecordStatus::Rejected);
+    Ok(model.update(db).await?)
 }

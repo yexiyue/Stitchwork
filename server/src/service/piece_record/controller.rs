@@ -24,6 +24,18 @@ pub struct PieceRecordPath {
     id: Uuid,
 }
 
+#[derive(TypedPath, Deserialize)]
+#[typed_path("/piece-records/{id}/approve")]
+pub struct PieceRecordApprovePath {
+    id: Uuid,
+}
+
+#[derive(TypedPath, Deserialize)]
+#[typed_path("/piece-records/{id}/reject")]
+pub struct PieceRecordRejectPath {
+    id: Uuid,
+}
+
 pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .typed_get(list)
@@ -31,6 +43,8 @@ pub fn router() -> Router<Arc<AppState>> {
         .typed_get(get_one)
         .typed_put(update)
         .typed_delete(delete)
+        .typed_post(approve)
+        .typed_post(reject)
 }
 
 async fn list(
@@ -48,8 +62,7 @@ async fn create(
     Extension(claims): Extension<Claims>,
     AppJson(dto): AppJson<CreatePieceRecordDto>,
 ) -> Result<ApiResponse<Model>> {
-    claims.require_boss()?;
-    Ok(ApiResponse::ok(service::create(&state.db, dto).await?))
+    Ok(ApiResponse::ok(service::create(&state.db, dto, &claims).await?))
 }
 
 async fn get_one(
@@ -79,4 +92,22 @@ async fn delete(
     claims.require_boss()?;
     service::delete(&state.db, id, claims.sub).await?;
     Ok(ApiResponse::ok(()))
+}
+
+async fn approve(
+    PieceRecordApprovePath { id }: PieceRecordApprovePath,
+    State(state): State<Arc<AppState>>,
+    Extension(claims): Extension<Claims>,
+) -> Result<ApiResponse<Model>> {
+    claims.require_boss()?;
+    Ok(ApiResponse::ok(service::approve(&state.db, id, claims.sub).await?))
+}
+
+async fn reject(
+    PieceRecordRejectPath { id }: PieceRecordRejectPath,
+    State(state): State<Arc<AppState>>,
+    Extension(claims): Extension<Claims>,
+) -> Result<ApiResponse<Model>> {
+    claims.require_boss()?;
+    Ok(ApiResponse::ok(service::reject(&state.db, id, claims.sub).await?))
 }

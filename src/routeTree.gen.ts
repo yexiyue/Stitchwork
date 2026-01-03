@@ -13,6 +13,13 @@ import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AuthIndexRouteImport } from './routes/_auth/index'
+import { Route as AuthProfileRouteImport } from './routes/_auth/profile'
+import { Route as AuthProcessesRouteImport } from './routes/_auth/processes'
+import { Route as AuthStaffRouteImport } from './routes/_auth/_staff'
+import { Route as AuthBossRouteImport } from './routes/_auth/_boss'
+import { Route as AuthStaffRecordRouteImport } from './routes/_auth/_staff/record'
+import { Route as AuthBossPendingRouteImport } from './routes/_auth/_boss/pending'
+import { Route as AuthBossOrdersRouteImport } from './routes/_auth/_boss/orders'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
@@ -33,30 +40,108 @@ const AuthIndexRoute = AuthIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthRoute,
 } as any)
+const AuthProfileRoute = AuthProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthProcessesRoute = AuthProcessesRouteImport.update({
+  id: '/processes',
+  path: '/processes',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthStaffRoute = AuthStaffRouteImport.update({
+  id: '/_staff',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthBossRoute = AuthBossRouteImport.update({
+  id: '/_boss',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthStaffRecordRoute = AuthStaffRecordRouteImport.update({
+  id: '/record',
+  path: '/record',
+  getParentRoute: () => AuthStaffRoute,
+} as any)
+const AuthBossPendingRoute = AuthBossPendingRouteImport.update({
+  id: '/pending',
+  path: '/pending',
+  getParentRoute: () => AuthBossRoute,
+} as any)
+const AuthBossOrdersRoute = AuthBossOrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
+  getParentRoute: () => AuthBossRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/processes': typeof AuthProcessesRoute
+  '/profile': typeof AuthProfileRoute
   '/': typeof AuthIndexRoute
+  '/orders': typeof AuthBossOrdersRoute
+  '/pending': typeof AuthBossPendingRoute
+  '/record': typeof AuthStaffRecordRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/processes': typeof AuthProcessesRoute
+  '/profile': typeof AuthProfileRoute
   '/': typeof AuthIndexRoute
+  '/orders': typeof AuthBossOrdersRoute
+  '/pending': typeof AuthBossPendingRoute
+  '/record': typeof AuthStaffRecordRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_auth': typeof AuthRouteWithChildren
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/_auth/_boss': typeof AuthBossRouteWithChildren
+  '/_auth/_staff': typeof AuthStaffRouteWithChildren
+  '/_auth/processes': typeof AuthProcessesRoute
+  '/_auth/profile': typeof AuthProfileRoute
   '/_auth/': typeof AuthIndexRoute
+  '/_auth/_boss/orders': typeof AuthBossOrdersRoute
+  '/_auth/_boss/pending': typeof AuthBossPendingRoute
+  '/_auth/_staff/record': typeof AuthStaffRecordRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/login' | '/register' | '/'
+  fullPaths:
+    | '/login'
+    | '/register'
+    | '/processes'
+    | '/profile'
+    | '/'
+    | '/orders'
+    | '/pending'
+    | '/record'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/register' | '/'
-  id: '__root__' | '/_auth' | '/login' | '/register' | '/_auth/'
+  to:
+    | '/login'
+    | '/register'
+    | '/processes'
+    | '/profile'
+    | '/'
+    | '/orders'
+    | '/pending'
+    | '/record'
+  id:
+    | '__root__'
+    | '/_auth'
+    | '/login'
+    | '/register'
+    | '/_auth/_boss'
+    | '/_auth/_staff'
+    | '/_auth/processes'
+    | '/_auth/profile'
+    | '/_auth/'
+    | '/_auth/_boss/orders'
+    | '/_auth/_boss/pending'
+    | '/_auth/_staff/record'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -95,14 +180,97 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthIndexRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_auth/profile': {
+      id: '/_auth/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AuthProfileRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/processes': {
+      id: '/_auth/processes'
+      path: '/processes'
+      fullPath: '/processes'
+      preLoaderRoute: typeof AuthProcessesRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/_staff': {
+      id: '/_auth/_staff'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof AuthStaffRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/_boss': {
+      id: '/_auth/_boss'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof AuthBossRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/_staff/record': {
+      id: '/_auth/_staff/record'
+      path: '/record'
+      fullPath: '/record'
+      preLoaderRoute: typeof AuthStaffRecordRouteImport
+      parentRoute: typeof AuthStaffRoute
+    }
+    '/_auth/_boss/pending': {
+      id: '/_auth/_boss/pending'
+      path: '/pending'
+      fullPath: '/pending'
+      preLoaderRoute: typeof AuthBossPendingRouteImport
+      parentRoute: typeof AuthBossRoute
+    }
+    '/_auth/_boss/orders': {
+      id: '/_auth/_boss/orders'
+      path: '/orders'
+      fullPath: '/orders'
+      preLoaderRoute: typeof AuthBossOrdersRouteImport
+      parentRoute: typeof AuthBossRoute
+    }
   }
 }
 
+interface AuthBossRouteChildren {
+  AuthBossOrdersRoute: typeof AuthBossOrdersRoute
+  AuthBossPendingRoute: typeof AuthBossPendingRoute
+}
+
+const AuthBossRouteChildren: AuthBossRouteChildren = {
+  AuthBossOrdersRoute: AuthBossOrdersRoute,
+  AuthBossPendingRoute: AuthBossPendingRoute,
+}
+
+const AuthBossRouteWithChildren = AuthBossRoute._addFileChildren(
+  AuthBossRouteChildren,
+)
+
+interface AuthStaffRouteChildren {
+  AuthStaffRecordRoute: typeof AuthStaffRecordRoute
+}
+
+const AuthStaffRouteChildren: AuthStaffRouteChildren = {
+  AuthStaffRecordRoute: AuthStaffRecordRoute,
+}
+
+const AuthStaffRouteWithChildren = AuthStaffRoute._addFileChildren(
+  AuthStaffRouteChildren,
+)
+
 interface AuthRouteChildren {
+  AuthBossRoute: typeof AuthBossRouteWithChildren
+  AuthStaffRoute: typeof AuthStaffRouteWithChildren
+  AuthProcessesRoute: typeof AuthProcessesRoute
+  AuthProfileRoute: typeof AuthProfileRoute
   AuthIndexRoute: typeof AuthIndexRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
+  AuthBossRoute: AuthBossRouteWithChildren,
+  AuthStaffRoute: AuthStaffRouteWithChildren,
+  AuthProcessesRoute: AuthProcessesRoute,
+  AuthProfileRoute: AuthProfileRoute,
   AuthIndexRoute: AuthIndexRoute,
 }
 

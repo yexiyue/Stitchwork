@@ -1,15 +1,15 @@
 use chrono::NaiveDate;
 use sea_orm::{
     ActiveModelTrait, ActiveValue::NotSet, ColumnTrait, DbConn, EntityTrait, PaginatorTrait,
-    QueryFilter, QueryOrder, QuerySelect, Set,
+    QueryFilter, QueryOrder, Set,
 };
 use uuid::Uuid;
 
-use super::dto::{CreateOrderDto, OrderQueryParams, OrderStatus, UpdateOrderDto, UpdateOrderStatusDto};
+use super::dto::{CreateOrderDto, OrderQueryParams, UpdateOrderDto, UpdateOrderStatusDto};
 use crate::common::{ListData, QueryParams};
-use crate::entity::order::{self, Column, Model};
+use crate::entity::order::{self, Column, Model, OrderStatus};
 use crate::entity::user::Role;
-use crate::entity::{customer, piece_record, process};
+use crate::entity::{customer, employment};
 use crate::error::{AppError, Result};
 use crate::service::auth::Claims;
 
@@ -27,17 +27,13 @@ pub async fn list(
             query = query.filter(Column::BossId.eq(claims.sub));
         }
         Role::Staff => {
-            // Staff 只能看参与过的订单
-            let order_ids: Vec<Uuid> = process::Entity::find()
-                .select_only()
-                .column(process::Column::OrderId)
-                .distinct()
-                .inner_join(piece_record::Entity)
-                .filter(piece_record::Column::UserId.eq(claims.sub))
-                .into_tuple()
-                .all(db)
-                .await?;
-            query = query.filter(Column::Id.is_in(order_ids));
+            // Staff 可以看到工坊所有订单
+            let emp = employment::Entity::find()
+                .filter(employment::Column::StaffId.eq(claims.sub))
+                .one(db)
+                .await?
+                .ok_or(AppError::Forbidden)?;
+            query = query.filter(Column::BossId.eq(emp.boss_id));
         }
     }
 
@@ -98,7 +94,7 @@ pub async fn create(db: &DbConn, dto: CreateOrderDto) -> Result<Model> {
         images: Set(dto.images),
         quantity: Set(dto.quantity),
         unit_price: Set(dto.unit_price),
-        status: Set("pending".to_string()),
+        status: Set(OrderStatus::Pending),
         received_at: Set(chrono::Utc::now()),
         delivered_at: Set(None),
     };
@@ -142,10 +138,11 @@ pub async fn update(db: &DbConn, id: Uuid, dto: UpdateOrderDto, boss_id: Uuid) -
         model.unit_price = Set(v);
     }
     if let Some(v) = dto.status {
-        if v == "delivered" {
+        let status: OrderStatus = v.parse().map_err(|_| AppError::BadRequest(format!("Invalid status: {}", v)))?;
+        if status == OrderStatus::Delivered {
             model.delivered_at = Set(Some(chrono::Utc::now()));
         }
-        model.status = Set(v);
+        model.status = Set(status);
     }
     Ok(model.update(db).await?)
 }
@@ -171,12 +168,11 @@ pub async fn update_status(db: &DbConn, id: Uuid, dto: UpdateOrderStatusDto, bos
         return Err(AppError::Forbidden);
     }
 
-    let current = OrderStatus::parse(&order.status)?;
-    let next = OrderStatus::parse(&dto.status)?;
-    if !current.can_transition_to(next) {
+    let next: OrderStatus = dto.status.parse().map_err(|_| AppError::BadRequest(format!("Invalid status: {}", dto.status)))?;
+    if !order.status.can_transition_to(next) {
         return Err(AppError::BadRequest(format!(
-            "Cannot transition from {} to {}",
-            order.status, dto.status
+            "Cannot transition from {:?} to {:?}",
+            order.status, next
         )));
     }
 
@@ -188,7 +184,7 @@ pub async fn update_status(db: &DbConn, id: Uuid, dto: UpdateOrderStatusDto, bos
 
     let model = order::ActiveModel {
         id: Set(order.id),
-        status: Set(dto.status),
+        status: Set(next),
         delivered_at,
         ..Default::default()
     };
