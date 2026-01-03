@@ -1,3 +1,4 @@
+use crate::entity::user::Role;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -10,9 +11,22 @@ pub struct LoginRequest {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct LoginUser {
+    pub id: Uuid,
+    pub username: String,
+    pub role: Role,
+    pub display_name: Option<String>,
+    pub phone: Option<String>,
+    pub avatar: Option<String>,
+    pub workshop_name: Option<String>,
+    pub workshop_desc: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct LoginResponse {
     pub token: String,
-    pub user_id: Uuid,
+    pub user: LoginUser,
 }
 
 #[derive(Debug, Deserialize)]

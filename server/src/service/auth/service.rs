@@ -6,13 +6,16 @@ use sea_orm::{ActiveModelTrait, ColumnTrait, DbConn, EntityTrait, QueryFilter, S
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::entity::{employment, user::{self, Role}};
+use crate::entity::{
+    employment,
+    user::{self, Role},
+};
 use crate::error::{AppError, Result};
 use crate::InviteCodes;
 
 use super::dto::{
     BindBossRequest, CreateStaffRequest, InviteCodeResponse, LoginRequest, LoginResponse,
-    RegisterRequest, UpdateProfileRequest,
+    LoginUser, RegisterRequest, UpdateProfileRequest,
 };
 use super::jwt::create_token;
 
@@ -30,12 +33,21 @@ pub async fn login(db: &DbConn, req: LoginRequest) -> Result<LoginResponse> {
         .verify_password(req.password.as_bytes(), &parsed_hash)
         .map_err(|_| AppError::BadRequest("用户名或密码错误".to_string()))?;
 
-    let token = create_token(user.id, user.role)
+    let token = create_token(user.id, user.role.clone())
         .map_err(|_| AppError::Internal("Token生成失败".to_string()))?;
 
     Ok(LoginResponse {
         token,
-        user_id: user.id,
+        user: LoginUser {
+            id: user.id,
+            username: user.username,
+            role: user.role,
+            display_name: user.display_name,
+            phone: user.phone,
+            avatar: user.avatar,
+            workshop_name: user.workshop_name,
+            workshop_desc: user.workshop_desc,
+        },
     })
 }
 
@@ -110,17 +122,28 @@ pub async fn create_staff(db: &DbConn, boss_id: Uuid, req: CreateStaffRequest) -
 }
 
 // 生成邀请码
-pub async fn generate_invite_code(invite_codes: &Arc<InviteCodes>, boss_id: Uuid) -> InviteCodeResponse {
+pub async fn generate_invite_code(
+    invite_codes: &Arc<InviteCodes>,
+    boss_id: Uuid,
+) -> InviteCodeResponse {
     let code = Uuid::new_v4().to_string()[..8].to_string();
     let expires_at = chrono::Utc::now().timestamp() + 3600 * 24; // 24小时有效
 
-    invite_codes.write().await.insert(code.clone(), (boss_id, expires_at));
+    invite_codes
+        .write()
+        .await
+        .insert(code.clone(), (boss_id, expires_at));
 
     InviteCodeResponse { code, expires_at }
 }
 
 // 员工绑定老板
-pub async fn bind_boss(db: &DbConn, invite_codes: &Arc<InviteCodes>, staff_id: Uuid, req: BindBossRequest) -> Result<()> {
+pub async fn bind_boss(
+    db: &DbConn,
+    invite_codes: &Arc<InviteCodes>,
+    staff_id: Uuid,
+    req: BindBossRequest,
+) -> Result<()> {
     let mut codes = invite_codes.write().await;
     let (boss_id, expires_at) = codes
         .remove(&req.invite_code)
@@ -160,11 +183,21 @@ pub async fn update_profile(db: &DbConn, user_id: Uuid, req: UpdateProfileReques
         .ok_or_else(|| AppError::NotFound("用户不存在".to_string()))?;
 
     let mut active: user::ActiveModel = user.into();
-    if let Some(v) = req.display_name { active.display_name = Set(Some(v)); }
-    if let Some(v) = req.phone { active.phone = Set(Some(v)); }
-    if let Some(v) = req.avatar { active.avatar = Set(Some(v)); }
-    if let Some(v) = req.workshop_name { active.workshop_name = Set(Some(v)); }
-    if let Some(v) = req.workshop_desc { active.workshop_desc = Set(Some(v)); }
+    if let Some(v) = req.display_name {
+        active.display_name = Set(Some(v));
+    }
+    if let Some(v) = req.phone {
+        active.phone = Set(Some(v));
+    }
+    if let Some(v) = req.avatar {
+        active.avatar = Set(Some(v));
+    }
+    if let Some(v) = req.workshop_name {
+        active.workshop_name = Set(Some(v));
+    }
+    if let Some(v) = req.workshop_desc {
+        active.workshop_desc = Set(Some(v));
+    }
     active.update(db).await?;
     Ok(())
 }

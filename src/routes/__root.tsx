@@ -12,7 +12,9 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <ConfigProvider locale={zhCN}>
-        <Outlet />
+        <div className="h-full w-full">
+          <Outlet />
+        </div>
       </ConfigProvider>
     </QueryClientProvider>
   );
