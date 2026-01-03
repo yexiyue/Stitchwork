@@ -1,7 +1,7 @@
 use sea_orm::{ActiveModelTrait, ColumnTrait, DbConn, EntityTrait, QueryFilter, Set};
 use uuid::Uuid;
 
-use crate::entity::{order, process, share, user};
+use crate::entity::{order, process, share, user, workshop};
 use crate::error::{AppError, Result};
 
 use super::dto::{
@@ -33,7 +33,12 @@ pub async fn list(db: &DbConn, boss_id: Uuid) -> Result<Vec<share::Model>> {
     Ok(shares)
 }
 
-pub async fn update(db: &DbConn, boss_id: Uuid, id: Uuid, req: UpdateShareRequest) -> Result<share::Model> {
+pub async fn update(
+    db: &DbConn,
+    boss_id: Uuid,
+    id: Uuid,
+    req: UpdateShareRequest,
+) -> Result<share::Model> {
     let share = share::Entity::find_by_id(id)
         .filter(share::Column::BossId.eq(boss_id))
         .one(db)
@@ -41,10 +46,18 @@ pub async fn update(db: &DbConn, boss_id: Uuid, id: Uuid, req: UpdateShareReques
         .ok_or_else(|| AppError::NotFound("分享不存在".to_string()))?;
 
     let mut active: share::ActiveModel = share.into();
-    if let Some(v) = req.title { active.title = Set(v); }
-    if let Some(v) = req.order_ids { active.order_ids = Set(serde_json::to_value(&v).unwrap()); }
-    if let Some(v) = req.process_ids { active.process_ids = Set(serde_json::to_value(&v).unwrap()); }
-    if let Some(v) = req.is_active { active.is_active = Set(v); }
+    if let Some(v) = req.title {
+        active.title = Set(v);
+    }
+    if let Some(v) = req.order_ids {
+        active.order_ids = Set(serde_json::to_value(&v).unwrap());
+    }
+    if let Some(v) = req.process_ids {
+        active.process_ids = Set(serde_json::to_value(&v).unwrap());
+    }
+    if let Some(v) = req.is_active {
+        active.is_active = Set(v);
+    }
     let share = active.update(db).await?;
     Ok(share)
 }
@@ -73,6 +86,12 @@ pub async fn get_public(db: &DbConn, token: &str) -> Result<PublicShareResponse>
         .one(db)
         .await?
         .ok_or_else(|| AppError::NotFound("用户不存在".to_string()))?;
+
+    // 获取老板的工坊信息
+    let ws = workshop::Entity::find()
+        .filter(workshop::Column::OwnerId.eq(boss.id))
+        .one(db)
+        .await?;
 
     let order_ids: Vec<Uuid> = serde_json::from_value(share.order_ids).unwrap_or_default();
     let process_ids: Vec<Uuid> = serde_json::from_value(share.process_ids).unwrap_or_default();
@@ -110,21 +129,24 @@ pub async fn get_public(db: &DbConn, token: &str) -> Result<PublicShareResponse>
             .map(|o| (o.id, o.product_name))
             .collect();
 
-        procs.into_iter().map(|p| PublicProcessInfo {
-            id: p.id,
-            name: p.name,
-            description: p.description,
-            piece_price: p.piece_price,
-            order_product_name: related_orders.get(&p.order_id).cloned().unwrap_or_default(),
-        }).collect()
+        procs
+            .into_iter()
+            .map(|p| PublicProcessInfo {
+                id: p.id,
+                name: p.name,
+                description: p.description,
+                piece_price: p.piece_price,
+                order_product_name: related_orders.get(&p.order_id).cloned().unwrap_or_default(),
+            })
+            .collect()
     } else {
         vec![]
     };
 
     Ok(PublicShareResponse {
         title: share.title,
-        workshop_name: boss.workshop_name,
-        workshop_desc: boss.workshop_desc,
+        workshop_name: ws.as_ref().map(|w| w.name.clone()),
+        workshop_desc: ws.and_then(|w| w.desc),
         avatar: boss.avatar,
         orders,
         processes,

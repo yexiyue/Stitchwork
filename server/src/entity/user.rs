@@ -28,8 +28,7 @@ pub struct Model {
     pub display_name: Option<String>,
     pub phone: Option<String>,
     pub avatar: Option<String>,
-    pub workshop_name: Option<String>,
-    pub workshop_desc: Option<String>,
+    pub workshop_id: Option<Uuid>,
     pub created_at: DateTimeUtc,
 
     #[serde(skip)]
@@ -45,8 +44,8 @@ pub struct Model {
     pub payrolls: HasMany<super::payroll::Entity>,
 
     #[serde(skip)]
-    #[sea_orm(self_ref, via = "employment", from = "Boss", to = "Staff")]
-    pub staffs: HasMany<Entity>,
+    #[sea_orm(belongs_to, from = "workshop_id", to = "id")]
+    pub workshop: HasOne<super::workshop::Entity>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

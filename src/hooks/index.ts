@@ -6,3 +6,4 @@ export * from "./use-piece-records";
 export * from "./use-payrolls";
 export * from "./use-stats";
 export * from "./use-shares";
+export * from "./use-staff-list";

@@ -9,7 +9,7 @@ use super::dto::{CreateOrderDto, OrderQueryParams, UpdateOrderDto, UpdateOrderSt
 use crate::common::{ListData, QueryParams};
 use crate::entity::order::{self, Column, Model, OrderStatus};
 use crate::entity::user::Role;
-use crate::entity::{customer, employment};
+use crate::entity::{customer, user, workshop};
 use crate::error::{AppError, Result};
 use crate::service::auth::Claims;
 
@@ -27,13 +27,17 @@ pub async fn list(
             query = query.filter(Column::BossId.eq(claims.sub));
         }
         Role::Staff => {
-            // Staff 可以看到工坊所有订单
-            let emp = employment::Entity::find()
-                .filter(employment::Column::StaffId.eq(claims.sub))
+            // Staff 通过 workshop_id 找到老板
+            let staff = user::Entity::find_by_id(claims.sub)
                 .one(db)
                 .await?
                 .ok_or(AppError::Forbidden)?;
-            query = query.filter(Column::BossId.eq(emp.boss_id));
+            let workshop_id = staff.workshop_id.ok_or(AppError::Forbidden)?;
+            let ws = workshop::Entity::find_by_id(workshop_id)
+                .one(db)
+                .await?
+                .ok_or(AppError::Forbidden)?;
+            query = query.filter(Column::BossId.eq(ws.owner_id));
         }
     }
 
@@ -138,7 +142,9 @@ pub async fn update(db: &DbConn, id: Uuid, dto: UpdateOrderDto, boss_id: Uuid) -
         model.unit_price = Set(v);
     }
     if let Some(v) = dto.status {
-        let status: OrderStatus = v.parse().map_err(|_| AppError::BadRequest(format!("Invalid status: {}", v)))?;
+        let status: OrderStatus = v
+            .parse()
+            .map_err(|_| AppError::BadRequest(format!("Invalid status: {}", v)))?;
         if status == OrderStatus::Delivered {
             model.delivered_at = Set(Some(chrono::Utc::now()));
         }
@@ -159,7 +165,12 @@ pub async fn delete(db: &DbConn, id: Uuid, boss_id: Uuid) -> Result<()> {
     Ok(())
 }
 
-pub async fn update_status(db: &DbConn, id: Uuid, dto: UpdateOrderStatusDto, boss_id: Uuid) -> Result<Model> {
+pub async fn update_status(
+    db: &DbConn,
+    id: Uuid,
+    dto: UpdateOrderStatusDto,
+    boss_id: Uuid,
+) -> Result<Model> {
     let order = order::Entity::find_by_id(id)
         .one(db)
         .await?
@@ -168,7 +179,10 @@ pub async fn update_status(db: &DbConn, id: Uuid, dto: UpdateOrderStatusDto, bos
         return Err(AppError::Forbidden);
     }
 
-    let next: OrderStatus = dto.status.parse().map_err(|_| AppError::BadRequest(format!("Invalid status: {}", dto.status)))?;
+    let next: OrderStatus = dto
+        .status
+        .parse()
+        .map_err(|_| AppError::BadRequest(format!("Invalid status: {}", dto.status)))?;
     if !order.status.can_transition_to(next) {
         return Err(AppError::BadRequest(format!(
             "Cannot transition from {:?} to {:?}",

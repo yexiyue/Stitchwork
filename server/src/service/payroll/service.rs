@@ -10,7 +10,11 @@ use crate::common::{ListData, QueryParams};
 use crate::entity::payroll::{self, Column, Model};
 use crate::error::{AppError, Result};
 
-pub async fn list(db: &DbConn, params: QueryParams, user_id: Option<Uuid>) -> Result<ListData<Model>> {
+pub async fn list(
+    db: &DbConn,
+    params: QueryParams,
+    user_id: Option<Uuid>,
+) -> Result<ListData<Model>> {
     let mut query = payroll::Entity::find();
 
     if let Some(uid) = user_id {

@@ -7,6 +7,7 @@ pub mod process;
 pub mod share;
 pub mod stats;
 pub mod upload;
+pub mod workshop;
 
 use axum::{middleware, Router};
 use std::sync::Arc;
@@ -25,13 +26,14 @@ pub fn routes() -> Router<Arc<AppState>> {
         .merge(stats::router())
         .merge(share::router())
         .merge(upload::router())
+        .merge(workshop::router())
         .layer(middleware::from_fn(auth::auth_middleware));
 
     Router::new().nest(
         "/api",
         Router::new()
-            .merge(auth::router())  // 登录注册不需要认证
-            .merge(share::public_router())  // 公开分享页面不需要认证
+            .merge(auth::router()) // 登录注册不需要认证
+            .merge(share::public_router()) // 公开分享页面不需要认证
             .merge(protected),
     )
 }

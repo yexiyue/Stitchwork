@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, redirect, useNavigate, useLocation } from "@tanstack/react-router";
 import { TabBar } from "antd-mobile";
-import { Home, ClipboardList, Layers, User, FileEdit } from "lucide-react";
+import { Home, ClipboardList, FileEdit, User } from "lucide-react";
 import { useAuthStore, selectIsBoss } from "@/stores/auth";
 
 export const Route = createFileRoute("/_auth")({
@@ -16,14 +16,13 @@ export const Route = createFileRoute("/_auth")({
 const bossTabs = [
   { key: "/", title: "首页", icon: <Home size={24} /> },
   { key: "/orders", title: "订单", icon: <ClipboardList size={24} /> },
-  { key: "/processes", title: "工序", icon: <Layers size={24} /> },
+  { key: "/records", title: "计件", icon: <FileEdit size={24} /> },
   { key: "/profile", title: "我的", icon: <User size={24} /> },
 ];
 
 const staffTabs = [
   { key: "/", title: "首页", icon: <Home size={24} /> },
-  { key: "/processes", title: "工序", icon: <Layers size={24} /> },
-  { key: "/record", title: "记件", icon: <FileEdit size={24} /> },
+  { key: "/record", title: "计件", icon: <FileEdit size={24} /> },
   { key: "/profile", title: "我的", icon: <User size={24} /> },
 ];
 
@@ -36,6 +35,7 @@ function AuthLayout() {
   // 子页面映射到对应的 tab
   const subPageMap: Record<string, string> = {
     "/customers": "/profile",
+    "/staff": "/profile",
   };
   const mappedPath = Object.entries(subPageMap).find(([prefix]) =>
     location.pathname.startsWith(prefix)

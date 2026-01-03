@@ -40,8 +40,14 @@ async fn list(
     Extension(claims): Extension<Claims>,
     Query(params): Query<QueryParams>,
 ) -> Result<ApiResponse<ListData<Model>>> {
-    let user_id = if claims.role == Role::Staff { Some(claims.sub) } else { None };
-    Ok(ApiResponse::ok(service::list(&state.db, params, user_id).await?))
+    let user_id = if claims.role == Role::Staff {
+        Some(claims.sub)
+    } else {
+        None
+    };
+    Ok(ApiResponse::ok(
+        service::list(&state.db, params, user_id).await?,
+    ))
 }
 
 async fn create(
@@ -59,8 +65,14 @@ async fn get_one(
     State(state): State<Arc<AppState>>,
     Extension(claims): Extension<Claims>,
 ) -> Result<ApiResponse<Model>> {
-    let user_id = if claims.role == Role::Staff { Some(claims.sub) } else { None };
-    Ok(ApiResponse::ok(service::get_one(&state.db, id, user_id).await?))
+    let user_id = if claims.role == Role::Staff {
+        Some(claims.sub)
+    } else {
+        None
+    };
+    Ok(ApiResponse::ok(
+        service::get_one(&state.db, id, user_id).await?,
+    ))
 }
 
 async fn update(

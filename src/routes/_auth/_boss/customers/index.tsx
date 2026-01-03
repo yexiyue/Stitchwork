@@ -10,13 +10,12 @@ import {
 import { Plus, Search } from "lucide-react";
 import { useDeleteCustomer } from "@/hooks";
 import type { Customer } from "@/types";
-import { Avatar, RelativeTime, VirtualList } from "@/components";
+import { Avatar, RelativeTime, VirtualList, PageHeader } from "@/components";
 import { customerApi } from "@/api";
 import dayjs from "dayjs";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useDebounceFn } from "ahooks";
 import { useState, useRef } from "react";
-import { motion, AnimatePresence } from "motion/react";
 import type { SearchBarRef } from "antd-mobile/es/components/search-bar";
 
 export const Route = createFileRoute("/_auth/_boss/customers/")({
@@ -102,79 +101,52 @@ function CustomersPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="p-4 pb-2">
-        <div className="flex items-center justify-between mb-3">
-          <AnimatePresence initial={false}>
-            {!showSearch && (
-              <motion.h1
-                key="title"
-                className="text-xl  whitespace-nowrap"
-                initial={{ width: 0, opacity: 0 }}
-                animate={{ width: "auto", opacity: 1 }}
-                exit={{ width: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                客户管理
-              </motion.h1>
-            )}
-          </AnimatePresence>
-          <div className="flex items-center gap-2 flex-1 justify-end">
-            <AnimatePresence initial={false}>
-              {showSearch && (
-                <motion.div
-                  key="search"
-                  className="flex-1 overflow-hidden"
-                  initial={{ width: 0 }}
-                  animate={{ width: "100%" }}
-                  exit={{ width: 0 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <SearchBar
-                    ref={searchInputRef}
-                    placeholder="搜索客户名称"
-                    value={search}
-                    onChange={(val) => {
-                      setSearch(val);
-                      updateSearch(val);
-                    }}
-                    onCancel={() => {
-                      setShowSearch(false);
-                      setSearch("");
-                      updateSearch("");
-                    }}
-                    showCancelButton
-                    autoFocus
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-            {!showSearch && (
-              <>
-                <Button
-                  size="small"
-                  fill="none"
-                  onClick={() => {
-                    setShowSearch(true);
-                    setTimeout(() => searchInputRef.current?.focus(), 100);
-                  }}
-                >
-                  <Search size={20} />
-                </Button>
-                <Button
-                  size="small"
-                  color="primary"
-                  onClick={() => navigate({ to: "/customers/new" })}
-                >
-                  <div className="flex items-center">
-                    <Plus size={16} className="mr-1" />
-                    新增
-                  </div>
-                </Button>
-              </>
-            )}
-          </div>
+      {showSearch ? (
+        <div className="h-[45px] flex items-center px-3">
+          <SearchBar
+            ref={searchInputRef}
+            placeholder="搜索客户名称"
+            value={search}
+            onChange={(val) => {
+              setSearch(val);
+              updateSearch(val);
+            }}
+            onCancel={() => {
+              setShowSearch(false);
+              setSearch("");
+              updateSearch("");
+            }}
+            showCancelButton
+            autoFocus
+            className="flex-1"
+          />
         </div>
-      </div>
+      ) : (
+        <PageHeader title="客户管理" right={
+          <div className="flex items-center gap-2">
+            <Button
+              size="small"
+              fill="none"
+              onClick={() => {
+                setShowSearch(true);
+                setTimeout(() => searchInputRef.current?.focus(), 100);
+              }}
+            >
+              <Search size={20} />
+            </Button>
+            <Button
+              size="small"
+              color="primary"
+              onClick={() => navigate({ to: "/customers/new" })}
+            >
+              <div className="flex items-center">
+                <Plus size={16} className="mr-1" />
+                新增
+              </div>
+            </Button>
+          </div>
+        } />
+      )}
 
       <div className="flex flex-1 overflow-hidden">
         <VirtualList

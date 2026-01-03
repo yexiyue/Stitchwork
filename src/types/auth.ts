@@ -5,6 +5,14 @@ export interface LoginRequest {
 
 export type Role = "boss" | "staff";
 
+export interface Workshop {
+  id: string;
+  name: string;
+  desc?: string;
+  address?: string;
+  image?: string;
+}
+
 export interface LoginUser {
   id: string;
   username: string;
@@ -12,8 +20,7 @@ export interface LoginUser {
   displayName?: string;
   phone?: string;
   avatar?: string;
-  workshopName?: string;
-  workshopDesc?: string;
+  workshop?: Workshop;
 }
 
 export interface LoginResponse {
@@ -26,19 +33,12 @@ export interface RegisterRequest {
   password: string;
 }
 
-export interface CreateStaffRequest {
-  username: string;
-  password: string;
-  displayName?: string;
-  phone?: string;
-}
-
 export interface InviteCodeResponse {
   code: string;
   expiresAt: number;
 }
 
-export interface BindBossRequest {
+export interface BindWorkshopRequest {
   inviteCode: string;
 }
 
@@ -46,6 +46,26 @@ export interface UpdateProfileRequest {
   displayName?: string;
   phone?: string;
   avatar?: string;
-  workshopName?: string;
-  workshopDesc?: string;
+}
+
+export interface CreateWorkshopRequest {
+  name: string;
+  desc?: string;
+  address?: string;
+  image?: string;
+}
+
+export interface UpdateWorkshopRequest {
+  name?: string;
+  desc?: string;
+  address?: string;
+  image?: string;
+}
+
+export interface Staff {
+  id: string;
+  username: string;
+  displayName?: string;
+  phone?: string;
+  avatar?: string;
 }

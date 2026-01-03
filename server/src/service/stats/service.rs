@@ -1,15 +1,15 @@
 use chrono::NaiveDate;
 use rust_decimal::Decimal;
-use sea_orm::{ColumnTrait, DbConn, EntityTrait, QueryFilter, QuerySelect};
+use sea_orm::{ColumnTrait, DbConn, EntityTrait, ModelTrait, QueryFilter, QuerySelect};
 use uuid::Uuid;
 
 use super::dto::{
     CustomerSummary, CustomerSummaryList, OrderStats, ProcessProgress, WorkerProduction,
     WorkerProductionList, WorkerStatsParams,
 };
-use crate::entity::{customer, order, piece_record, process, user};
 use crate::entity::order::OrderStatus;
 use crate::entity::piece_record::PieceRecordStatus;
+use crate::entity::{customer, order, piece_record, process, user};
 use crate::error::{AppError, Result};
 
 pub async fn order_stats(db: &DbConn, order_id: Uuid, boss_id: Uuid) -> Result<OrderStats> {
@@ -21,10 +21,7 @@ pub async fn order_stats(db: &DbConn, order_id: Uuid, boss_id: Uuid) -> Result<O
         return Err(AppError::Forbidden);
     }
 
-    let processes = process::Entity::find()
-        .filter(process::Column::OrderId.eq(order_id))
-        .all(db)
-        .await?;
+    let processes = ord.find_related(process::Entity).all(db).await?;
 
     let mut process_stats = Vec::new();
     let mut total_completed: i64 = 0;
@@ -70,14 +67,17 @@ pub async fn customer_summary(db: &DbConn, boss_id: Uuid) -> Result<CustomerSumm
 
     let mut list = Vec::new();
     for cust in customers {
-        let orders = order::Entity::find()
-            .filter(order::Column::CustomerId.eq(cust.id))
-            .all(db)
-            .await?;
+        let orders = cust.find_related(order::Entity).all(db).await?;
 
         let total = orders.len() as i64;
-        let pending = orders.iter().filter(|o| o.status == OrderStatus::Pending).count() as i64;
-        let processing = orders.iter().filter(|o| o.status == OrderStatus::Processing).count() as i64;
+        let pending = orders
+            .iter()
+            .filter(|o| o.status == OrderStatus::Pending)
+            .count() as i64;
+        let processing = orders
+            .iter()
+            .filter(|o| o.status == OrderStatus::Processing)
+            .count() as i64;
         let completed = orders
             .iter()
             .filter(|o| o.status == OrderStatus::Completed || o.status == OrderStatus::Delivered)
@@ -107,9 +107,8 @@ pub async fn worker_production(
 
     if let Some(ref start) = params.start_date {
         if let Ok(date) = NaiveDate::parse_from_str(start, "%Y-%m-%d") {
-            query = query.filter(
-                piece_record::Column::RecordedAt.gte(date.and_hms_opt(0, 0, 0).unwrap()),
-            );
+            query = query
+                .filter(piece_record::Column::RecordedAt.gte(date.and_hms_opt(0, 0, 0).unwrap()));
         }
     }
     if let Some(ref end) = params.end_date {

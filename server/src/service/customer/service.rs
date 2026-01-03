@@ -11,8 +11,7 @@ use crate::entity::customer::{self, Column, Model};
 use crate::error::{AppError, Result};
 
 pub async fn list(db: &DbConn, params: QueryParams, boss_id: Uuid) -> Result<ListData<Model>> {
-    let mut query = customer::Entity::find()
-        .filter(Column::UserId.eq(boss_id));
+    let mut query = customer::Entity::find().filter(Column::UserId.eq(boss_id));
 
     if let Some(ref search) = params.search {
         query = query.filter(Column::Name.contains(search));
@@ -28,7 +27,11 @@ pub async fn list(db: &DbConn, params: QueryParams, boss_id: Uuid) -> Result<Lis
         }
     }
 
-    let order = if params.sort_order == "asc" { sea_orm::Order::Asc } else { sea_orm::Order::Desc };
+    let order = if params.sort_order == "asc" {
+        sea_orm::Order::Asc
+    } else {
+        sea_orm::Order::Desc
+    };
     query = match params.sort_by.as_deref() {
         Some("name") => query.order_by(Column::Name, order),
         _ => query.order_by(Column::CreatedAt, order),

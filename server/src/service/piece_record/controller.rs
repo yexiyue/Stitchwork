@@ -53,7 +53,9 @@ async fn list(
     Extension(claims): Extension<Claims>,
     Query(params): Query<QueryParams>,
 ) -> Result<ApiResponse<ListData<Model>>> {
-    Ok(ApiResponse::ok(service::list(&state.db, params, &claims).await?))
+    Ok(ApiResponse::ok(
+        service::list(&state.db, params, &claims).await?,
+    ))
 }
 
 async fn create(
@@ -62,7 +64,9 @@ async fn create(
     Extension(claims): Extension<Claims>,
     AppJson(dto): AppJson<CreatePieceRecordDto>,
 ) -> Result<ApiResponse<Model>> {
-    Ok(ApiResponse::ok(service::create(&state.db, dto, &claims).await?))
+    Ok(ApiResponse::ok(
+        service::create(&state.db, dto, &claims).await?,
+    ))
 }
 
 async fn get_one(
@@ -71,7 +75,9 @@ async fn get_one(
     Extension(claims): Extension<Claims>,
 ) -> Result<ApiResponse<Model>> {
     claims.require_boss()?;
-    Ok(ApiResponse::ok(service::get_one(&state.db, id, claims.sub).await?))
+    Ok(ApiResponse::ok(
+        service::get_one(&state.db, id, claims.sub).await?,
+    ))
 }
 
 async fn update(
@@ -81,7 +87,9 @@ async fn update(
     AppJson(dto): AppJson<UpdatePieceRecordDto>,
 ) -> Result<ApiResponse<Model>> {
     claims.require_boss()?;
-    Ok(ApiResponse::ok(service::update(&state.db, id, dto, claims.sub).await?))
+    Ok(ApiResponse::ok(
+        service::update(&state.db, id, dto, claims.sub).await?,
+    ))
 }
 
 async fn delete(
@@ -100,7 +108,9 @@ async fn approve(
     Extension(claims): Extension<Claims>,
 ) -> Result<ApiResponse<Model>> {
     claims.require_boss()?;
-    Ok(ApiResponse::ok(service::approve(&state.db, id, claims.sub).await?))
+    Ok(ApiResponse::ok(
+        service::approve(&state.db, id, claims.sub).await?,
+    ))
 }
 
 async fn reject(
@@ -109,5 +119,7 @@ async fn reject(
     Extension(claims): Extension<Claims>,
 ) -> Result<ApiResponse<Model>> {
     claims.require_boss()?;
-    Ok(ApiResponse::ok(service::reject(&state.db, id, claims.sub).await?))
+    Ok(ApiResponse::ok(
+        service::reject(&state.db, id, claims.sub).await?,
+    ))
 }

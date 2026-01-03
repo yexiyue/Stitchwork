@@ -15,8 +15,8 @@ impl S3Config {
     pub fn from_env() -> Option<Self> {
         let endpoint = std::env::var("S3_ENDPOINT").ok()?;
         let bucket = std::env::var("S3_BUCKET").ok()?;
-        let public_url = std::env::var("S3_PUBLIC_URL")
-            .unwrap_or_else(|_| format!("{}/{}", endpoint, bucket));
+        let public_url =
+            std::env::var("S3_PUBLIC_URL").unwrap_or_else(|_| format!("{}/{}", endpoint, bucket));
         Some(Self {
             access_key_id: std::env::var("S3_ACCESS_KEY_ID").ok()?,
             access_key_secret: std::env::var("S3_ACCESS_KEY_SECRET").ok()?,

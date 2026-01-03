@@ -8,7 +8,7 @@ use super::dto::{CreateProcessDto, ProcessQueryParams, UpdateProcessDto};
 use crate::common::{ListData, QueryParams};
 use crate::entity::process::{self, Column, Model};
 use crate::entity::user::Role;
-use crate::entity::{employment, order};
+use crate::entity::{order, user, workshop};
 use crate::error::{AppError, Result};
 use crate::service::auth::Claims;
 
@@ -26,13 +26,17 @@ pub async fn list(
             query = query.filter(Column::BossId.eq(claims.sub));
         }
         Role::Staff => {
-            // Staff 可以看到工坊所有工序
-            let emp = employment::Entity::find()
-                .filter(employment::Column::StaffId.eq(claims.sub))
+            // Staff 通过 workshop_id 找到老板
+            let staff = user::Entity::find_by_id(claims.sub)
                 .one(db)
                 .await?
                 .ok_or(AppError::Forbidden)?;
-            query = query.filter(Column::BossId.eq(emp.boss_id));
+            let workshop_id = staff.workshop_id.ok_or(AppError::Forbidden)?;
+            let ws = workshop::Entity::find_by_id(workshop_id)
+                .one(db)
+                .await?
+                .ok_or(AppError::Forbidden)?;
+            query = query.filter(Column::BossId.eq(ws.owner_id));
         }
     }
 

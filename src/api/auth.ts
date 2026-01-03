@@ -2,11 +2,17 @@ import { client, setToken } from "./client";
 import type {
   LoginRequest,
   LoginResponse,
+  LoginUser,
   RegisterRequest,
-  CreateStaffRequest,
   InviteCodeResponse,
-  BindBossRequest,
+  BindWorkshopRequest,
   UpdateProfileRequest,
+  Staff,
+  ListData,
+  QueryParams,
+  Workshop,
+  CreateWorkshopRequest,
+  UpdateWorkshopRequest,
 } from "@/types";
 
 export const authApi = {
@@ -17,12 +23,20 @@ export const authApi = {
   },
   register: (data: RegisterRequest) =>
     client.post<{ userId: string }>("/api/register", data),
-  createStaff: (data: CreateStaffRequest) =>
-    client.post<{ staffId: string }>("/api/staff", data),
   generateInviteCode: () =>
     client.post<InviteCodeResponse>("/api/invite-code"),
-  bindBoss: (data: BindBossRequest) =>
-    client.post<void>("/api/bind-boss", data),
+  bindWorkshop: (data: BindWorkshopRequest) =>
+    client.post<void>("/api/bind-workshop", data),
   updateProfile: (data: UpdateProfileRequest) =>
     client.put<void>("/api/profile", data),
+  getStaffList: (params?: QueryParams) =>
+    client.get<ListData<Staff>>("/api/staff", { params }),
+  removeStaff: (staffId: string) => client.delete<void>(`/api/staff/${staffId}`),
+  getProfile: () => client.get<LoginUser>("/api/profile"),
+  // Workshop
+  getWorkshop: () => client.get<Workshop | null>("/api/workshop"),
+  createWorkshop: (data: CreateWorkshopRequest) =>
+    client.post<Workshop>("/api/workshop", data),
+  updateWorkshop: (data: UpdateWorkshopRequest) =>
+    client.put<Workshop>("/api/workshop", data),
 };

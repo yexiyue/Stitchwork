@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Card, Badge } from "antd-mobile";
-import { Home, ClipboardCheck, FileEdit, Users } from "lucide-react";
+import { ClipboardCheck, FileEdit, Users, Store } from "lucide-react";
 import { useAuthStore, selectIsBoss } from "@/stores/auth";
 
 export const Route = createFileRoute("/_auth/")({
@@ -14,12 +14,32 @@ function IndexPage() {
 
   return (
     <div className="p-4">
-      <h1 className="flex items-center gap-2 text-xl font-bold">
-        <Home size={24} />
-        StitchWork
-      </h1>
-      <p className="mt-2">欢迎, {user?.displayName || user?.username}</p>
-      <p className="text-gray-500">服装加工流程管理系统</p>
+      {user?.workshop ? (
+        <div className="p-4 bg-gray-50 rounded-lg" onClick={() => isBoss && navigate({ to: "/workshop" })}>
+          <div className="flex items-start gap-3">
+            {user.workshop.image ? (
+              <img src={user.workshop.image} className="w-16 h-16 rounded-lg object-cover" />
+            ) : (
+              <div className="w-16 h-16 rounded-lg bg-gray-200 flex items-center justify-center">
+                <Store size={24} className="text-gray-400" />
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <h2 className="font-medium">{user.workshop.name}</h2>
+              {user.workshop.address && <p className="text-sm text-gray-500 mt-1">{user.workshop.address}</p>}
+              {user.workshop.desc && <p className="text-sm text-gray-400 mt-1 line-clamp-2">{user.workshop.desc}</p>}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="p-4 bg-gray-50 rounded-lg text-center text-gray-500">
+          {isBoss ? (
+            <span onClick={() => navigate({ to: "/workshop" })}>点击创建工坊</span>
+          ) : (
+            <span>暂未加入工坊</span>
+          )}
+        </div>
+      )}
 
       <div className="mt-6 grid grid-cols-2 gap-4">
         {isBoss && (

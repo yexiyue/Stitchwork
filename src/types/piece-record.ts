@@ -11,6 +11,11 @@ export interface PieceRecord {
   status: PieceRecordStatus;
   recordedBy: RecordedBy;
   recordedAt: string;
+  // 关联字段
+  processName?: string;
+  userName?: string;
+  orderName?: string;
+  orderId?: string;
 }
 
 export interface CreatePieceRecordDto {

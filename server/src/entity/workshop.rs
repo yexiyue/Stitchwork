@@ -4,20 +4,20 @@ use serde::{Deserialize, Serialize};
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[sea_orm(table_name = "employment")]
+#[sea_orm(table_name = "workshop")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
-    pub boss_id: Uuid,
-    pub staff_id: Uuid,
+    pub owner_id: Uuid,
+    pub name: String,
+    pub desc: Option<String>,
+    pub address: Option<String>,
+    pub image: Option<String>,
     pub created_at: DateTimeUtc,
 
     #[serde(skip)]
-    #[sea_orm(belongs_to, relation_enum = "Boss", from = "boss_id", to = "id")]
-    pub boss: HasOne<super::user::Entity>,
-    #[serde(skip)]
-    #[sea_orm(belongs_to, relation_enum = "Staff", from = "staff_id", to = "id")]
-    pub staff: HasOne<super::user::Entity>,
+    #[sea_orm(has_many)]
+    pub staffs: HasMany<super::user::Entity>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

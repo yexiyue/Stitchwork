@@ -126,7 +126,12 @@ pub async fn get_one(db: &DbConn, id: Uuid, boss_id: Uuid) -> Result<Model> {
     Ok(record)
 }
 
-pub async fn update(db: &DbConn, id: Uuid, dto: UpdatePieceRecordDto, boss_id: Uuid) -> Result<Model> {
+pub async fn update(
+    db: &DbConn,
+    id: Uuid,
+    dto: UpdatePieceRecordDto,
+    boss_id: Uuid,
+) -> Result<Model> {
     let record = piece_record::Entity::find_by_id(id)
         .one(db)
         .await?
@@ -169,7 +174,9 @@ pub async fn approve(db: &DbConn, id: Uuid, boss_id: Uuid) -> Result<Model> {
         return Err(AppError::Forbidden);
     }
     if record.status != PieceRecordStatus::Pending {
-        return Err(AppError::BadRequest("Only pending records can be approved".to_string()));
+        return Err(AppError::BadRequest(
+            "Only pending records can be approved".to_string(),
+        ));
     }
 
     let mut model: piece_record::ActiveModel = record.into();
@@ -186,7 +193,9 @@ pub async fn reject(db: &DbConn, id: Uuid, boss_id: Uuid) -> Result<Model> {
         return Err(AppError::Forbidden);
     }
     if record.status != PieceRecordStatus::Pending {
-        return Err(AppError::BadRequest("Only pending records can be rejected".to_string()));
+        return Err(AppError::BadRequest(
+            "Only pending records can be rejected".to_string(),
+        ));
     }
 
     let mut model: piece_record::ActiveModel = record.into();

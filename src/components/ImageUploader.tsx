@@ -4,17 +4,24 @@ import imageCompression from "browser-image-compression";
 import { uploadApi } from "@/api";
 
 interface ImageUploaderProps {
-  value?: string[];
-  onChange?: (urls: string[]) => void;
+  value?: string | string[];
+  onChange?: (urls: string | string[]) => void;
   maxCount?: number;
 }
 
 export function ImageUploader({
-  value = [],
+  value,
   onChange,
   maxCount = 9,
 }: ImageUploaderProps) {
-  const fileList: ImageUploadItem[] = value.map((url) => ({ url }));
+  const isSingle = maxCount === 1;
+  const urls = Array.isArray(value) ? value : value ? [value] : [];
+  const fileList: ImageUploadItem[] = urls.map((url) => ({ url }));
+
+  const handleChange = (items: ImageUploadItem[]) => {
+    const newUrls = items.map((i) => i.url!);
+    onChange?.(isSingle ? (newUrls[0] || "") : newUrls);
+  };
 
   const upload = async (file: File): Promise<ImageUploadItem> => {
     const compressed = await imageCompression(file, {
@@ -40,7 +47,7 @@ export function ImageUploader({
   return (
     <AdmImageUploader
       value={fileList}
-      onChange={(items) => onChange?.(items.map((i) => i.url!))}
+      onChange={handleChange}
       upload={upload}
       maxCount={maxCount}
       onCountExceed={() => Toast.show(`最多上传 ${maxCount} 张图片`)}

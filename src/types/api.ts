@@ -18,4 +18,6 @@ export interface QueryParams {
   startDate?: string;
   endDate?: string;
   status?: string;
+  userId?: string;
+  orderId?: string;
 }

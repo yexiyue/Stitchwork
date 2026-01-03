@@ -9,6 +9,7 @@ interface AuthState {
   user: LoginUser | null;
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
+  updateUser: (updates: Partial<LoginUser>) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -25,6 +26,10 @@ export const useAuthStore = create<AuthState>()(
         clearToken();
         set({ token: null, user: null });
       },
+      updateUser: (updates) =>
+        set((state) => ({
+          user: state.user ? { ...state.user, ...updates } : null,
+        })),
     }),
     {
       name: "auth-storage",

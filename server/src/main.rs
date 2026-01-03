@@ -14,7 +14,7 @@ mod service;
 
 pub use s3::S3Client;
 
-/// 邀请码存储: code -> (boss_id, expires_at)
+/// 邀请码存储: code -> (workshop_id, expires_at)
 pub type InviteCodes = RwLock<HashMap<String, (Uuid, i64)>>;
 
 #[derive(Clone)]

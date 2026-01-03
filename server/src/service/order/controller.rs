@@ -47,7 +47,9 @@ async fn list(
     Query(params): Query<QueryParams>,
     Query(filter): Query<OrderQueryParams>,
 ) -> Result<ApiResponse<ListData<Model>>> {
-    Ok(ApiResponse::ok(service::list(&state.db, params, filter, &claims).await?))
+    Ok(ApiResponse::ok(
+        service::list(&state.db, params, filter, &claims).await?,
+    ))
 }
 
 async fn create(
@@ -66,7 +68,9 @@ async fn get_one(
     Extension(claims): Extension<Claims>,
 ) -> Result<ApiResponse<Model>> {
     claims.require_boss()?;
-    Ok(ApiResponse::ok(service::get_one(&state.db, id, claims.sub).await?))
+    Ok(ApiResponse::ok(
+        service::get_one(&state.db, id, claims.sub).await?,
+    ))
 }
 
 async fn update(
@@ -76,7 +80,9 @@ async fn update(
     AppJson(dto): AppJson<UpdateOrderDto>,
 ) -> Result<ApiResponse<Model>> {
     claims.require_boss()?;
-    Ok(ApiResponse::ok(service::update(&state.db, id, dto, claims.sub).await?))
+    Ok(ApiResponse::ok(
+        service::update(&state.db, id, dto, claims.sub).await?,
+    ))
 }
 
 async fn delete(

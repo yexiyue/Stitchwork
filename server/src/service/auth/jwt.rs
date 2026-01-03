@@ -1,9 +1,4 @@
-use axum::{
-    extract::Request,
-    http::header::AUTHORIZATION,
-    middleware::Next,
-    response::Response,
-};
+use axum::{extract::Request, http::header::AUTHORIZATION, middleware::Next, response::Response};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
