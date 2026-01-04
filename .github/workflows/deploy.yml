@@ -9,6 +9,8 @@ on:
 
 env:
   BINARY_NAME: stitchwork-server
+  ECS_HOST: 47.115.172.218
+  ECS_USER: root
 
 jobs:
   build:
@@ -49,8 +51,8 @@ jobs:
       - name: Deploy to ECS
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ secrets.ECS_HOST }}
-          username: ${{ secrets.ECS_USER }}
+          host: ${{ env.ECS_HOST }}
+          username: ${{ env.ECS_USER }}
           key: ${{ secrets.ECS_SSH_KEY }}
           source: ${{ env.BINARY_NAME }}
           target: /opt/stitchwork/
@@ -58,8 +60,8 @@ jobs:
       - name: Restart service
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ secrets.ECS_HOST }}
-          username: ${{ secrets.ECS_USER }}
+          host: ${{ env.ECS_HOST }}
+          username: ${{ env.ECS_USER }}
           key: ${{ secrets.ECS_SSH_KEY }}
           script: |
             chmod +x /opt/stitchwork/${{ env.BINARY_NAME }}
