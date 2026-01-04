@@ -2,9 +2,10 @@ name: Build and Deploy
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
     paths:
-      - 'server/**'
+      - "server/**"
   workflow_dispatch:
 
 env:
@@ -20,6 +21,9 @@ jobs:
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
 
       - name: Install musl tools
         run: |
