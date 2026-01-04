@@ -1,15 +1,16 @@
 use chrono::NaiveDate;
 use rust_decimal::Decimal;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DbConn, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
-    Set,
+    ActiveModelTrait, ColumnTrait, DbConn, EntityLoaderTrait, EntityTrait, PaginatorTrait,
+    QueryFilter, QueryOrder, Set,
 };
 use uuid::Uuid;
 
-use super::dto::{CreatePieceRecordDto, UpdatePieceRecordDto};
+use super::dto::{CreatePieceRecordDto, PieceRecordResponse, UpdatePieceRecordDto};
 use crate::common::{ListData, QueryParams};
+use crate::entity;
 use crate::entity::order::OrderStatus;
-use crate::entity::user::Role;
+use crate::entity::user::{self, Role};
 use crate::entity::{
     order,
     piece_record::{self, Column, Model, PieceRecordStatus, RecordedBy},
@@ -17,8 +18,13 @@ use crate::entity::{
 };
 use crate::error::{AppError, Result};
 use crate::service::auth::Claims;
+use std::collections::HashMap;
 
-pub async fn list(db: &DbConn, params: QueryParams, claims: &Claims) -> Result<ListData<Model>> {
+pub async fn list(
+    db: &DbConn,
+    params: QueryParams,
+    claims: &Claims,
+) -> Result<ListData<PieceRecordResponse>> {
     let mut query = piece_record::Entity::find();
 
     // 用户数据隔离
@@ -32,15 +38,18 @@ pub async fn list(db: &DbConn, params: QueryParams, claims: &Claims) -> Result<L
     }
 
     // 按状态过滤
-    if let Some(ref status) = params.status {
-        let status_enum = match status.as_str() {
-            "pending" => Some(PieceRecordStatus::Pending),
-            "approved" => Some(PieceRecordStatus::Approved),
-            "rejected" => Some(PieceRecordStatus::Rejected),
-            _ => None,
-        };
-        if let Some(s) = status_enum {
-            query = query.filter(Column::Status.eq(s));
+    if let Some(ref statuses) = params.status {
+        let status_enums: Vec<PieceRecordStatus> = statuses
+            .iter()
+            .filter_map(|s| match s.as_str() {
+                "pending" => Some(PieceRecordStatus::Pending),
+                "approved" => Some(PieceRecordStatus::Approved),
+                "rejected" => Some(PieceRecordStatus::Rejected),
+                _ => None,
+            })
+            .collect();
+        if !status_enums.is_empty() {
+            query = query.filter(Column::Status.is_in(status_enums));
         }
     }
 
@@ -68,7 +77,74 @@ pub async fn list(db: &DbConn, params: QueryParams, claims: &Claims) -> Result<L
 
     let paginator = query.paginate(db, params.page_size);
     let total = paginator.num_items().await?;
-    let list = paginator.fetch_page(params.page.saturating_sub(1)).await?;
+    let records = paginator.fetch_page(params.page.saturating_sub(1)).await?;
+
+    // 批量获取关联数据
+    let process_ids: Vec<Uuid> = records.iter().map(|r| r.process_id).collect();
+    let user_ids: Vec<Uuid> = records.iter().map(|r| r.user_id).collect();
+
+    let processes: HashMap<Uuid, process::Model> = process::Entity::find()
+        .filter(process::Column::Id.is_in(process_ids))
+        .all(db)
+        .await?
+        .into_iter()
+        .map(|p| (p.id, p))
+        .collect();
+
+    let order_ids: Vec<Uuid> = processes.values().map(|p| p.order_id).collect();
+    let orders: HashMap<Uuid, order::Model> = order::Entity::find()
+        .filter(order::Column::Id.is_in(order_ids))
+        .all(db)
+        .await?
+        .into_iter()
+        .map(|o| (o.id, o))
+        .collect();
+
+    let users: HashMap<Uuid, user::Model> = user::Entity::find()
+        .filter(user::Column::Id.is_in(user_ids))
+        .all(db)
+        .await?
+        .into_iter()
+        .map(|u| (u.id, u))
+        .collect();
+
+    // 组装响应
+    let list = records
+        .into_iter()
+        .map(|r| {
+            let proc = processes.get(&r.process_id);
+            let ord = proc.and_then(|p| orders.get(&p.order_id));
+            let usr = users.get(&r.user_id);
+
+            // 获取订单第一张图片
+            let order_image = ord.and_then(|o| {
+                o.images.as_ref().and_then(|imgs| {
+                    imgs.as_array()
+                        .and_then(|arr| arr.first())
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                })
+            });
+
+            PieceRecordResponse {
+                id: r.id,
+                process_id: r.process_id,
+                user_id: r.user_id,
+                boss_id: r.boss_id,
+                quantity: r.quantity,
+                amount: r.amount,
+                status: r.status,
+                recorded_by: r.recorded_by,
+                recorded_at: r.recorded_at,
+                process_name: proc.map(|p| p.name.clone()),
+                user_name: usr.map(|u| u.display_name.clone().unwrap_or(u.username.clone())),
+                order_id: proc.map(|p| p.order_id),
+                order_name: ord.map(|o| o.product_name.clone()),
+                order_image,
+                piece_price: proc.map(|p| p.piece_price),
+            }
+        })
+        .collect();
 
     Ok(ListData { list, total })
 }
@@ -115,15 +191,59 @@ pub async fn create(db: &DbConn, dto: CreatePieceRecordDto, claims: &Claims) -> 
     Ok(model.insert(db).await?)
 }
 
-pub async fn get_one(db: &DbConn, id: Uuid, boss_id: Uuid) -> Result<Model> {
-    let record = piece_record::Entity::find_by_id(id)
+pub async fn get_one(db: &DbConn, id: Uuid, claims: &Claims) -> Result<PieceRecordResponse> {
+    let record = piece_record::Entity::load()
+        .filter_by_id(id)
+        .with(entity::user::Entity)
+        .with((entity::process::Entity, entity::order::Entity))
         .one(db)
         .await?
         .ok_or_else(|| AppError::NotFound(format!("PieceRecord {} not found", id)))?;
-    if record.boss_id != boss_id {
-        return Err(AppError::Forbidden);
+
+    // Boss can access records they own; Staff can access their own records
+    match claims.role {
+        Role::Boss => {
+            if record.boss_id != claims.sub {
+                return Err(AppError::Forbidden);
+            }
+        }
+        Role::Staff => {
+            if record.user_id != claims.sub {
+                return Err(AppError::Forbidden);
+            }
+        }
     }
-    Ok(record)
+
+    let proc = record.process.as_ref();
+    let ord = proc.and_then(|p| p.order.as_ref());
+    let usr = record.user.as_ref();
+
+    let order_image = ord.and_then(|o| {
+        o.images.as_ref().and_then(|imgs| {
+            imgs.as_array()
+                .and_then(|arr| arr.first())
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+        })
+    });
+
+    Ok(PieceRecordResponse {
+        id: record.id,
+        process_id: record.process_id,
+        user_id: record.user_id,
+        boss_id: record.boss_id,
+        quantity: record.quantity,
+        amount: record.amount,
+        status: record.status,
+        recorded_by: record.recorded_by,
+        recorded_at: record.recorded_at,
+        process_name: proc.map(|p| p.name.clone()),
+        user_name: usr.map(|u| u.display_name.clone().unwrap_or(u.username.clone())),
+        order_id: proc.map(|p| p.order_id),
+        order_name: ord.map(|o| o.product_name.clone()),
+        order_image,
+        piece_price: proc.map(|p| p.piece_price),
+    })
 }
 
 pub async fn update(
@@ -201,4 +321,32 @@ pub async fn reject(db: &DbConn, id: Uuid, boss_id: Uuid) -> Result<Model> {
     let mut model: piece_record::ActiveModel = record.into();
     model.status = Set(PieceRecordStatus::Rejected);
     Ok(model.update(db).await?)
+}
+
+pub async fn batch_approve(db: &DbConn, ids: Vec<Uuid>, boss_id: Uuid) -> Result<u64> {
+    let result = piece_record::Entity::update_many()
+        .col_expr(
+            piece_record::Column::Status,
+            sea_orm::sea_query::Expr::value(PieceRecordStatus::Approved),
+        )
+        .filter(piece_record::Column::Id.is_in(ids))
+        .filter(piece_record::Column::BossId.eq(boss_id))
+        .filter(piece_record::Column::Status.eq(PieceRecordStatus::Pending))
+        .exec(db)
+        .await?;
+    Ok(result.rows_affected)
+}
+
+pub async fn batch_reject(db: &DbConn, ids: Vec<Uuid>, boss_id: Uuid) -> Result<u64> {
+    let result = piece_record::Entity::update_many()
+        .col_expr(
+            piece_record::Column::Status,
+            sea_orm::sea_query::Expr::value(PieceRecordStatus::Rejected),
+        )
+        .filter(piece_record::Column::Id.is_in(ids))
+        .filter(piece_record::Column::BossId.eq(boss_id))
+        .filter(piece_record::Column::Status.eq(PieceRecordStatus::Pending))
+        .exec(db)
+        .await?;
+    Ok(result.rows_affected)
 }

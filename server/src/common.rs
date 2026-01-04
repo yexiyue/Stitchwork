@@ -30,7 +30,7 @@ pub struct QueryParams {
     pub search: Option<String>,
     pub start_date: Option<String>,
     pub end_date: Option<String>,
-    pub status: Option<String>,
+    pub status: Option<Vec<String>>,
 }
 
 fn default_page() -> u64 {

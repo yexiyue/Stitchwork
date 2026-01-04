@@ -44,3 +44,18 @@ pub struct UpdateProfileRequest {
     pub phone: Option<String>,
     pub avatar: Option<String>,
 }
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChangePasswordRequest {
+    pub old_password: String,
+    pub new_password: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RegisterStaffRequest {
+    pub username: String,
+    pub password: String,
+    pub invite_code: String,
+}

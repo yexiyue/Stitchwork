@@ -17,7 +17,7 @@ export interface QueryParams {
   search?: string;
   startDate?: string;
   endDate?: string;
-  status?: string;
+  status?: string[];
   userId?: string;
   orderId?: string;
 }

@@ -4,8 +4,8 @@ use sea_orm::{ColumnTrait, DbConn, EntityTrait, ModelTrait, QueryFilter, QuerySe
 use uuid::Uuid;
 
 use super::dto::{
-    CustomerSummary, CustomerSummaryList, OrderStats, ProcessProgress, WorkerProduction,
-    WorkerProductionList, WorkerStatsParams,
+    CustomerSummary, CustomerSummaryList, DailyStat, DailyStatsList, GroupStat, GroupStatsList,
+    OrderStats, ProcessProgress, WorkerProduction, WorkerProductionList, WorkerStatsParams,
 };
 use crate::entity::order::OrderStatus;
 use crate::entity::piece_record::PieceRecordStatus;
@@ -145,4 +145,191 @@ pub async fn worker_production(
     }
 
     Ok(WorkerProductionList { list })
+}
+
+/// Daily stats for trend chart
+/// For boss: returns aggregated stats for all workers
+/// For staff: returns stats for the individual user
+pub async fn daily_stats(
+    db: &DbConn,
+    boss_id: Option<Uuid>,
+    user_id: Option<Uuid>,
+    params: WorkerStatsParams,
+) -> Result<DailyStatsList> {
+    use std::collections::BTreeMap;
+
+    let mut query = piece_record::Entity::find()
+        .filter(piece_record::Column::Status.eq(PieceRecordStatus::Approved));
+
+    // For boss, filter by boss_id; for staff, filter by user_id
+    if let Some(bid) = boss_id {
+        query = query.filter(piece_record::Column::BossId.eq(bid));
+    }
+    if let Some(uid) = user_id {
+        query = query.filter(piece_record::Column::UserId.eq(uid));
+    }
+
+    if let Some(ref start) = params.start_date {
+        if let Ok(date) = NaiveDate::parse_from_str(start, "%Y-%m-%d") {
+            query = query
+                .filter(piece_record::Column::RecordedAt.gte(date.and_hms_opt(0, 0, 0).unwrap()));
+        }
+    }
+    if let Some(ref end) = params.end_date {
+        if let Ok(date) = NaiveDate::parse_from_str(end, "%Y-%m-%d") {
+            query = query.filter(
+                piece_record::Column::RecordedAt.lte(date.and_hms_opt(23, 59, 59).unwrap()),
+            );
+        }
+    }
+
+    let records = query.all(db).await?;
+
+    // Group by date
+    let mut daily_map: BTreeMap<String, (i64, Decimal)> = BTreeMap::new();
+    for rec in &records {
+        let date_str = rec.recorded_at.format("%Y-%m-%d").to_string();
+        let entry = daily_map.entry(date_str).or_insert((0, Decimal::ZERO));
+        entry.0 += rec.quantity as i64;
+        entry.1 += rec.amount;
+    }
+
+    let list = daily_map
+        .into_iter()
+        .map(|(date, (qty, amt))| DailyStat {
+            date,
+            total_quantity: qty,
+            total_amount: amt,
+        })
+        .collect();
+
+    Ok(DailyStatsList { list })
+}
+
+/// Stats grouped by order
+pub async fn stats_by_order(
+    db: &DbConn,
+    boss_id: Option<Uuid>,
+    user_id: Option<Uuid>,
+    params: WorkerStatsParams,
+) -> Result<GroupStatsList> {
+    use std::collections::HashMap;
+
+    let mut query = piece_record::Entity::find()
+        .filter(piece_record::Column::Status.eq(PieceRecordStatus::Approved));
+
+    if let Some(bid) = boss_id {
+        query = query.filter(piece_record::Column::BossId.eq(bid));
+    }
+    if let Some(uid) = user_id {
+        query = query.filter(piece_record::Column::UserId.eq(uid));
+    }
+
+    if let Some(ref start) = params.start_date {
+        if let Ok(date) = NaiveDate::parse_from_str(start, "%Y-%m-%d") {
+            query = query
+                .filter(piece_record::Column::RecordedAt.gte(date.and_hms_opt(0, 0, 0).unwrap()));
+        }
+    }
+    if let Some(ref end) = params.end_date {
+        if let Ok(date) = NaiveDate::parse_from_str(end, "%Y-%m-%d") {
+            query = query.filter(
+                piece_record::Column::RecordedAt.lte(date.and_hms_opt(23, 59, 59).unwrap()),
+            );
+        }
+    }
+
+    let records = query.all(db).await?;
+
+    // Get order_id via process_id, then group by order_id
+    let mut order_map: HashMap<Uuid, (i64, Decimal)> = HashMap::new();
+    for rec in &records {
+        // Get process to find order_id
+        let proc = process::Entity::find_by_id(rec.process_id).one(db).await?;
+        if let Some(p) = proc {
+            let entry = order_map.entry(p.order_id).or_insert((0, Decimal::ZERO));
+            entry.0 += rec.quantity as i64;
+            entry.1 += rec.amount;
+        }
+    }
+
+    let mut list = Vec::new();
+    for (order_id, (qty, amt)) in order_map {
+        let ord = order::Entity::find_by_id(order_id).one(db).await?;
+        let name = ord.map(|o| o.product_name).unwrap_or_default();
+        list.push(GroupStat {
+            id: order_id,
+            name,
+            total_quantity: qty,
+            total_amount: amt,
+        });
+    }
+
+    // Sort by quantity descending
+    list.sort_by(|a, b| b.total_quantity.cmp(&a.total_quantity));
+
+    Ok(GroupStatsList { list })
+}
+
+/// Stats grouped by process
+pub async fn stats_by_process(
+    db: &DbConn,
+    boss_id: Option<Uuid>,
+    user_id: Option<Uuid>,
+    params: WorkerStatsParams,
+) -> Result<GroupStatsList> {
+    use std::collections::HashMap;
+
+    let mut query = piece_record::Entity::find()
+        .filter(piece_record::Column::Status.eq(PieceRecordStatus::Approved));
+
+    if let Some(bid) = boss_id {
+        query = query.filter(piece_record::Column::BossId.eq(bid));
+    }
+    if let Some(uid) = user_id {
+        query = query.filter(piece_record::Column::UserId.eq(uid));
+    }
+
+    if let Some(ref start) = params.start_date {
+        if let Ok(date) = NaiveDate::parse_from_str(start, "%Y-%m-%d") {
+            query = query
+                .filter(piece_record::Column::RecordedAt.gte(date.and_hms_opt(0, 0, 0).unwrap()));
+        }
+    }
+    if let Some(ref end) = params.end_date {
+        if let Ok(date) = NaiveDate::parse_from_str(end, "%Y-%m-%d") {
+            query = query.filter(
+                piece_record::Column::RecordedAt.lte(date.and_hms_opt(23, 59, 59).unwrap()),
+            );
+        }
+    }
+
+    let records = query.all(db).await?;
+
+    // Group by process_id
+    let mut process_map: HashMap<Uuid, (i64, Decimal)> = HashMap::new();
+    for rec in &records {
+        let entry = process_map
+            .entry(rec.process_id)
+            .or_insert((0, Decimal::ZERO));
+        entry.0 += rec.quantity as i64;
+        entry.1 += rec.amount;
+    }
+
+    let mut list = Vec::new();
+    for (process_id, (qty, amt)) in process_map {
+        let proc = process::Entity::find_by_id(process_id).one(db).await?;
+        let name = proc.map(|p| p.name).unwrap_or_default();
+        list.push(GroupStat {
+            id: process_id,
+            name,
+            total_quantity: qty,
+            total_amount: amt,
+        });
+    }
+
+    // Sort by quantity descending
+    list.sort_by(|a, b| b.total_quantity.cmp(&a.total_quantity));
+
+    Ok(GroupStatsList { list })
 }

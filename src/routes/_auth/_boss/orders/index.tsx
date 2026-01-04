@@ -9,8 +9,10 @@ import {
   Dropdown,
   Image,
   ImageViewer,
+  CalendarPicker,
+  Divider,
 } from "antd-mobile";
-import { Plus, Search, Filter, ImageOff, Users } from "lucide-react";
+import { Plus, ImageOff, Calendar, Filter, Users } from "lucide-react";
 import { useDeleteOrder, useCustomers } from "@/hooks";
 import type { Order, OrderStatus } from "@/types";
 import { RelativeTime, VirtualList } from "@/components";
@@ -18,9 +20,9 @@ import { orderApi } from "@/api";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useDebounceFn } from "ahooks";
 import { useState, useRef } from "react";
-import { motion, AnimatePresence } from "motion/react";
 import type { SearchBarRef } from "antd-mobile/es/components/search-bar";
 import type { DropdownRef } from "antd-mobile/es/components/dropdown";
+import dayjs from "dayjs";
 
 export const Route = createFileRoute("/_auth/_boss/orders/")({
   component: OrdersPage,
@@ -50,9 +52,11 @@ function OrdersPage() {
   const deleteMutation = useDeleteOrder();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [showSearch, setShowSearch] = useState(false);
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [customerFilter, setCustomerFilter] = useState("");
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [calendarVisible, setCalendarVisible] = useState(false);
   const searchInputRef = useRef<SearchBarRef>(null);
   const dropdownRef = useRef<DropdownRef>(null);
 
@@ -66,14 +70,25 @@ function OrdersPage() {
   const queryClient = useQueryClient();
   const { data, isFetching, fetchNextPage, hasNextPage, refetch } =
     useInfiniteQuery({
-      queryKey: ["orders", debouncedSearch, statusFilter, customerFilter],
+      queryKey: [
+        "orders",
+        debouncedSearch,
+        statusFilter,
+        customerFilter,
+        startDate?.toISOString(),
+        endDate?.toISOString(),
+      ],
       queryFn: ({ pageParam = 1 }) =>
         orderApi.list({
           page: pageParam,
           pageSize: PAGE_SIZE,
           search: debouncedSearch,
-          status: statusFilter || undefined,
+          status: statusFilter.length ? statusFilter : undefined,
           customerId: customerFilter || undefined,
+          startDate: startDate
+            ? dayjs(startDate).format("YYYY-MM-DD")
+            : undefined,
+          endDate: endDate ? dayjs(endDate).format("YYYY-MM-DD") : undefined,
         }),
       initialPageParam: 1,
       getNextPageParam: (lastPage, allPages) =>
@@ -106,121 +121,124 @@ function OrdersPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      {/* 顶部栏：标题 + 新增按钮 */}
       <div className="p-4 pb-2">
-        <div className="flex items-center justify-between mb-3">
-          <AnimatePresence initial={false}>
-            {!showSearch && (
-              <motion.h1
-                key="title"
-                className="text-xl whitespace-nowrap"
-                initial={{ width: 0, opacity: 0 }}
-                animate={{ width: "auto", opacity: 1 }}
-                exit={{ width: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl">订单管理</h1>
+          <Button
+            size="small"
+            color="primary"
+            onClick={() => navigate({ to: "/orders/new" })}
+          >
+            <div className="flex items-center">
+              <Plus size={16} className="mr-1" />
+              新增
+            </div>
+          </Button>
+        </div>
+      </div>
+
+      {/* 筛选栏 */}
+      <div className="pb-2 flex items-center">
+        <div className="flex-1 ml-4">
+          <SearchBar
+            ref={searchInputRef}
+            placeholder="搜索产品名称"
+            value={search}
+            onChange={(val) => {
+              setSearch(val);
+              updateSearch(val);
+            }}
+          />
+        </div>
+        <Dropdown ref={dropdownRef}>
+          <Dropdown.Item
+            key="status"
+            title={
+              <Filter
+                size={16}
+                className={statusFilter.length ? "text-blue-500" : "text-gray-500"}
+              />
+            }
+          >
+            <div className="p-2">
+              <div
+                className={`p-3 rounded ${!statusFilter.length ? "bg-blue-50 text-blue-500" : ""}`}
+                onClick={() => {
+                  setStatusFilter([]);
+                  dropdownRef.current?.close();
+                }}
               >
-                订单管理
-              </motion.h1>
-            )}
-          </AnimatePresence>
-          <div className="flex items-center gap-2 flex-1 justify-end">
-            <AnimatePresence initial={false}>
-              {showSearch && (
-                <motion.div
-                  key="search"
-                  className="flex-1 overflow-hidden"
-                  initial={{ width: 0 }}
-                  animate={{ width: "100%" }}
-                  exit={{ width: 0 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <SearchBar
-                    ref={searchInputRef}
-                    placeholder="搜索产品名称"
-                    value={search}
-                    onChange={(val) => {
-                      setSearch(val);
-                      updateSearch(val);
-                    }}
-                    onCancel={() => {
-                      setShowSearch(false);
-                      setSearch("");
-                      updateSearch("");
-                    }}
-                    showCancelButton
-                    autoFocus
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-            {!showSearch && (
-              <>
-                <Button
-                  size="small"
-                  fill="none"
+                全部状态
+              </div>
+              {STATUS_OPTIONS.filter(opt => opt.key).map((opt) => (
+                <div
+                  key={opt.key}
+                  className={`p-3 rounded flex items-center justify-between ${
+                    statusFilter.includes(opt.key) ? "bg-blue-50 text-blue-500" : ""
+                  }`}
                   onClick={() => {
-                    setShowSearch(true);
-                    setTimeout(() => searchInputRef.current?.focus(), 100);
+                    setStatusFilter(prev =>
+                      prev.includes(opt.key)
+                        ? prev.filter(s => s !== opt.key)
+                        : [...prev, opt.key]
+                    );
                   }}
                 >
-                  <Search size={20} />
-                </Button>
-                <Dropdown ref={dropdownRef}>
-                  <Dropdown.Item key="status" title={<Filter size={20} />}>
-                    <div className="p-2">
-                      {STATUS_OPTIONS.map((opt) => (
-                        <div
-                          key={opt.key}
-                          className={`p-3 rounded ${statusFilter === opt.key ? "bg-blue-50 text-blue-500" : ""}`}
-                          onClick={() => {
-                            setStatusFilter(opt.key);
-                            dropdownRef.current?.close();
-                          }}
-                        >
-                          {opt.title}
-                        </div>
-                      ))}
-                    </div>
-                  </Dropdown.Item>
-                  <Dropdown.Item key="customer" title={<Users size={20} />}>
-                    <div className="p-2 max-h-64 overflow-y-auto">
-                      <div
-                        className={`p-3 rounded ${customerFilter === "" ? "bg-blue-50 text-blue-500" : ""}`}
-                        onClick={() => {
-                          setCustomerFilter("");
-                          dropdownRef.current?.close();
-                        }}
-                      >
-                        全部客户
-                      </div>
-                      {customersData?.list.map((c) => (
-                        <div
-                          key={c.id}
-                          className={`p-3 rounded ${customerFilter === c.id ? "bg-blue-50 text-blue-500" : ""}`}
-                          onClick={() => {
-                            setCustomerFilter(c.id);
-                            dropdownRef.current?.close();
-                          }}
-                        >
-                          {c.name}
-                        </div>
-                      ))}
-                    </div>
-                  </Dropdown.Item>
-                </Dropdown>
-                <Button
-                  size="small"
-                  color="primary"
-                  onClick={() => navigate({ to: "/orders/new" })}
+                  {opt.title}
+                  {statusFilter.includes(opt.key) && <span>✓</span>}
+                </div>
+              ))}
+            </div>
+          </Dropdown.Item>
+          <Dropdown.Item
+            key="customer"
+            title={
+              <Users
+                size={16}
+                className={customerFilter ? "text-blue-500" : "text-gray-500"}
+              />
+            }
+          >
+            <div className="p-2 max-h-64 overflow-y-auto">
+              <div
+                className={`p-3 rounded ${
+                  customerFilter === "" ? "bg-blue-50 text-blue-500" : ""
+                }`}
+                onClick={() => {
+                  setCustomerFilter("");
+                  dropdownRef.current?.close();
+                }}
+              >
+                全部客户
+              </div>
+              {customersData?.list.map((c) => (
+                <div
+                  key={c.id}
+                  className={`p-3 rounded ${
+                    customerFilter === c.id ? "bg-blue-50 text-blue-500" : ""
+                  }`}
+                  onClick={() => {
+                    setCustomerFilter(c.id);
+                    dropdownRef.current?.close();
+                  }}
                 >
-                  <div className="flex items-center">
-                    <Plus size={16} className="mr-1" />
-                    新增
-                  </div>
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
+                  {c.name}
+                </div>
+              ))}
+            </div>
+          </Dropdown.Item>
+          <Dropdown.Item
+            key="date"
+            title={
+              <Calendar
+                size={16}
+                className={startDate ? "text-blue-500" : "text-gray-500"}
+              />
+            }
+            onClick={() => setCalendarVisible(true)}
+          />
+        </Dropdown>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
@@ -232,7 +250,14 @@ function OrdersPage() {
           onRefresh={refetch}
           keyExtractor={(o) => o.id}
           emptyText="暂无订单"
-          searchEmpty={!!(debouncedSearch || statusFilter || customerFilter) && !list.length}
+          searchEmpty={
+            !!(
+              debouncedSearch ||
+              statusFilter ||
+              customerFilter ||
+              startDate
+            ) && !list.length
+          }
           estimateSize={108}
           renderItem={(order) => (
             <SwipeAction
@@ -280,7 +305,9 @@ function OrdersPage() {
                 )}
                 <div className="flex-1 min-w-0 flex flex-col justify-between">
                   <div className="flex justify-between items-start">
-                    <span className="font-medium truncate">{order.productName}</span>
+                    <span className="font-medium truncate">
+                      {order.productName}
+                    </span>
                     <Tag
                       color={STATUS_MAP[order.status].color}
                       fill="outline"
@@ -301,6 +328,28 @@ function OrdersPage() {
           )}
         />
       </div>
+
+      {/* 日期范围选择器 */}
+      <CalendarPicker
+        visible={calendarVisible}
+        selectionMode="range"
+        onClose={() => {
+          setCalendarVisible(false);
+          dropdownRef.current?.close();
+        }}
+        onConfirm={(val) => {
+          if (val && val.length === 2) {
+            setStartDate(val[0]);
+            setEndDate(val[1]);
+          } else {
+            setStartDate(null);
+            setEndDate(null);
+          }
+          setCalendarVisible(false);
+          dropdownRef.current?.close();
+        }}
+        title="选择日期范围"
+      />
     </div>
   );
 }

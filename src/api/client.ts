@@ -47,14 +47,18 @@ async function request<T>(
 
 export const client = {
   get: <T>(path: string, params?: object) => {
-    const query = params
-      ? "?" + new URLSearchParams(
-          Object.entries(params)
-            .filter(([, v]) => v !== undefined && v !== null)
-            .map(([k, v]) => [k, String(v)])
-        ).toString()
-      : "";
-    return request<T>(path + query);
+    if (!params) return request<T>(path);
+    const searchParams = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+      if (v === undefined || v === null) continue;
+      if (Array.isArray(v)) {
+        v.forEach((item) => searchParams.append(k, String(item)));
+      } else {
+        searchParams.append(k, String(v));
+      }
+    }
+    const query = searchParams.toString();
+    return request<T>(path + (query ? `?${query}` : ""));
   },
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "POST", body: JSON.stringify(body) }),

@@ -5,8 +5,12 @@ use serde::Deserialize;
 use std::sync::Arc;
 use uuid::Uuid;
 
-use super::dto::{CustomerSummaryList, OrderStats, WorkerProductionList, WorkerStatsParams};
+use super::dto::{
+    CustomerSummaryList, DailyStatsList, GroupStatsList, OrderStats, WorkerProductionList,
+    WorkerStatsParams,
+};
 use crate::common::ApiResponse;
+use crate::entity::user::Role;
 use crate::error::Result;
 use crate::service::auth::Claims;
 use crate::AppState;
@@ -27,11 +31,26 @@ pub struct CustomerStatsPath;
 #[typed_path("/stats/workers")]
 pub struct WorkerStatsPath;
 
+#[derive(TypedPath)]
+#[typed_path("/stats/daily")]
+pub struct DailyStatsPath;
+
+#[derive(TypedPath)]
+#[typed_path("/stats/by-order")]
+pub struct StatsByOrderPath;
+
+#[derive(TypedPath)]
+#[typed_path("/stats/by-process")]
+pub struct StatsByProcessPath;
+
 pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .typed_get(order_stats)
         .typed_get(customer_stats)
         .typed_get(worker_stats)
+        .typed_get(daily_stats)
+        .typed_get(stats_by_order)
+        .typed_get(stats_by_process)
 }
 
 async fn order_stats(
@@ -65,5 +84,54 @@ async fn worker_stats(
     claims.require_boss()?;
     Ok(ApiResponse::ok(
         service::worker_production(&state.db, claims.sub, params).await?,
+    ))
+}
+
+async fn daily_stats(
+    _: DailyStatsPath,
+    State(state): State<Arc<AppState>>,
+    Extension(claims): Extension<Claims>,
+    Query(params): Query<WorkerStatsParams>,
+) -> Result<ApiResponse<DailyStatsList>> {
+    // For staff, filter by their own user_id; for boss, filter by boss_id
+    let (boss_id, user_id) = if claims.role == Role::Staff {
+        (None, Some(claims.sub))
+    } else {
+        (Some(claims.sub), None)
+    };
+    Ok(ApiResponse::ok(
+        service::daily_stats(&state.db, boss_id, user_id, params).await?,
+    ))
+}
+
+async fn stats_by_order(
+    _: StatsByOrderPath,
+    State(state): State<Arc<AppState>>,
+    Extension(claims): Extension<Claims>,
+    Query(params): Query<WorkerStatsParams>,
+) -> Result<ApiResponse<GroupStatsList>> {
+    let (boss_id, user_id) = if claims.role == Role::Staff {
+        (None, Some(claims.sub))
+    } else {
+        (Some(claims.sub), None)
+    };
+    Ok(ApiResponse::ok(
+        service::stats_by_order(&state.db, boss_id, user_id, params).await?,
+    ))
+}
+
+async fn stats_by_process(
+    _: StatsByProcessPath,
+    State(state): State<Arc<AppState>>,
+    Extension(claims): Extension<Claims>,
+    Query(params): Query<WorkerStatsParams>,
+) -> Result<ApiResponse<GroupStatsList>> {
+    let (boss_id, user_id) = if claims.role == Role::Staff {
+        (None, Some(claims.sub))
+    } else {
+        (Some(claims.sub), None)
+    };
+    Ok(ApiResponse::ok(
+        service::stats_by_process(&state.db, boss_id, user_id, params).await?,
     ))
 }

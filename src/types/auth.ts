@@ -33,6 +33,12 @@ export interface RegisterRequest {
   password: string;
 }
 
+export interface RegisterStaffRequest {
+  username: string;
+  password: string;
+  inviteCode: string;
+}
+
 export interface InviteCodeResponse {
   code: string;
   expiresAt: number;
@@ -46,6 +52,11 @@ export interface UpdateProfileRequest {
   displayName?: string;
   phone?: string;
   avatar?: string;
+}
+
+export interface ChangePasswordRequest {
+  oldPassword: string;
+  newPassword: string;
 }
 
 export interface CreateWorkshopRequest {

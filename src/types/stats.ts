@@ -40,3 +40,26 @@ export interface WorkerStatsParams {
   startDate?: string;
   endDate?: string;
 }
+
+// Daily stats for trend chart
+export interface DailyStat {
+  date: string;
+  totalQuantity: number;
+  totalAmount: string;
+}
+
+export interface DailyStatsList {
+  list: DailyStat[];
+}
+
+// Group stats for stacked bar chart
+export interface GroupStat {
+  id: string;
+  name: string;
+  totalQuantity: number;
+  totalAmount: string;
+}
+
+export interface GroupStatsList {
+  list: GroupStat[];
+}

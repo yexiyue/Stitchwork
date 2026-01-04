@@ -16,8 +16,11 @@ pub struct Model {
     pub created_at: DateTimeUtc,
 
     #[serde(skip)]
-    #[sea_orm(has_many)]
+    #[sea_orm(has_many, relation_enum = "HasStaffs", via_rel = "WorkshopMember")]
     pub staffs: HasMany<super::user::Entity>,
+
+    #[sea_orm(belongs_to, relation_enum = "HasOwner", from = "owner_id", to = "id")]
+    pub boss: HasOne<super::user::Entity>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

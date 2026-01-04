@@ -1,5 +1,6 @@
 pub mod auth;
 pub mod customer;
+pub mod home;
 pub mod order;
 pub mod payroll;
 pub mod piece_record;
@@ -19,6 +20,7 @@ pub fn routes() -> Router<Arc<AppState>> {
     let protected = Router::new()
         .merge(auth::protected_router())
         .merge(customer::router())
+        .merge(home::router())
         .merge(order::router())
         .merge(process::router())
         .merge(piece_record::router())

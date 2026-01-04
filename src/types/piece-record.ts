@@ -16,6 +16,8 @@ export interface PieceRecord {
   userName?: string;
   orderName?: string;
   orderId?: string;
+  orderImage?: string;
+  piecePrice?: string;
 }
 
 export interface CreatePieceRecordDto {

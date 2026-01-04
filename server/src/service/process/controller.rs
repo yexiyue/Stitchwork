@@ -60,9 +60,8 @@ async fn get_one(
     State(state): State<Arc<AppState>>,
     Extension(claims): Extension<Claims>,
 ) -> Result<ApiResponse<Model>> {
-    claims.require_boss()?;
     Ok(ApiResponse::ok(
-        service::get_one(&state.db, id, claims.sub).await?,
+        service::get_one(&state.db, id, &claims).await?,
     ))
 }
 

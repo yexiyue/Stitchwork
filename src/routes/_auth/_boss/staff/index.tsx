@@ -165,7 +165,7 @@ function StaffPage() {
           <div className="text-center py-4">
             <div className="flex justify-center mb-4">
               <QRCodeSVG
-                value={`stitch://bind?code=${inviteCode?.code}`}
+                value={`${window.location.origin}/register-staff?code=${inviteCode?.code}`}
                 size={160}
               />
             </div>

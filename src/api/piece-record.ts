@@ -22,4 +22,8 @@ export const pieceRecordApi = {
     client.post<PieceRecord>(`/api/piece-records/${id}/approve`),
   reject: (id: string) =>
     client.post<PieceRecord>(`/api/piece-records/${id}/reject`),
+  batchApprove: (ids: string[]) =>
+    client.post<number>("/api/piece-records/batch-approve", { ids }),
+  batchReject: (ids: string[]) =>
+    client.post<number>("/api/piece-records/batch-reject", { ids }),
 };

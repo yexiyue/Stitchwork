@@ -44,8 +44,16 @@ pub struct Model {
     pub payrolls: HasMany<super::payroll::Entity>,
 
     #[serde(skip)]
-    #[sea_orm(belongs_to, from = "workshop_id", to = "id")]
+    #[sea_orm(
+        belongs_to,
+        relation_enum = "WorkshopMember",
+        from = "workshop_id",
+        to = "id"
+    )]
     pub workshop: HasOne<super::workshop::Entity>,
+
+    #[sea_orm(has_many, relation_enum = "WorkshopOwner", via_rel = "HasOwner")]
+    pub workshops: HasMany<super::workshop::Entity>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

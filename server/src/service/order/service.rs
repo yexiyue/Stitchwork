@@ -3,6 +3,7 @@ use sea_orm::{
     ActiveModelTrait, ActiveValue::NotSet, ColumnTrait, DbConn, EntityTrait, PaginatorTrait,
     QueryFilter, QueryOrder, Set,
 };
+use tracing::info;
 use uuid::Uuid;
 
 use super::dto::{CreateOrderDto, OrderQueryParams, UpdateOrderDto, UpdateOrderStatusDto};
@@ -45,8 +46,9 @@ pub async fn list(
     if let Some(customer_id) = filter.customer_id {
         query = query.filter(Column::CustomerId.eq(customer_id));
     }
-    if let Some(ref status) = filter.status {
-        query = query.filter(Column::Status.eq(status));
+    if let Some(ref status) = params.status {
+        info!("status: {:#?}", status);
+        query = query.filter(Column::Status.is_in(status));
     }
 
     if let Some(ref search) = params.search {
@@ -105,13 +107,33 @@ pub async fn create(db: &DbConn, dto: CreateOrderDto) -> Result<Model> {
     Ok(model.insert(db).await?)
 }
 
-pub async fn get_one(db: &DbConn, id: Uuid, boss_id: Uuid) -> Result<Model> {
+pub async fn get_one(db: &DbConn, id: Uuid, claims: &Claims) -> Result<Model> {
     let order = order::Entity::find_by_id(id)
         .one(db)
         .await?
         .ok_or_else(|| AppError::NotFound(format!("Order {} not found", id)))?;
-    if order.boss_id != boss_id {
-        return Err(AppError::Forbidden);
+    // Boss can access their own orders; Staff can access orders in their workshop
+    match claims.role {
+        Role::Boss => {
+            if order.boss_id != claims.sub {
+                return Err(AppError::Forbidden);
+            }
+        }
+        Role::Staff => {
+            // Verify staff belongs to the workshop that owns this order
+            let staff = user::Entity::find_by_id(claims.sub)
+                .one(db)
+                .await?
+                .ok_or(AppError::Forbidden)?;
+            let workshop_id = staff.workshop_id.ok_or(AppError::Forbidden)?;
+            let ws = workshop::Entity::find_by_id(workshop_id)
+                .one(db)
+                .await?
+                .ok_or(AppError::Forbidden)?;
+            if order.boss_id != ws.owner_id {
+                return Err(AppError::Forbidden);
+            }
+        }
     }
     Ok(order)
 }

@@ -5,6 +5,7 @@ import { pieceRecordApi, orderApi, processApi } from "@/api";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useStaffList } from "@/hooks";
+import { OrderPicker } from "@/components";
 
 export const Route = createFileRoute("/_auth/_boss/records/new")({
   component: NewRecordPage,
@@ -18,11 +19,12 @@ function NewRecordPage() {
   const [orderId, setOrderId] = useState("");
   const [processId, setProcessId] = useState("");
   const [quantity, setQuantity] = useState(1);
+  const [orderSheetVisible, setOrderSheetVisible] = useState(false);
 
   const { data: staffList } = useStaffList();
   const { data: ordersData } = useQuery({
-    queryKey: ["orders-all"],
-    queryFn: () => orderApi.list({ pageSize: 1000 }),
+    queryKey: ["orders-active"],
+    queryFn: () => orderApi.list({ pageSize: 1000, status: ["pending", "processing"] }),
   });
   const { data: processesData } = useQuery({
     queryKey: ["processes", orderId],
@@ -44,18 +46,13 @@ function NewRecordPage() {
     value: s.id,
   }));
 
-  const orderOptions = (ordersData?.list ?? []).map((o: Order) => ({
-    label: o.productName,
-    value: o.id,
-  }));
-
   const processOptions = (processesData?.list ?? []).map((p: Process) => ({
     label: `${p.name} (¥${p.piecePrice})`,
     value: p.id,
   }));
 
   const selectedStaff = staffOptions.find((o) => o.value === userId);
-  const selectedOrder = orderOptions.find((o) => o.value === orderId);
+  const selectedOrder = (ordersData?.list ?? []).find((o) => o.id === orderId);
   const selectedProcess = (processesData?.list ?? []).find((p) => p.id === processId);
 
   const totalAmount = selectedProcess ? (parseFloat(selectedProcess.piecePrice) * quantity).toFixed(2) : "0.00";
@@ -65,12 +62,14 @@ function NewRecordPage() {
     if (val) setUserId(val[0] as string);
   };
 
-  const handleSelectOrder = async () => {
-    const val = await Picker.prompt({ columns: [orderOptions] });
-    if (val) {
-      setOrderId(val[0] as string);
-      setProcessId("");
-    }
+  const handleSelectOrder = () => {
+    setOrderSheetVisible(true);
+  };
+
+  const handleOrderSelect = (order: Order) => {
+    setOrderId(order.id);
+    setProcessId("");
+    setOrderSheetVisible(false);
   };
 
   const handleSelectProcess = async () => {
@@ -118,7 +117,7 @@ function NewRecordPage() {
             required
             clickable
             onClick={handleSelectOrder}
-            extra={selectedOrder?.label || "请选择订单"}
+            extra={selectedOrder?.productName || "请选择订单"}
           />
           <Form.Item
             label="工序"
@@ -135,6 +134,12 @@ function NewRecordPage() {
           </Form.Item>
         </Form>
       </div>
+      <OrderPicker
+        visible={orderSheetVisible}
+        orders={ordersData?.list ?? []}
+        onSelect={handleOrderSelect}
+        onClose={() => setOrderSheetVisible(false)}
+      />
     </div>
   );
 }

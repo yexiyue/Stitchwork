@@ -85,13 +85,33 @@ pub async fn create(db: &DbConn, dto: CreateProcessDto) -> Result<Model> {
     Ok(model.insert(db).await?)
 }
 
-pub async fn get_one(db: &DbConn, id: Uuid, boss_id: Uuid) -> Result<Model> {
+pub async fn get_one(db: &DbConn, id: Uuid, claims: &Claims) -> Result<Model> {
     let process = process::Entity::find_by_id(id)
         .one(db)
         .await?
         .ok_or_else(|| AppError::NotFound(format!("Process {} not found", id)))?;
-    if process.boss_id != boss_id {
-        return Err(AppError::Forbidden);
+    // Boss can access their own processes; Staff can access processes in their workshop
+    match claims.role {
+        Role::Boss => {
+            if process.boss_id != claims.sub {
+                return Err(AppError::Forbidden);
+            }
+        }
+        Role::Staff => {
+            // Verify staff belongs to the workshop that owns this process
+            let staff = user::Entity::find_by_id(claims.sub)
+                .one(db)
+                .await?
+                .ok_or(AppError::Forbidden)?;
+            let workshop_id = staff.workshop_id.ok_or(AppError::Forbidden)?;
+            let ws = workshop::Entity::find_by_id(workshop_id)
+                .one(db)
+                .await?
+                .ok_or(AppError::Forbidden)?;
+            if process.boss_id != ws.owner_id {
+                return Err(AppError::Forbidden);
+            }
+        }
     }
     Ok(process)
 }

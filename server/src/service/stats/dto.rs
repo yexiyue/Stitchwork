@@ -58,3 +58,34 @@ pub struct WorkerStatsParams {
     pub start_date: Option<String>,
     pub end_date: Option<String>,
 }
+
+// Daily stats for trend chart
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DailyStat {
+    pub date: String,
+    pub total_quantity: i64,
+    pub total_amount: Decimal,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DailyStatsList {
+    pub list: Vec<DailyStat>,
+}
+
+// Group stats for stacked bar chart
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GroupStat {
+    pub id: Uuid,
+    pub name: String,
+    pub total_quantity: i64,
+    pub total_amount: Decimal,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GroupStatsList {
+    pub list: Vec<GroupStat>,
+}

@@ -22,7 +22,7 @@ const bossTabs = [
 
 const staffTabs = [
   { key: "/", title: "首页", icon: <Home size={24} /> },
-  { key: "/record", title: "计件", icon: <FileEdit size={24} /> },
+  { key: "/my-records", title: "计件", icon: <FileEdit size={24} /> },
   { key: "/profile", title: "我的", icon: <User size={24} /> },
 ];
 
@@ -36,6 +36,7 @@ function AuthLayout() {
   const subPageMap: Record<string, string> = {
     "/customers": "/profile",
     "/staff": "/profile",
+    "/workshop": "/profile",
   };
   const mappedPath = Object.entries(subPageMap).find(([prefix]) =>
     location.pathname.startsWith(prefix)

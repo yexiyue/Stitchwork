@@ -2,7 +2,9 @@ use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
 };
-use sea_orm::{ActiveModelTrait, ColumnTrait, DbConn, EntityTrait, QueryFilter, Set};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, DbConn, EntityLoaderTrait, EntityTrait, QueryFilter, Set,
+};
 use uuid::Uuid;
 
 use crate::entity::{
@@ -12,10 +14,14 @@ use crate::entity::{
 use crate::error::{AppError, Result};
 use crate::service::workshop::service::to_response;
 
+use std::sync::Arc;
+
 use super::dto::{
-    LoginRequest, LoginResponse, LoginUser, RegisterRequest, UpdateProfileRequest, WorkshopResponse,
+    ChangePasswordRequest, LoginRequest, LoginResponse, LoginUser, RegisterRequest,
+    RegisterStaffRequest, UpdateProfileRequest, WorkshopResponse,
 };
 use super::jwt::create_token;
+use crate::InviteCodes;
 
 pub async fn login(db: &DbConn, req: LoginRequest) -> Result<LoginResponse> {
     let user = user::Entity::find()
@@ -78,6 +84,73 @@ pub async fn register(db: &DbConn, req: RegisterRequest) -> Result<Uuid> {
     Ok(user.id)
 }
 
+pub async fn register_staff(
+    db: &DbConn,
+    invite_codes: &Arc<InviteCodes>,
+    req: RegisterStaffRequest,
+) -> Result<LoginResponse> {
+    // 验证邀请码
+    let mut codes = invite_codes.write().await;
+    let (workshop_id, expires_at) = codes
+        .remove(&req.invite_code)
+        .ok_or_else(|| AppError::BadRequest("邀请码无效".to_string()))?;
+
+    if chrono::Utc::now().timestamp() > expires_at {
+        return Err(AppError::BadRequest("邀请码已过期".to_string()));
+    }
+    drop(codes);
+
+    // 检查用户名是否已存在
+    if user::Entity::find()
+        .filter(user::Column::Username.eq(&req.username))
+        .one(db)
+        .await?
+        .is_some()
+    {
+        return Err(AppError::BadRequest("用户名已存在".to_string()));
+    }
+
+    let password_hash = hash_password(&req.password)?;
+
+    // 创建 Staff 用户并绑定工坊
+    let new_user = user::ActiveModel {
+        id: Set(Uuid::new_v4()),
+        username: Set(req.username.clone()),
+        password_hash: Set(password_hash),
+        role: Set(Role::Staff),
+        display_name: Set(None),
+        phone: Set(None),
+        avatar: Set(None),
+        workshop_id: Set(Some(workshop_id)),
+        created_at: Set(chrono::Utc::now()),
+    };
+
+    let user = new_user.insert(db).await?;
+
+    // 生成 token
+    let token = create_token(user.id, user.role)
+        .map_err(|_| AppError::Internal("Token生成失败".to_string()))?;
+
+    // 获取工坊信息
+    let ws = workshop::Entity::load()
+        .filter_by_id(workshop_id)
+        .one(db)
+        .await?;
+
+    Ok(LoginResponse {
+        token,
+        user: LoginUser {
+            id: user.id,
+            username: user.username,
+            role: user.role,
+            display_name: user.display_name,
+            phone: user.phone,
+            avatar: user.avatar,
+            workshop: ws.as_ref().map(to_response),
+        },
+    })
+}
+
 pub async fn update_profile(db: &DbConn, user_id: Uuid, req: UpdateProfileRequest) -> Result<()> {
     let user = user::Entity::find_by_id(user_id)
         .one(db)
@@ -95,6 +168,33 @@ pub async fn update_profile(db: &DbConn, user_id: Uuid, req: UpdateProfileReques
         active.avatar = Set(Some(v));
     }
     active.update(db).await?;
+    Ok(())
+}
+
+pub async fn change_password(
+    db: &DbConn,
+    user_id: Uuid,
+    req: ChangePasswordRequest,
+) -> Result<()> {
+    let user = user::Entity::find_by_id(user_id)
+        .one(db)
+        .await?
+        .ok_or_else(|| AppError::NotFound("用户不存在".to_string()))?;
+
+    // 验证旧密码
+    let parsed_hash = PasswordHash::new(&user.password_hash)
+        .map_err(|_| AppError::Internal("密码验证失败".to_string()))?;
+
+    Argon2::default()
+        .verify_password(req.old_password.as_bytes(), &parsed_hash)
+        .map_err(|_| AppError::BadRequest("旧密码错误".to_string()))?;
+
+    // 更新新密码
+    let new_hash = hash_password(&req.new_password)?;
+    let mut active: user::ActiveModel = user.into();
+    active.password_hash = Set(new_hash);
+    active.update(db).await?;
+
     Ok(())
 }
 
@@ -125,12 +225,12 @@ async fn get_workshop_for_user(
     let ws = if user.role == Role::Staff {
         // 员工：通过 workshop_id 查找
         match user.workshop_id {
-            Some(id) => workshop::Entity::find_by_id(id).one(db).await?,
+            Some(id) => workshop::Entity::load().filter_by_id(id).one(db).await?,
             None => None,
         }
     } else {
         // 老板：查找自己拥有的工坊
-        workshop::Entity::find()
+        workshop::Entity::load()
             .filter(workshop::Column::OwnerId.eq(user.id))
             .one(db)
             .await?

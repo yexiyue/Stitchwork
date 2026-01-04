@@ -1,5 +1,5 @@
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DbConn, EntityTrait, ExprTrait, PaginatorTrait, QueryFilter,
+    ColumnTrait, DbConn, EntityLoaderTrait, EntityTrait, ExprTrait, PaginatorTrait, QueryFilter,
     QueryOrder, Set,
 };
 use std::sync::Arc;
@@ -16,15 +16,15 @@ use super::dto::{
 };
 
 // 辅助函数：获取老板的工坊
-async fn get_boss_workshop(db: &DbConn, boss_id: Uuid) -> Result<workshop::Model> {
-    workshop::Entity::find()
+async fn get_boss_workshop(db: &DbConn, boss_id: Uuid) -> Result<workshop::ModelEx> {
+    workshop::Entity::load()
         .filter(workshop::Column::OwnerId.eq(boss_id))
         .one(db)
         .await?
         .ok_or_else(|| AppError::BadRequest("请先创建工坊".to_string()))
 }
 
-pub fn to_response(ws: &workshop::Model) -> WorkshopResponse {
+pub fn to_response(ws: &workshop::ModelEx) -> WorkshopResponse {
     WorkshopResponse {
         id: ws.id,
         name: ws.name.clone(),
@@ -35,7 +35,7 @@ pub fn to_response(ws: &workshop::Model) -> WorkshopResponse {
 }
 
 pub async fn get_workshop(db: &DbConn, owner_id: Uuid) -> Result<Option<WorkshopResponse>> {
-    let ws = workshop::Entity::find()
+    let ws = workshop::Entity::load()
         .filter(workshop::Column::OwnerId.eq(owner_id))
         .one(db)
         .await?;
@@ -56,17 +56,16 @@ pub async fn create_workshop(
         return Err(AppError::BadRequest("已创建工坊".to_string()));
     }
 
-    let ws = workshop::ActiveModel {
-        id: Set(Uuid::new_v4()),
-        owner_id: Set(owner_id),
-        name: Set(req.name),
-        desc: Set(req.desc),
-        address: Set(req.address),
-        image: Set(req.image),
-        created_at: Set(chrono::Utc::now()),
-    }
-    .insert(db)
-    .await?;
+    let ws = workshop::ActiveModelEx::new()
+        .set_id(Uuid::new_v4())
+        .set_owner_id(owner_id)
+        .set_name(req.name)
+        .set_desc(req.desc)
+        .set_address(req.address)
+        .set_image(req.image)
+        .set_created_at(chrono::Utc::now())
+        .insert(db)
+        .await?;
 
     Ok(to_response(&ws))
 }
@@ -78,7 +77,7 @@ pub async fn update_workshop(
 ) -> Result<WorkshopResponse> {
     let ws = get_boss_workshop(db, owner_id).await?;
 
-    let mut active: workshop::ActiveModel = ws.into();
+    let mut active: workshop::ActiveModelEx = ws.into();
     if let Some(v) = req.name {
         active.name = Set(v);
     }
@@ -131,7 +130,8 @@ pub async fn bind_workshop(
         return Err(AppError::BadRequest("邀请码已过期".to_string()));
     }
 
-    let staff = user::Entity::find_by_id(staff_id)
+    let staff = user::Entity::load()
+        .filter_by_id(staff_id)
         .one(db)
         .await?
         .ok_or_else(|| AppError::NotFound("用户不存在".to_string()))?;
@@ -140,9 +140,12 @@ pub async fn bind_workshop(
         return Err(AppError::BadRequest("已绑定工坊".to_string()));
     }
 
-    let mut active: user::ActiveModel = staff.into();
-    active.workshop_id = Set(Some(workshop_id));
-    active.update(db).await?;
+    if staff.role != user::Role::Staff {
+        return Err(AppError::BadRequest("用户角色错误".to_string()));
+    }
+
+    let active: user::ActiveModelEx = staff.into();
+    active.set_workshop_id(workshop_id).update(db).await?;
 
     Ok(())
 }
@@ -194,7 +197,8 @@ pub async fn get_staff_list(
 pub async fn remove_staff(db: &DbConn, boss_id: Uuid, staff_id: Uuid) -> Result<()> {
     let ws = get_boss_workshop(db, boss_id).await?;
 
-    let staff = user::Entity::find_by_id(staff_id)
+    let staff = user::Entity::load()
+        .filter_by_id(staff_id)
         .one(db)
         .await?
         .ok_or_else(|| AppError::NotFound("员工不存在".to_string()))?;
@@ -203,8 +207,7 @@ pub async fn remove_staff(db: &DbConn, boss_id: Uuid, staff_id: Uuid) -> Result<
         return Err(AppError::BadRequest("该员工不属于您的工坊".to_string()));
     }
 
-    let mut active: user::ActiveModel = staff.into();
-    active.workshop_id = Set(None);
-    active.update(db).await?;
+    let active: user::ActiveModelEx = staff.into();
+    active.set_workshop_id(None).update(db).await?;
     Ok(())
 }

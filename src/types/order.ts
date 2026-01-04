@@ -37,5 +37,4 @@ export interface UpdateOrderStatusDto {
 
 export interface OrderQueryParams {
   customerId?: string;
-  status?: string;
 }
