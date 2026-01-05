@@ -89,3 +89,94 @@ pub struct GroupStat {
 pub struct GroupStatsList {
     pub list: Vec<GroupStat>,
 }
+
+// ============ Order Stats ============
+
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct OrderStatsParams {
+    pub start_date: Option<String>,
+    pub end_date: Option<String>,
+}
+
+/// 订单概览统计
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OrderOverview {
+    pub total_orders: i64,
+    pub pending_orders: i64,
+    pub processing_orders: i64,
+    pub completed_orders: i64,
+    pub delivered_orders: i64,
+    pub cancelled_orders: i64,
+    pub total_quantity: i64,
+    pub total_amount: Decimal,
+}
+
+/// 月度订单趋势
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MonthlyOrderStat {
+    pub month: String, // YYYY-MM
+    pub order_count: i64,
+    pub total_quantity: i64,
+    pub total_amount: Decimal,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MonthlyOrderStatsList {
+    pub list: Vec<MonthlyOrderStat>,
+}
+
+/// 客户贡献度
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CustomerContribution {
+    pub customer_id: Uuid,
+    pub customer_name: String,
+    pub order_count: i64,
+    pub total_quantity: i64,
+    pub total_amount: Decimal,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CustomerContributionList {
+    pub list: Vec<CustomerContribution>,
+}
+
+/// 订单进度概览
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OrderProgressItem {
+    pub order_id: Uuid,
+    pub product_name: String,
+    pub customer_name: String,
+    pub total_quantity: i32,
+    pub completed_quantity: i64,
+    pub progress: f64,
+    pub status: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OrderProgressList {
+    pub list: Vec<OrderProgressItem>,
+}
+
+/// 每日订单趋势
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DailyOrderStat {
+    pub date: String, // YYYY-MM-DD
+    pub order_count: i64,
+    pub total_quantity: i64,
+    pub total_amount: Decimal,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DailyOrderStatsList {
+    pub list: Vec<DailyOrderStat>,
+}

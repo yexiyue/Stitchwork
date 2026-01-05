@@ -60,3 +60,9 @@ pub struct Model {
 }
 
 impl ActiveModelBehavior for ActiveModel {}
+
+impl crate::common::OwnedByBoss for Model {
+    fn boss_id(&self) -> Uuid {
+        self.boss_id
+    }
+}

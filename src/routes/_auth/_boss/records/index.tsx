@@ -1,77 +1,69 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Dialog, Toast, Tag, Dropdown, SwipeAction, Image, CalendarPicker } from "antd-mobile";
+import { Dialog, Toast, Dropdown, SwipeAction, Image } from "antd-mobile";
 import { Filter, Plus, ImageIcon, BarChart2, Calendar, Users, Package } from "lucide-react";
-import type { PieceRecord, PieceRecordStatus, Staff, Order } from "@/types";
-import { RelativeTime, VirtualList } from "@/components";
+import type { PieceRecord, Staff, Order } from "@/types";
+import { RelativeTime, VirtualList, StatusTag, DateRangeButton } from "@/components";
 import { pieceRecordApi, orderApi } from "@/api";
-import {
-  useInfiniteQuery,
-  useQueryClient,
-  useMutation,
-  useQuery,
-} from "@tanstack/react-query";
-import { useState, useRef } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRef } from "react";
 import type { DropdownRef } from "antd-mobile/es/components/dropdown";
-import { useStaffList } from "@/hooks";
-import dayjs from "dayjs";
+import { useStaffList, useInfiniteList, useToggleFilter, useDateRange } from "@/hooks";
+import { RECORD_STATUS_OPTIONS } from "@/constants";
 
 export const Route = createFileRoute("/_auth/_boss/records/")({
   component: RecordsPage,
 });
 
-const PAGE_SIZE = 20;
-
-const STATUS_MAP: Record<PieceRecordStatus, { label: string; color: string }> =
-  {
-    pending: { label: "待审核", color: "#faad14" },
-    approved: { label: "已通过", color: "#52c41a" },
-    rejected: { label: "已拒绝", color: "#ff4d4f" },
-  };
-
-const STATUS_OPTIONS = [
-  { key: "", title: "全部状态" },
-  { key: "pending", title: "待审核" },
-  { key: "approved", title: "已通过" },
-  { key: "rejected", title: "已拒绝" },
-];
-
 function RecordsPage() {
   const navigate = useNavigate();
-  const [statusFilter, setStatusFilter] = useState<string[]>([]);
-  const [userFilter, setUserFilter] = useState("");
-  const [orderFilter, setOrderFilter] = useState("");
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
-  const [calendarVisible, setCalendarVisible] = useState(false);
   const dropdownRef = useRef<DropdownRef>(null);
   const queryClient = useQueryClient();
 
+  // 筛选状态
+  const statusFilter = useToggleFilter<string>();
+  const userFilter = useToggleFilter<string>();
+  const orderFilter = useToggleFilter<string>();
+
+  // 日期筛选
+  const {
+    startDate,
+    endDate,
+    dateParams,
+    calendarVisible,
+    setCalendarVisible,
+    handleCalendarConfirm,
+    hasDateFilter,
+  } = useDateRange({ nullable: true });
+
+  // 员工和订单数据
   const { data: staffList } = useStaffList();
   const { data: ordersData } = useQuery({
     queryKey: ["orders-all"],
     queryFn: () => orderApi.list({ pageSize: 1000 }),
   });
 
-  const { data, isFetching, fetchNextPage, hasNextPage, refetch } =
-    useInfiniteQuery({
-      queryKey: ["piece-records", statusFilter, userFilter, orderFilter, startDate?.toISOString(), endDate?.toISOString()],
-      queryFn: ({ pageParam = 1 }) =>
-        pieceRecordApi.list({
-          page: pageParam,
-          pageSize: PAGE_SIZE,
-          status: statusFilter.length ? statusFilter : undefined,
-          userId: userFilter || undefined,
-          orderId: orderFilter || undefined,
-          startDate: startDate ? dayjs(startDate).format("YYYY-MM-DD") : undefined,
-          endDate: endDate ? dayjs(endDate).format("YYYY-MM-DD") : undefined,
-        }),
-      initialPageParam: 1,
-      getNextPageParam: (lastPage, allPages) =>
-        allPages.flatMap((p) => p.list).length < lastPage.total
-          ? allPages.length + 1
-          : undefined,
-    });
+  // 无限列表
+  const { list, isFetching, hasMore, loadMore, refresh } = useInfiniteList<PieceRecord>(
+    [
+      "piece-records",
+      statusFilter.selected,
+      userFilter.selected[0] ?? "",
+      orderFilter.selected[0] ?? "",
+      startDate?.toISOString(),
+      endDate?.toISOString(),
+    ],
+    (params) =>
+      pieceRecordApi.list({
+        ...params,
+        status: statusFilter.hasSelected ? statusFilter.selected : undefined,
+        userId: userFilter.selected[0] || undefined,
+        orderId: orderFilter.selected[0] || undefined,
+        startDate: dateParams.startDate,
+        endDate: dateParams.endDate,
+      })
+  );
 
+  // 审批操作
   const approveMutation = useMutation({
     mutationFn: pieceRecordApi.approve,
     onSuccess: () => {
@@ -87,8 +79,6 @@ function RecordsPage() {
       queryClient.invalidateQueries({ queryKey: ["piece-records"] });
     },
   });
-
-  const list = data?.pages.flatMap((p) => p.list) ?? [];
 
   const handleApprove = (record: PieceRecord) => {
     Dialog.confirm({
@@ -118,11 +108,11 @@ function RecordsPage() {
     value: o.id,
   }));
 
-  const hasFilters = statusFilter || userFilter || orderFilter || startDate;
+  const hasFilters = statusFilter.hasSelected || userFilter.hasSelected || orderFilter.hasSelected || hasDateFilter;
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* 顶部栏：标题 + 操作按钮 */}
+      {/* 顶部栏 */}
       <div className="p-4 pb-2">
         <div className="flex items-center justify-between">
           <h1 className="text-xl">计件管理</h1>
@@ -151,36 +141,30 @@ function RecordsPage() {
             title={
               <Filter
                 size={16}
-                className={statusFilter.length ? "text-blue-500" : "text-gray-500"}
+                className={statusFilter.hasSelected ? "text-blue-500" : "text-gray-500"}
               />
             }
           >
             <div className="p-2">
               <div
-                className={`p-3 rounded ${!statusFilter.length ? "bg-blue-50 text-blue-500" : ""}`}
+                className={`p-3 rounded ${!statusFilter.hasSelected ? "bg-blue-50 text-blue-500" : ""}`}
                 onClick={() => {
-                  setStatusFilter([]);
+                  statusFilter.clear();
                   dropdownRef.current?.close();
                 }}
               >
                 全部状态
               </div>
-              {STATUS_OPTIONS.filter(opt => opt.key).map((opt) => (
+              {RECORD_STATUS_OPTIONS.filter((opt) => opt.key).map((opt) => (
                 <div
                   key={opt.key}
                   className={`p-3 rounded flex items-center justify-between ${
-                    statusFilter.includes(opt.key) ? "bg-blue-50 text-blue-500" : ""
+                    statusFilter.isSelected(opt.key) ? "bg-blue-50 text-blue-500" : ""
                   }`}
-                  onClick={() => {
-                    setStatusFilter(prev =>
-                      prev.includes(opt.key)
-                        ? prev.filter(s => s !== opt.key)
-                        : [...prev, opt.key]
-                    );
-                  }}
+                  onClick={() => statusFilter.toggle(opt.key)}
                 >
                   {opt.title}
-                  {statusFilter.includes(opt.key) && <span>✓</span>}
+                  {statusFilter.isSelected(opt.key) && <span>✓</span>}
                 </div>
               ))}
             </div>
@@ -190,17 +174,15 @@ function RecordsPage() {
             title={
               <Users
                 size={16}
-                className={userFilter ? "text-blue-500" : "text-gray-500"}
+                className={userFilter.hasSelected ? "text-blue-500" : "text-gray-500"}
               />
             }
           >
             <div className="p-2 max-h-64 overflow-y-auto">
               <div
-                className={`p-3 rounded ${
-                  !userFilter ? "bg-blue-50 text-blue-500" : ""
-                }`}
+                className={`p-3 rounded ${!userFilter.hasSelected ? "bg-blue-50 text-blue-500" : ""}`}
                 onClick={() => {
-                  setUserFilter("");
+                  userFilter.clear();
                   dropdownRef.current?.close();
                 }}
               >
@@ -210,10 +192,10 @@ function RecordsPage() {
                 <div
                   key={opt.value}
                   className={`p-3 rounded ${
-                    userFilter === opt.value ? "bg-blue-50 text-blue-500" : ""
+                    userFilter.isSelected(opt.value) ? "bg-blue-50 text-blue-500" : ""
                   }`}
                   onClick={() => {
-                    setUserFilter(opt.value);
+                    userFilter.setSelected([opt.value]);
                     dropdownRef.current?.close();
                   }}
                 >
@@ -227,17 +209,15 @@ function RecordsPage() {
             title={
               <Package
                 size={16}
-                className={orderFilter ? "text-blue-500" : "text-gray-500"}
+                className={orderFilter.hasSelected ? "text-blue-500" : "text-gray-500"}
               />
             }
           >
             <div className="p-2 max-h-64 overflow-y-auto">
               <div
-                className={`p-3 rounded ${
-                  !orderFilter ? "bg-blue-50 text-blue-500" : ""
-                }`}
+                className={`p-3 rounded ${!orderFilter.hasSelected ? "bg-blue-50 text-blue-500" : ""}`}
                 onClick={() => {
-                  setOrderFilter("");
+                  orderFilter.clear();
                   dropdownRef.current?.close();
                 }}
               >
@@ -247,10 +227,10 @@ function RecordsPage() {
                 <div
                   key={opt.value}
                   className={`p-3 rounded ${
-                    orderFilter === opt.value ? "bg-blue-50 text-blue-500" : ""
+                    orderFilter.isSelected(opt.value) ? "bg-blue-50 text-blue-500" : ""
                   }`}
                   onClick={() => {
-                    setOrderFilter(opt.value);
+                    orderFilter.setSelected([opt.value]);
                     dropdownRef.current?.close();
                   }}
                 >
@@ -264,7 +244,7 @@ function RecordsPage() {
             title={
               <Calendar
                 size={16}
-                className={startDate ? "text-blue-500" : "text-gray-500"}
+                className={hasDateFilter ? "text-blue-500" : "text-gray-500"}
               />
             }
             onClick={() => setCalendarVisible(true)}
@@ -272,13 +252,14 @@ function RecordsPage() {
         </Dropdown>
       </div>
 
+      {/* 列表 */}
       <div className="flex flex-1 overflow-hidden">
         <VirtualList
           data={list}
           loading={isFetching}
-          hasMore={!!hasNextPage}
-          onLoadMore={fetchNextPage}
-          onRefresh={refetch}
+          hasMore={hasMore}
+          onLoadMore={loadMore}
+          onRefresh={refresh}
           keyExtractor={(r) => r.id}
           emptyText="暂无计件记录"
           searchEmpty={!!hasFilters && !list.length}
@@ -308,32 +289,19 @@ function RecordsPage() {
                 className="bg-white p-3 mb-2 mx-2 rounded-lg shadow-sm flex gap-3 cursor-pointer active:bg-gray-50"
                 onClick={() => navigate({ to: "/records/$id", params: { id: record.id } })}
               >
-                {/* 订单图片 */}
                 <div className="shrink-0 w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
                   {record.orderImage ? (
-                    <Image
-                      src={record.orderImage}
-                      width={56}
-                      height={56}
-                      fit="cover"
-                    />
+                    <Image src={record.orderImage} width={56} height={56} fit="cover" />
                   ) : (
                     <ImageIcon size={24} className="text-gray-400" />
                   )}
                 </div>
-                {/* 信息 */}
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start mb-1">
                     <span className="font-medium truncate">
                       {record.userName || "未知员工"}
                     </span>
-                    <Tag
-                      color={STATUS_MAP[record.status].color}
-                      fill="outline"
-                      style={{ "--border-radius": "4px" }}
-                    >
-                      {STATUS_MAP[record.status].label}
-                    </Tag>
+                    <StatusTag status={record.status} type="record" />
                   </div>
                   <div className="text-sm text-gray-600 truncate">
                     {record.orderName && <span>{record.orderName} · </span>}
@@ -353,26 +321,14 @@ function RecordsPage() {
         />
       </div>
 
-      {/* 日期范围选择器 */}
-      <CalendarPicker
+      {/* 日期选择器 */}
+      <DateRangeButton
+        startDate={startDate}
+        endDate={endDate}
         visible={calendarVisible}
-        selectionMode="range"
-        onClose={() => {
-          setCalendarVisible(false);
-          dropdownRef.current?.close();
-        }}
-        onConfirm={(val) => {
-          if (val && val.length === 2) {
-            setStartDate(val[0]);
-            setEndDate(val[1]);
-          } else {
-            setStartDate(null);
-            setEndDate(null);
-          }
-          setCalendarVisible(false);
-          dropdownRef.current?.close();
-        }}
-        title="选择日期范围"
+        onVisibleChange={setCalendarVisible}
+        onConfirm={handleCalendarConfirm}
+        showIcon={false}
       />
     </div>
   );

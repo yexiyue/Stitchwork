@@ -6,3 +6,10 @@ export { useAvatarCropper } from "./AvatarCropper";
 export { PageHeader } from "./PageHeader";
 export { Chart, MiniChart } from "./charts";
 export { OrderPicker } from "./OrderPicker";
+
+// 新增共享组件
+export { StatsCard } from "./StatsCard";
+export { StatsGrid } from "./StatsGrid";
+export { DateRangeButton } from "./DateRangeButton";
+export { StatusTag } from "./StatusTag";
+export { EmptyState } from "./EmptyState";

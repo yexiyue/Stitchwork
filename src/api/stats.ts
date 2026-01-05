@@ -6,6 +6,12 @@ import type {
   WorkerStatsParams,
   DailyStatsList,
   GroupStatsList,
+  OrderStatsParams,
+  OrderOverview,
+  MonthlyOrderStatsList,
+  CustomerContributionList,
+  OrderProgressList,
+  DailyOrderStatsList,
 } from "@/types";
 
 export const statsApi = {
@@ -21,4 +27,15 @@ export const statsApi = {
     client.get<GroupStatsList>("/api/stats/by-order", params),
   statsByProcess: (params?: WorkerStatsParams) =>
     client.get<GroupStatsList>("/api/stats/by-process", params),
+  // Order stats
+  orderOverview: (params?: OrderStatsParams) =>
+    client.get<OrderOverview>("/api/stats/orders/overview", params),
+  monthlyOrderStats: (params?: OrderStatsParams) =>
+    client.get<MonthlyOrderStatsList>("/api/stats/orders/monthly", params),
+  customerContribution: (params?: OrderStatsParams) =>
+    client.get<CustomerContributionList>("/api/stats/orders/by-customer", params),
+  orderProgress: (params?: OrderStatsParams) =>
+    client.get<OrderProgressList>("/api/stats/orders/progress", params),
+  dailyOrderStats: (params?: OrderStatsParams) =>
+    client.get<DailyOrderStatsList>("/api/stats/orders/daily", params),
 };

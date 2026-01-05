@@ -6,8 +6,9 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use super::dto::{
-    CustomerSummaryList, DailyStatsList, GroupStatsList, OrderStats, WorkerProductionList,
-    WorkerStatsParams,
+    CustomerContributionList, CustomerSummaryList, DailyOrderStatsList, DailyStatsList,
+    GroupStatsList, MonthlyOrderStatsList, OrderOverview, OrderProgressList, OrderStats,
+    OrderStatsParams, WorkerProductionList, WorkerStatsParams,
 };
 use crate::common::ApiResponse;
 use crate::entity::user::Role;
@@ -43,6 +44,26 @@ pub struct StatsByOrderPath;
 #[typed_path("/stats/by-process")]
 pub struct StatsByProcessPath;
 
+#[derive(TypedPath)]
+#[typed_path("/stats/orders/overview")]
+pub struct OrderOverviewPath;
+
+#[derive(TypedPath)]
+#[typed_path("/stats/orders/monthly")]
+pub struct MonthlyOrderStatsPath;
+
+#[derive(TypedPath)]
+#[typed_path("/stats/orders/by-customer")]
+pub struct CustomerContributionPath;
+
+#[derive(TypedPath)]
+#[typed_path("/stats/orders/progress")]
+pub struct OrderProgressPath;
+
+#[derive(TypedPath)]
+#[typed_path("/stats/orders/daily")]
+pub struct DailyOrderStatsPath;
+
 pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .typed_get(order_stats)
@@ -51,6 +72,11 @@ pub fn router() -> Router<Arc<AppState>> {
         .typed_get(daily_stats)
         .typed_get(stats_by_order)
         .typed_get(stats_by_process)
+        .typed_get(order_overview)
+        .typed_get(monthly_order_stats)
+        .typed_get(customer_contribution)
+        .typed_get(order_progress)
+        .typed_get(daily_order_stats)
 }
 
 async fn order_stats(
@@ -133,5 +159,67 @@ async fn stats_by_process(
     };
     Ok(ApiResponse::ok(
         service::stats_by_process(&state.db, boss_id, user_id, params).await?,
+    ))
+}
+
+// ============ Order Stats ============
+
+async fn order_overview(
+    _: OrderOverviewPath,
+    State(state): State<Arc<AppState>>,
+    Extension(claims): Extension<Claims>,
+    Query(params): Query<OrderStatsParams>,
+) -> Result<ApiResponse<OrderOverview>> {
+    claims.require_boss()?;
+    Ok(ApiResponse::ok(
+        service::order_overview(&state.db, claims.sub, params).await?,
+    ))
+}
+
+async fn monthly_order_stats(
+    _: MonthlyOrderStatsPath,
+    State(state): State<Arc<AppState>>,
+    Extension(claims): Extension<Claims>,
+    Query(params): Query<OrderStatsParams>,
+) -> Result<ApiResponse<MonthlyOrderStatsList>> {
+    claims.require_boss()?;
+    Ok(ApiResponse::ok(
+        service::monthly_order_stats(&state.db, claims.sub, params).await?,
+    ))
+}
+
+async fn customer_contribution(
+    _: CustomerContributionPath,
+    State(state): State<Arc<AppState>>,
+    Extension(claims): Extension<Claims>,
+    Query(params): Query<OrderStatsParams>,
+) -> Result<ApiResponse<CustomerContributionList>> {
+    claims.require_boss()?;
+    Ok(ApiResponse::ok(
+        service::customer_contribution(&state.db, claims.sub, params).await?,
+    ))
+}
+
+async fn order_progress(
+    _: OrderProgressPath,
+    State(state): State<Arc<AppState>>,
+    Extension(claims): Extension<Claims>,
+    Query(params): Query<OrderStatsParams>,
+) -> Result<ApiResponse<OrderProgressList>> {
+    claims.require_boss()?;
+    Ok(ApiResponse::ok(
+        service::order_progress(&state.db, claims.sub, params).await?,
+    ))
+}
+
+async fn daily_order_stats(
+    _: DailyOrderStatsPath,
+    State(state): State<Arc<AppState>>,
+    Extension(claims): Extension<Claims>,
+    Query(params): Query<OrderStatsParams>,
+) -> Result<ApiResponse<DailyOrderStatsList>> {
+    claims.require_boss()?;
+    Ok(ApiResponse::ok(
+        service::daily_order_stats(&state.db, claims.sub, params).await?,
     ))
 }

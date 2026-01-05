@@ -3,11 +3,19 @@ import type { ImageUploadItem } from "antd-mobile/es/components/image-uploader";
 import imageCompression from "browser-image-compression";
 import { uploadApi } from "@/api";
 
-interface ImageUploaderProps {
-  value?: string | string[];
-  onChange?: (urls: string | string[]) => void;
-  maxCount?: number;
+interface ImageUploaderSingleProps {
+  value?: string;
+  onChange?: (url: string) => void;
+  maxCount: 1;
 }
+
+interface ImageUploaderMultiProps {
+  value?: string[];
+  onChange?: (urls: string[]) => void;
+  maxCount?: Exclude<number, 1>;
+}
+
+type ImageUploaderProps = ImageUploaderSingleProps | ImageUploaderMultiProps;
 
 export function ImageUploader({
   value,
@@ -20,7 +28,11 @@ export function ImageUploader({
 
   const handleChange = (items: ImageUploadItem[]) => {
     const newUrls = items.map((i) => i.url!);
-    onChange?.(isSingle ? (newUrls[0] || "") : newUrls);
+    if (isSingle) {
+      (onChange as ((url: string) => void) | undefined)?.(newUrls[0] || "");
+    } else {
+      (onChange as ((urls: string[]) => void) | undefined)?.(newUrls);
+    }
   };
 
   const upload = async (file: File): Promise<ImageUploadItem> => {

@@ -38,7 +38,6 @@ pub enum ActivityType {
 #[serde(rename_all = "camelCase")]
 pub struct Activity {
     pub id: Uuid,
-    #[serde(rename = "type")]
     pub activity_type: ActivityType,
     pub user_name: String,
     pub order_name: String,

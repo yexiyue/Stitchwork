@@ -1,6 +1,9 @@
 use chrono::{Datelike, NaiveDate, Utc};
 use rust_decimal::Decimal;
-use sea_orm::{ColumnTrait, DbConn, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect};
+use sea_orm::{
+    ColumnTrait, DbConn, EntityTrait, LoaderTrait, PaginatorTrait, QueryFilter, QueryOrder,
+    QuerySelect,
+};
 use uuid::Uuid;
 
 use super::dto::{Activity, ActivityList, ActivityType, BossOverview, StaffOverview};
@@ -105,8 +108,74 @@ pub async fn staff_overview(db: &DbConn, user_id: Uuid) -> Result<StaffOverview>
     })
 }
 
+async fn build_activities(
+    db: &DbConn,
+    records: Vec<piece_record::Model>,
+) -> Result<Vec<Activity>> {
+    use std::collections::HashMap;
+
+    if records.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    // Use LoaderTrait for direct relationships (SeaORM 2.0)
+    let users: Vec<Option<user::Model>> = records.load_one(user::Entity, db).await?;
+    let processes: Vec<Option<process::Model>> = records.load_one(process::Entity, db).await?;
+
+    // For orders (indirect: records -> processes -> orders), use batch query
+    let order_ids: Vec<Uuid> = processes
+        .iter()
+        .filter_map(|p| p.as_ref().map(|pr| pr.order_id))
+        .collect();
+    let orders: HashMap<Uuid, order::Model> = order::Entity::find()
+        .filter(order::Column::Id.is_in(order_ids))
+        .all(db)
+        .await?
+        .into_iter()
+        .map(|o| (o.id, o))
+        .collect();
+
+    let list = records
+        .into_iter()
+        .zip(users.into_iter())
+        .zip(processes.into_iter())
+        .map(|((rec, user), proc)| {
+            let user_name = user
+                .map(|u| u.display_name.unwrap_or(u.username))
+                .unwrap_or_default();
+
+            let (order_name, process_name) = if let Some(p) = proc {
+                let order_name = orders
+                    .get(&p.order_id)
+                    .map(|o| o.product_name.clone())
+                    .unwrap_or_default();
+                (order_name, p.name)
+            } else {
+                (String::new(), String::new())
+            };
+
+            let activity_type = match rec.status {
+                PieceRecordStatus::Pending => ActivityType::Submit,
+                PieceRecordStatus::Approved => ActivityType::Approve,
+                PieceRecordStatus::Rejected => ActivityType::Reject,
+            };
+
+            Activity {
+                id: rec.id,
+                activity_type,
+                user_name,
+                order_name,
+                process_name,
+                quantity: rec.quantity,
+                created_at: rec.recorded_at,
+            }
+        })
+        .collect();
+
+    Ok(list)
+}
+
 pub async fn boss_activities(db: &DbConn, boss_id: Uuid) -> Result<ActivityList> {
-    // Get recent piece records (submitted, approved, rejected)
     let records = piece_record::Entity::find()
         .filter(piece_record::Column::BossId.eq(boss_id))
         .order_by_desc(piece_record::Column::RecordedAt)
@@ -114,38 +183,7 @@ pub async fn boss_activities(db: &DbConn, boss_id: Uuid) -> Result<ActivityList>
         .all(db)
         .await?;
 
-    let mut list = Vec::new();
-    for rec in records {
-        let u = user::Entity::find_by_id(rec.user_id).one(db).await?;
-        let user_name = u
-            .map(|u| u.display_name.unwrap_or(u.username))
-            .unwrap_or_default();
-
-        let proc = process::Entity::find_by_id(rec.process_id).one(db).await?;
-        let (order_name, process_name) = if let Some(p) = proc {
-            let ord = order::Entity::find_by_id(p.order_id).one(db).await?;
-            (ord.map(|o| o.product_name).unwrap_or_default(), p.name)
-        } else {
-            (String::new(), String::new())
-        };
-
-        let activity_type = match rec.status {
-            PieceRecordStatus::Pending => ActivityType::Submit,
-            PieceRecordStatus::Approved => ActivityType::Approve,
-            PieceRecordStatus::Rejected => ActivityType::Reject,
-        };
-
-        list.push(Activity {
-            id: rec.id,
-            activity_type,
-            user_name,
-            order_name,
-            process_name,
-            quantity: rec.quantity,
-            created_at: rec.recorded_at,
-        });
-    }
-
+    let list = build_activities(db, records).await?;
     Ok(ActivityList { list })
 }
 
@@ -157,37 +195,6 @@ pub async fn staff_activities(db: &DbConn, user_id: Uuid) -> Result<ActivityList
         .all(db)
         .await?;
 
-    let mut list = Vec::new();
-    for rec in records {
-        let u = user::Entity::find_by_id(rec.user_id).one(db).await?;
-        let user_name = u
-            .map(|u| u.display_name.unwrap_or(u.username))
-            .unwrap_or_default();
-
-        let proc = process::Entity::find_by_id(rec.process_id).one(db).await?;
-        let (order_name, process_name) = if let Some(p) = proc {
-            let ord = order::Entity::find_by_id(p.order_id).one(db).await?;
-            (ord.map(|o| o.product_name).unwrap_or_default(), p.name)
-        } else {
-            (String::new(), String::new())
-        };
-
-        let activity_type = match rec.status {
-            PieceRecordStatus::Pending => ActivityType::Submit,
-            PieceRecordStatus::Approved => ActivityType::Approve,
-            PieceRecordStatus::Rejected => ActivityType::Reject,
-        };
-
-        list.push(Activity {
-            id: rec.id,
-            activity_type,
-            user_name,
-            order_name,
-            process_name,
-            quantity: rec.quantity,
-            created_at: rec.recorded_at,
-        });
-    }
-
+    let list = build_activities(db, records).await?;
     Ok(ActivityList { list })
 }

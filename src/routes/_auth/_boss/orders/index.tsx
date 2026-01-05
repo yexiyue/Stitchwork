@@ -5,99 +5,71 @@ import {
   SwipeAction,
   Toast,
   SearchBar,
-  Tag,
   Dropdown,
   Image,
   ImageViewer,
-  CalendarPicker,
-  Divider,
 } from "antd-mobile";
-import { Plus, ImageOff, Calendar, Filter, Users } from "lucide-react";
-import { useDeleteOrder, useCustomers } from "@/hooks";
-import type { Order, OrderStatus } from "@/types";
-import { RelativeTime, VirtualList } from "@/components";
+import { Plus, ImageOff, Calendar, Filter, Users, BarChart3 } from "lucide-react";
+import { useDeleteOrder, useCustomers, useInfiniteList, useDebouncedSearch, useToggleFilter, useDateRange } from "@/hooks";
+import type { Order } from "@/types";
+import { RelativeTime, VirtualList, StatusTag, DateRangeButton } from "@/components";
 import { orderApi } from "@/api";
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { useDebounceFn } from "ahooks";
-import { useState, useRef } from "react";
-import type { SearchBarRef } from "antd-mobile/es/components/search-bar";
+import { useQueryClient } from "@tanstack/react-query";
+import { useRef } from "react";
 import type { DropdownRef } from "antd-mobile/es/components/dropdown";
-import dayjs from "dayjs";
+import { ORDER_STATUS_OPTIONS } from "@/constants";
 
 export const Route = createFileRoute("/_auth/_boss/orders/")({
   component: OrdersPage,
 });
 
-const PAGE_SIZE = 20;
-
-const STATUS_MAP: Record<OrderStatus, { label: string; color: string }> = {
-  pending: { label: "待处理", color: "#faad14" },
-  processing: { label: "进行中", color: "#1890ff" },
-  completed: { label: "已完成", color: "#52c41a" },
-  delivered: { label: "已交付", color: "#722ed1" },
-  cancelled: { label: "已取消", color: "#999" },
-};
-
-const STATUS_OPTIONS = [
-  { key: "", title: "全部状态" },
-  { key: "pending", title: "待处理" },
-  { key: "processing", title: "进行中" },
-  { key: "completed", title: "已完成" },
-  { key: "delivered", title: "已交付" },
-  { key: "cancelled", title: "已取消" },
-];
-
 function OrdersPage() {
   const navigate = useNavigate();
   const deleteMutation = useDeleteOrder();
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string[]>([]);
-  const [customerFilter, setCustomerFilter] = useState("");
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
-  const [calendarVisible, setCalendarVisible] = useState(false);
-  const searchInputRef = useRef<SearchBarRef>(null);
+  const queryClient = useQueryClient();
   const dropdownRef = useRef<DropdownRef>(null);
 
+  // 搜索
+  const { search, debouncedSearch, setSearch, searchInputRef } = useDebouncedSearch();
+
+  // 状态筛选
+  const statusFilter = useToggleFilter<string>();
+
+  // 客户筛选
   const { data: customersData } = useCustomers({ pageSize: 100 });
+  const customerFilter = useToggleFilter<string>();
 
-  const { run: updateSearch } = useDebounceFn(
-    (val: string) => setDebouncedSearch(val),
-    { wait: 300 }
+  // 日期筛选
+  const {
+    startDate,
+    endDate,
+    dateParams,
+    calendarVisible,
+    setCalendarVisible,
+    handleCalendarConfirm,
+    hasDateFilter,
+  } = useDateRange({ nullable: true });
+
+  // 无限列表
+  const { list, isFetching, hasMore, loadMore, refresh } = useInfiniteList<Order>(
+    [
+      "orders",
+      debouncedSearch,
+      statusFilter.selected,
+      customerFilter.selected[0] ?? "",
+      startDate?.toISOString(),
+      endDate?.toISOString(),
+    ],
+    (params) =>
+      orderApi.list({
+        ...params,
+        search: debouncedSearch || undefined,
+        status: statusFilter.hasSelected ? statusFilter.selected : undefined,
+        customerId: customerFilter.selected[0] || undefined,
+        startDate: dateParams.startDate,
+        endDate: dateParams.endDate,
+      })
   );
-
-  const queryClient = useQueryClient();
-  const { data, isFetching, fetchNextPage, hasNextPage, refetch } =
-    useInfiniteQuery({
-      queryKey: [
-        "orders",
-        debouncedSearch,
-        statusFilter,
-        customerFilter,
-        startDate?.toISOString(),
-        endDate?.toISOString(),
-      ],
-      queryFn: ({ pageParam = 1 }) =>
-        orderApi.list({
-          page: pageParam,
-          pageSize: PAGE_SIZE,
-          search: debouncedSearch,
-          status: statusFilter.length ? statusFilter : undefined,
-          customerId: customerFilter || undefined,
-          startDate: startDate
-            ? dayjs(startDate).format("YYYY-MM-DD")
-            : undefined,
-          endDate: endDate ? dayjs(endDate).format("YYYY-MM-DD") : undefined,
-        }),
-      initialPageParam: 1,
-      getNextPageParam: (lastPage, allPages) =>
-        allPages.flatMap((p) => p.list).length < lastPage.total
-          ? allPages.length + 1
-          : undefined,
-    });
-
-  const list = data?.pages.flatMap((p) => p.list) ?? [];
 
   const handleDelete = (order: Order) => {
     Dialog.confirm({
@@ -119,22 +91,36 @@ function OrdersPage() {
     });
   };
 
+  const hasFilters = debouncedSearch || statusFilter.hasSelected || customerFilter.hasSelected || hasDateFilter;
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* 顶部栏：标题 + 新增按钮 */}
+      {/* 顶部栏 */}
       <div className="p-4 pb-2">
         <div className="flex items-center justify-between">
           <h1 className="text-xl">订单管理</h1>
-          <Button
-            size="small"
-            color="primary"
-            onClick={() => navigate({ to: "/orders/new" })}
-          >
-            <div className="flex items-center">
-              <Plus size={16} className="mr-1" />
-              新增
-            </div>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="small"
+              fill="outline"
+              onClick={() => navigate({ to: "/orders/stats" })}
+            >
+              <div className="flex items-center">
+                <BarChart3 size={16} className="mr-1" />
+                统计
+              </div>
+            </Button>
+            <Button
+              size="small"
+              color="primary"
+              onClick={() => navigate({ to: "/orders/new" })}
+            >
+              <div className="flex items-center">
+                <Plus size={16} className="mr-1" />
+                新增
+              </div>
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -145,10 +131,7 @@ function OrdersPage() {
             ref={searchInputRef}
             placeholder="搜索产品名称"
             value={search}
-            onChange={(val) => {
-              setSearch(val);
-              updateSearch(val);
-            }}
+            onChange={setSearch}
           />
         </div>
         <Dropdown ref={dropdownRef}>
@@ -157,36 +140,30 @@ function OrdersPage() {
             title={
               <Filter
                 size={16}
-                className={statusFilter.length ? "text-blue-500" : "text-gray-500"}
+                className={statusFilter.hasSelected ? "text-blue-500" : "text-gray-500"}
               />
             }
           >
             <div className="p-2">
               <div
-                className={`p-3 rounded ${!statusFilter.length ? "bg-blue-50 text-blue-500" : ""}`}
+                className={`p-3 rounded ${!statusFilter.hasSelected ? "bg-blue-50 text-blue-500" : ""}`}
                 onClick={() => {
-                  setStatusFilter([]);
+                  statusFilter.clear();
                   dropdownRef.current?.close();
                 }}
               >
                 全部状态
               </div>
-              {STATUS_OPTIONS.filter(opt => opt.key).map((opt) => (
+              {ORDER_STATUS_OPTIONS.filter((opt) => opt.key).map((opt) => (
                 <div
                   key={opt.key}
                   className={`p-3 rounded flex items-center justify-between ${
-                    statusFilter.includes(opt.key) ? "bg-blue-50 text-blue-500" : ""
+                    statusFilter.isSelected(opt.key) ? "bg-blue-50 text-blue-500" : ""
                   }`}
-                  onClick={() => {
-                    setStatusFilter(prev =>
-                      prev.includes(opt.key)
-                        ? prev.filter(s => s !== opt.key)
-                        : [...prev, opt.key]
-                    );
-                  }}
+                  onClick={() => statusFilter.toggle(opt.key)}
                 >
                   {opt.title}
-                  {statusFilter.includes(opt.key) && <span>✓</span>}
+                  {statusFilter.isSelected(opt.key) && <span>✓</span>}
                 </div>
               ))}
             </div>
@@ -196,17 +173,15 @@ function OrdersPage() {
             title={
               <Users
                 size={16}
-                className={customerFilter ? "text-blue-500" : "text-gray-500"}
+                className={customerFilter.hasSelected ? "text-blue-500" : "text-gray-500"}
               />
             }
           >
             <div className="p-2 max-h-64 overflow-y-auto">
               <div
-                className={`p-3 rounded ${
-                  customerFilter === "" ? "bg-blue-50 text-blue-500" : ""
-                }`}
+                className={`p-3 rounded ${!customerFilter.hasSelected ? "bg-blue-50 text-blue-500" : ""}`}
                 onClick={() => {
-                  setCustomerFilter("");
+                  customerFilter.clear();
                   dropdownRef.current?.close();
                 }}
               >
@@ -216,10 +191,10 @@ function OrdersPage() {
                 <div
                   key={c.id}
                   className={`p-3 rounded ${
-                    customerFilter === c.id ? "bg-blue-50 text-blue-500" : ""
+                    customerFilter.isSelected(c.id) ? "bg-blue-50 text-blue-500" : ""
                   }`}
                   onClick={() => {
-                    setCustomerFilter(c.id);
+                    customerFilter.setSelected([c.id]);
                     dropdownRef.current?.close();
                   }}
                 >
@@ -233,7 +208,7 @@ function OrdersPage() {
             title={
               <Calendar
                 size={16}
-                className={startDate ? "text-blue-500" : "text-gray-500"}
+                className={hasDateFilter ? "text-blue-500" : "text-gray-500"}
               />
             }
             onClick={() => setCalendarVisible(true)}
@@ -241,23 +216,17 @@ function OrdersPage() {
         </Dropdown>
       </div>
 
+      {/* 列表 */}
       <div className="flex flex-1 overflow-hidden">
         <VirtualList
           data={list}
           loading={isFetching}
-          hasMore={!!hasNextPage}
-          onLoadMore={fetchNextPage}
-          onRefresh={refetch}
+          hasMore={hasMore}
+          onLoadMore={loadMore}
+          onRefresh={refresh}
           keyExtractor={(o) => o.id}
           emptyText="暂无订单"
-          searchEmpty={
-            !!(
-              debouncedSearch ||
-              statusFilter ||
-              customerFilter ||
-              startDate
-            ) && !list.length
-          }
+          searchEmpty={!!hasFilters && !list.length}
           estimateSize={108}
           renderItem={(order) => (
             <SwipeAction
@@ -267,10 +236,7 @@ function OrdersPage() {
                   text: "编辑",
                   color: "primary",
                   onClick: () =>
-                    navigate({
-                      to: "/orders/$id/edit",
-                      params: { id: order.id },
-                    }),
+                    navigate({ to: "/orders/$id/edit", params: { id: order.id } }),
                 },
                 {
                   key: "delete",
@@ -282,9 +248,7 @@ function OrdersPage() {
             >
               <div
                 className="bg-white p-3 mb-2 mx-2 rounded-lg shadow-sm flex gap-3"
-                onClick={() =>
-                  navigate({ to: "/orders/$id", params: { id: order.id } })
-                }
+                onClick={() => navigate({ to: "/orders/$id", params: { id: order.id } })}
               >
                 {order.images?.length ? (
                   <Image
@@ -305,16 +269,8 @@ function OrdersPage() {
                 )}
                 <div className="flex-1 min-w-0 flex flex-col justify-between">
                   <div className="flex justify-between items-start">
-                    <span className="font-medium truncate">
-                      {order.productName}
-                    </span>
-                    <Tag
-                      color={STATUS_MAP[order.status].color}
-                      fill="outline"
-                      style={{ "--border-radius": "4px" }}
-                    >
-                      {STATUS_MAP[order.status].label}
-                    </Tag>
+                    <span className="font-medium truncate">{order.productName}</span>
+                    <StatusTag status={order.status} type="order" />
                   </div>
                   <div className="text-sm text-gray-500">
                     数量: {order.quantity} · 单价: ¥{order.unitPrice}
@@ -329,26 +285,14 @@ function OrdersPage() {
         />
       </div>
 
-      {/* 日期范围选择器 */}
-      <CalendarPicker
+      {/* 日期选择器 */}
+      <DateRangeButton
+        startDate={startDate}
+        endDate={endDate}
         visible={calendarVisible}
-        selectionMode="range"
-        onClose={() => {
-          setCalendarVisible(false);
-          dropdownRef.current?.close();
-        }}
-        onConfirm={(val) => {
-          if (val && val.length === 2) {
-            setStartDate(val[0]);
-            setEndDate(val[1]);
-          } else {
-            setStartDate(null);
-            setEndDate(null);
-          }
-          setCalendarVisible(false);
-          dropdownRef.current?.close();
-        }}
-        title="选择日期范围"
+        onVisibleChange={setCalendarVisible}
+        onConfirm={handleCalendarConfirm}
+        showIcon={false}
       />
     </div>
   );
