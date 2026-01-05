@@ -52,6 +52,7 @@ pub struct Model {
     )]
     pub workshop: HasOne<super::workshop::Entity>,
 
+    // 钻石关系需要先断开，同步完数据库后才能恢复
     #[sea_orm(has_many, relation_enum = "WorkshopOwner", via_rel = "HasOwner")]
     pub workshops: HasMany<super::workshop::Entity>,
 }
