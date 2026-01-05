@@ -30,14 +30,16 @@ export function DateRangeButton({
 
   return (
     <>
-      <div className="flex items-center gap-2">
-        {showIcon && <Calendar size={18} className="text-gray-400" />}
-        <Button size="small" fill="outline" onClick={() => onVisibleChange(true)}>
-          {startDate && endDate
-            ? `${formatDate(startDate)} 至 ${formatDate(endDate)}`
-            : "选择日期范围"}
-        </Button>
-      </div>
+      {showIcon && (
+        <div className="flex items-center gap-2">
+          <Calendar size={18} className="text-gray-400" />
+          <Button size="small" fill="outline" onClick={() => onVisibleChange(true)}>
+            {startDate && endDate
+              ? `${formatDate(startDate)} 至 ${formatDate(endDate)}`
+              : "选择日期范围"}
+          </Button>
+        </div>
+      )}
 
       <CalendarPicker
         visible={visible}

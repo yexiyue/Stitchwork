@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { List, Button, Dialog, Toast, Input, PullToRefresh } from "antd-mobile";
-import { Users, UserPlus, LogOut, Camera, Store, Phone, User as UserIcon, AtSign, Lock } from "lucide-react";
+import { Users, UserPlus, LogOut, Camera, Store, Phone, User as UserIcon, AtSign, Lock, ClipboardList } from "lucide-react";
 import { useAuthStore, selectIsBoss } from "@/stores/auth";
 import { authApi } from "@/api";
 import { Avatar, useAvatarCropper } from "@/components";
@@ -160,12 +160,12 @@ function ProfilePage() {
       updateUser(profile);
     }}>
       <div style={{ background: getGradient(user?.username || "U"), minHeight: "100vh" }}>
-        <div className="flex flex-col items-center py-8">
+        <div className="flex flex-col items-center py-16">
           <div className="relative" onClick={openFilePicker}>
             <Avatar
               name={user?.displayName || user?.username || "U"}
               src={user?.avatar}
-              size="lg"
+              size="xl"
             />
             <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-white rounded-full shadow flex items-center justify-center">
               <Camera size={12} className="text-gray-500" />
@@ -234,7 +234,7 @@ function ProfilePage() {
 
         {!isBoss && (
           <List header="我的">
-            <List.Item onClick={() => {}}>记件记录</List.Item>
+            <List.Item prefix={<ClipboardList size={20} />} onClick={() => navigate({ to: "/my-records" })}>记件记录</List.Item>
           </List>
         )}
 

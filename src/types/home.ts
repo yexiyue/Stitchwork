@@ -28,6 +28,7 @@ export interface Activity {
   activityType: ActivityType;
   userName: string;
   orderName: string;
+  orderImage?: string;
   processName: string;
   quantity: number;
   createdAt: string;

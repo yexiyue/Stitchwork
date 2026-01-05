@@ -1,21 +1,24 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { List, Dialog, Toast, SearchBar, SwipeAction } from "antd-mobile";
-import { Search } from "lucide-react";
-import { Avatar, VirtualList, PageHeader } from "@/components";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { List, Dialog, Toast, SearchBar, SwipeAction, NavBar } from "antd-mobile";
+import { Search, UserPlus, X, ChevronLeft } from "lucide-react";
+import { Avatar, VirtualList, RelativeTime } from "@/components";
 import { authApi } from "@/api";
 import { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { useInfiniteList, useDebouncedSearch } from "@/hooks";
+import { motion, AnimatePresence } from "motion/react";
 
 export const Route = createFileRoute("/_auth/_boss/staff/")({
   component: StaffPage,
 });
 
 function StaffPage() {
+  const navigate = useNavigate();
   const [showSearch, setShowSearch] = useState(false);
 
   // 搜索
-  const { search, debouncedSearch, setSearch, searchInputRef } = useDebouncedSearch();
+  const { search, debouncedSearch, setSearch, searchInputRef } =
+    useDebouncedSearch();
 
   // 无限列表
   const { list, isFetching, hasMore, loadMore, refresh } = useInfiniteList(
@@ -36,9 +39,7 @@ function StaffPage() {
         content: (
           <div className="flex flex-col items-center py-4">
             <QRCodeSVG value={url} size={180} />
-            <p className="mt-3 text-sm text-gray-500">
-              邀请码: {data.code}
-            </p>
+            <p className="mt-3 text-sm text-gray-500">邀请码: {data.code}</p>
             <p className="text-xs text-gray-400">
               有效期至: {new Date(data.expiresAt).toLocaleString()}
             </p>
@@ -74,32 +75,57 @@ function StaffPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <PageHeader
-        title="员工管理"
+      {/* 顶部栏 */}
+      <NavBar
+        onBack={() => navigate({ to: "/profile" })}
+        backIcon={<ChevronLeft size={24} />}
         right={
-          <div className="flex items-center gap-3">
-            <Search
-              size={20}
-              className="text-gray-500"
-              onClick={() => setShowSearch(!showSearch)}
-            />
-            <span className="text-blue-500 text-sm" onClick={handleInvite}>
-              邀请
-            </span>
-          </div>
+          <AnimatePresence mode="wait">
+            {showSearch ? (
+              <motion.div key="close" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <X
+                  size={20}
+                  className="text-gray-500"
+                  onClick={() => {
+                    setShowSearch(false);
+                    setSearch("");
+                  }}
+                />
+              </motion.div>
+            ) : (
+              <motion.div key="actions" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex justify-end gap-3">
+                <Search
+                  size={20}
+                  className="text-gray-500"
+                  onClick={() => setShowSearch(true)}
+                />
+                <UserPlus
+                  size={20}
+                  className="text-blue-500"
+                  onClick={handleInvite}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         }
-      />
-
-      {showSearch && (
-        <div className="px-4 pb-2">
-          <SearchBar
-            ref={searchInputRef}
-            placeholder="搜索员工"
-            value={search}
-            onChange={setSearch}
-          />
-        </div>
-      )}
+      >
+        <AnimatePresence mode="wait">
+          {showSearch ? (
+            <motion.div key="search" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.15 }}>
+              <SearchBar
+                ref={searchInputRef}
+                placeholder="搜索员工姓名"
+                value={search}
+                onChange={setSearch}
+              />
+            </motion.div>
+          ) : (
+            <motion.div key="title" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.15 }}>
+              员工管理
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </NavBar>
 
       <div className="flex flex-1 overflow-hidden">
         <VirtualList
@@ -129,13 +155,22 @@ function StaffPage() {
             >
               <List.Item
                 prefix={
-                  <Avatar
-                    name={staff.displayName || staff.username}
-                    src={staff.avatar}
-                    size="md"
-                  />
+                  <div className="flex h-full items-center mr-2">
+                    <Avatar
+                      name={staff.displayName || staff.username}
+                      src={staff.avatar}
+                      size="md"
+                    />
+                  </div>
                 }
                 description={staff.username}
+                extra={
+                  staff.createdAt && (
+                    <span className="text-xs text-gray-400">
+                      <RelativeTime date={staff.createdAt} />
+                    </span>
+                  )
+                }
               >
                 {staff.displayName || staff.username}
               </List.Item>

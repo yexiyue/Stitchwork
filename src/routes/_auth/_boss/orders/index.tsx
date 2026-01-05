@@ -1,6 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
-  Button,
   Dialog,
   SwipeAction,
   Toast,
@@ -99,27 +98,17 @@ function OrdersPage() {
       <div className="p-4 pb-2">
         <div className="flex items-center justify-between">
           <h1 className="text-xl">订单管理</h1>
-          <div className="flex items-center gap-2">
-            <Button
-              size="small"
-              fill="outline"
+          <div className="flex items-center gap-3">
+            <BarChart3
+              size={20}
+              className="text-gray-500"
               onClick={() => navigate({ to: "/orders/stats" })}
-            >
-              <div className="flex items-center">
-                <BarChart3 size={16} className="mr-1" />
-                统计
-              </div>
-            </Button>
-            <Button
-              size="small"
-              color="primary"
+            />
+            <Plus
+              size={20}
+              className="text-blue-500"
               onClick={() => navigate({ to: "/orders/new" })}
-            >
-              <div className="flex items-center">
-                <Plus size={16} className="mr-1" />
-                新增
-              </div>
-            </Button>
+            />
           </div>
         </div>
       </div>
@@ -291,7 +280,10 @@ function OrdersPage() {
         endDate={endDate}
         visible={calendarVisible}
         onVisibleChange={setCalendarVisible}
-        onConfirm={handleCalendarConfirm}
+        onConfirm={(dates) => {
+          handleCalendarConfirm(dates);
+          dropdownRef.current?.close();
+        }}
         showIcon={false}
       />
     </div>

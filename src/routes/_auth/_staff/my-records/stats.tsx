@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { NavBar } from "antd-mobile";
+import { ChevronLeft } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { statsApi } from "@/api";
 import { useMemo } from "react";
@@ -117,7 +118,7 @@ function StaffStatsPage() {
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
-      <NavBar onBack={() => navigate({ to: "/my-records" })}>我的统计</NavBar>
+      <NavBar onBack={() => navigate({ to: "/my-records" })} backIcon={<ChevronLeft size={24} />}>我的统计</NavBar>
 
       <div className="flex-1 overflow-auto">
         {/* 日期选择器 */}

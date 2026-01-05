@@ -1,26 +1,50 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Dialog, Toast, Dropdown, SwipeAction, Image } from "antd-mobile";
-import { Filter, Plus, ImageIcon, BarChart2, Calendar, Users, Package } from "lucide-react";
+import {
+  Filter,
+  Plus,
+  ImageIcon,
+  BarChart3,
+  Calendar,
+  Users,
+  Package,
+} from "lucide-react";
 import type { PieceRecord, Staff, Order } from "@/types";
-import { RelativeTime, VirtualList, StatusTag, DateRangeButton } from "@/components";
+import {
+  RelativeTime,
+  VirtualList,
+  StatusTag,
+  DateRangeButton,
+} from "@/components";
 import { pieceRecordApi, orderApi } from "@/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
 import type { DropdownRef } from "antd-mobile/es/components/dropdown";
-import { useStaffList, useInfiniteList, useToggleFilter, useDateRange } from "@/hooks";
+import {
+  useStaffList,
+  useInfiniteList,
+  useToggleFilter,
+  useDateRange,
+} from "@/hooks";
 import { RECORD_STATUS_OPTIONS } from "@/constants";
 
 export const Route = createFileRoute("/_auth/_boss/records/")({
   component: RecordsPage,
+  validateSearch: (search: Record<string, unknown>): { status?: string } => ({
+    status: (search.status as string) || undefined,
+  }),
 });
 
 function RecordsPage() {
   const navigate = useNavigate();
+  const { status: initialStatus } = Route.useSearch();
   const dropdownRef = useRef<DropdownRef>(null);
   const queryClient = useQueryClient();
 
   // 筛选状态
-  const statusFilter = useToggleFilter<string>();
+  const statusFilter = useToggleFilter<string>(
+    initialStatus ? [initialStatus] : []
+  );
   const userFilter = useToggleFilter<string>();
   const orderFilter = useToggleFilter<string>();
 
@@ -43,25 +67,26 @@ function RecordsPage() {
   });
 
   // 无限列表
-  const { list, isFetching, hasMore, loadMore, refresh } = useInfiniteList<PieceRecord>(
-    [
-      "piece-records",
-      statusFilter.selected,
-      userFilter.selected[0] ?? "",
-      orderFilter.selected[0] ?? "",
-      startDate?.toISOString(),
-      endDate?.toISOString(),
-    ],
-    (params) =>
-      pieceRecordApi.list({
-        ...params,
-        status: statusFilter.hasSelected ? statusFilter.selected : undefined,
-        userId: userFilter.selected[0] || undefined,
-        orderId: orderFilter.selected[0] || undefined,
-        startDate: dateParams.startDate,
-        endDate: dateParams.endDate,
-      })
-  );
+  const { list, isFetching, hasMore, loadMore, refresh } =
+    useInfiniteList<PieceRecord>(
+      [
+        "piece-records",
+        statusFilter.selected,
+        userFilter.selected[0] ?? "",
+        orderFilter.selected[0] ?? "",
+        startDate?.toISOString(),
+        endDate?.toISOString(),
+      ],
+      (params) =>
+        pieceRecordApi.list({
+          ...params,
+          status: statusFilter.hasSelected ? statusFilter.selected : undefined,
+          userId: userFilter.selected[0] || undefined,
+          orderId: orderFilter.selected[0] || undefined,
+          startDate: dateParams.startDate,
+          endDate: dateParams.endDate,
+        })
+    );
 
   // 审批操作
   const approveMutation = useMutation({
@@ -108,7 +133,11 @@ function RecordsPage() {
     value: o.id,
   }));
 
-  const hasFilters = statusFilter.hasSelected || userFilter.hasSelected || orderFilter.hasSelected || hasDateFilter;
+  const hasFilters =
+    statusFilter.hasSelected ||
+    userFilter.hasSelected ||
+    orderFilter.hasSelected ||
+    hasDateFilter;
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -117,18 +146,16 @@ function RecordsPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-xl">计件管理</h1>
           <div className="flex items-center gap-3">
-            <div
-              className="flex items-center text-blue-500"
+            <BarChart3
+              size={20}
+              className="text-gray-500"
               onClick={() => navigate({ to: "/records/stats" })}
-            >
-              <BarChart2 size={20} />
-            </div>
-            <div
-              className="flex items-center text-blue-500"
+            />
+            <Plus
+              size={20}
+              className="text-blue-500"
               onClick={() => navigate({ to: "/records/new" })}
-            >
-              <Plus size={20} />
-            </div>
+            />
           </div>
         </div>
       </div>
@@ -141,13 +168,17 @@ function RecordsPage() {
             title={
               <Filter
                 size={16}
-                className={statusFilter.hasSelected ? "text-blue-500" : "text-gray-500"}
+                className={
+                  statusFilter.hasSelected ? "text-blue-500" : "text-gray-500"
+                }
               />
             }
           >
             <div className="p-2">
               <div
-                className={`p-3 rounded ${!statusFilter.hasSelected ? "bg-blue-50 text-blue-500" : ""}`}
+                className={`p-3 rounded ${
+                  !statusFilter.hasSelected ? "bg-blue-50 text-blue-500" : ""
+                }`}
                 onClick={() => {
                   statusFilter.clear();
                   dropdownRef.current?.close();
@@ -159,7 +190,9 @@ function RecordsPage() {
                 <div
                   key={opt.key}
                   className={`p-3 rounded flex items-center justify-between ${
-                    statusFilter.isSelected(opt.key) ? "bg-blue-50 text-blue-500" : ""
+                    statusFilter.isSelected(opt.key)
+                      ? "bg-blue-50 text-blue-500"
+                      : ""
                   }`}
                   onClick={() => statusFilter.toggle(opt.key)}
                 >
@@ -174,13 +207,17 @@ function RecordsPage() {
             title={
               <Users
                 size={16}
-                className={userFilter.hasSelected ? "text-blue-500" : "text-gray-500"}
+                className={
+                  userFilter.hasSelected ? "text-blue-500" : "text-gray-500"
+                }
               />
             }
           >
             <div className="p-2 max-h-64 overflow-y-auto">
               <div
-                className={`p-3 rounded ${!userFilter.hasSelected ? "bg-blue-50 text-blue-500" : ""}`}
+                className={`p-3 rounded ${
+                  !userFilter.hasSelected ? "bg-blue-50 text-blue-500" : ""
+                }`}
                 onClick={() => {
                   userFilter.clear();
                   dropdownRef.current?.close();
@@ -192,7 +229,9 @@ function RecordsPage() {
                 <div
                   key={opt.value}
                   className={`p-3 rounded ${
-                    userFilter.isSelected(opt.value) ? "bg-blue-50 text-blue-500" : ""
+                    userFilter.isSelected(opt.value)
+                      ? "bg-blue-50 text-blue-500"
+                      : ""
                   }`}
                   onClick={() => {
                     userFilter.setSelected([opt.value]);
@@ -209,13 +248,17 @@ function RecordsPage() {
             title={
               <Package
                 size={16}
-                className={orderFilter.hasSelected ? "text-blue-500" : "text-gray-500"}
+                className={
+                  orderFilter.hasSelected ? "text-blue-500" : "text-gray-500"
+                }
               />
             }
           >
             <div className="p-2 max-h-64 overflow-y-auto">
               <div
-                className={`p-3 rounded ${!orderFilter.hasSelected ? "bg-blue-50 text-blue-500" : ""}`}
+                className={`p-3 rounded ${
+                  !orderFilter.hasSelected ? "bg-blue-50 text-blue-500" : ""
+                }`}
                 onClick={() => {
                   orderFilter.clear();
                   dropdownRef.current?.close();
@@ -227,7 +270,9 @@ function RecordsPage() {
                 <div
                   key={opt.value}
                   className={`p-3 rounded ${
-                    orderFilter.isSelected(opt.value) ? "bg-blue-50 text-blue-500" : ""
+                    orderFilter.isSelected(opt.value)
+                      ? "bg-blue-50 text-blue-500"
+                      : ""
                   }`}
                   onClick={() => {
                     orderFilter.setSelected([opt.value]);
@@ -287,11 +332,18 @@ function RecordsPage() {
             >
               <div
                 className="bg-white p-3 mb-2 mx-2 rounded-lg shadow-sm flex gap-3 cursor-pointer active:bg-gray-50"
-                onClick={() => navigate({ to: "/records/$id", params: { id: record.id } })}
+                onClick={() =>
+                  navigate({ to: "/records/$id", params: { id: record.id } })
+                }
               >
-                <div className="shrink-0 w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+                <div className="shrink-0 h-20 aspect-square rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
                   {record.orderImage ? (
-                    <Image src={record.orderImage} width={56} height={56} fit="cover" />
+                    <Image
+                      src={record.orderImage}
+                      width="100%"
+                      height="100%"
+                      fit="cover"
+                    />
                   ) : (
                     <ImageIcon size={24} className="text-gray-400" />
                   )}
@@ -312,7 +364,7 @@ function RecordsPage() {
                   </div>
                   <div className="text-xs text-gray-400 mt-0.5">
                     <RelativeTime date={record.recordedAt} />
-                    {record.recordedBy === "boss" && " · 老板代录"}
+                    {record.recordedBy === "byBoss" && " · 老板代录"}
                   </div>
                 </div>
               </div>
@@ -327,7 +379,10 @@ function RecordsPage() {
         endDate={endDate}
         visible={calendarVisible}
         onVisibleChange={setCalendarVisible}
-        onConfirm={handleCalendarConfirm}
+        onConfirm={(dates) => {
+          handleCalendarConfirm(dates);
+          dropdownRef.current?.close();
+        }}
         showIcon={false}
       />
     </div>

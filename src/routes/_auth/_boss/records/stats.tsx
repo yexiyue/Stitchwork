@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { NavBar, CapsuleTabs } from "antd-mobile";
+import { ChevronLeft } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { statsApi } from "@/api";
 import { useState, useMemo } from "react";
@@ -121,19 +122,14 @@ function StatsPage() {
     <div className="flex flex-col h-full bg-gray-50">
       <NavBar
         onBack={() => navigate({ to: "/records" })}
-        right={
-          <CapsuleTabs activeKey={dimension} onChange={(key) => setDimension(key as Dimension)}>
-            <CapsuleTabs.Tab title="数量" key="quantity" />
-            <CapsuleTabs.Tab title="金额" key="amount" />
-          </CapsuleTabs>
-        }
+        backIcon={<ChevronLeft size={24} />}
       >
         计件统计
       </NavBar>
 
       <div className="flex-1 overflow-auto">
         {/* 日期选择器 */}
-        <div className="bg-white p-4">
+        <div className="bg-white p-2">
           <DateRangeButton
             startDate={startDate}
             endDate={endDate}
@@ -158,7 +154,13 @@ function StatsPage() {
           <>
             {/* 柱状图 - 员工产量 */}
             <div className="bg-white mt-2 p-4">
-              <div className="text-sm font-medium text-gray-600 mb-2">员工产量</div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm font-medium text-gray-600">员工产量</div>
+                <CapsuleTabs activeKey={dimension} onChange={(key) => setDimension(key as Dimension)} className="text-sm">
+                  <CapsuleTabs.Tab title="数量" key="quantity" />
+                  <CapsuleTabs.Tab title="金额" key="amount" />
+                </CapsuleTabs>
+              </div>
               {workers.length === 0 ? (
                 <div className="text-center py-8 text-gray-400 text-sm">暂无数据</div>
               ) : (

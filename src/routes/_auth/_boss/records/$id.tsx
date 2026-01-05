@@ -10,7 +10,7 @@ import {
   Input,
   Popup,
 } from "antd-mobile";
-import { ImageIcon, Edit2, Trash2 } from "lucide-react";
+import { ImageIcon, Edit2, Trash2, ChevronLeft } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { pieceRecordApi, orderApi } from "@/api";
 import { RelativeTime } from "@/components";
@@ -124,7 +124,7 @@ function RecordDetailPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col h-full">
-        <NavBar onBack={() => navigate({ to: "/records" })}>计件详情</NavBar>
+        <NavBar onBack={() => navigate({ to: "/records" })} backIcon={<ChevronLeft size={24} />}>计件详情</NavBar>
         <div className="flex-1 flex items-center justify-center">加载中...</div>
       </div>
     );
@@ -133,7 +133,7 @@ function RecordDetailPage() {
   if (!record) {
     return (
       <div className="flex flex-col h-full">
-        <NavBar onBack={() => navigate({ to: "/records" })}>计件详情</NavBar>
+        <NavBar onBack={() => navigate({ to: "/records" })} backIcon={<ChevronLeft size={24} />}>计件详情</NavBar>
         <div className="flex-1 flex items-center justify-center text-gray-500">
           记录不存在
         </div>
@@ -148,6 +148,7 @@ function RecordDetailPage() {
     <div className="flex flex-col h-full bg-gray-50">
       <NavBar
         onBack={() => navigate({ to: "/records" })}
+        backIcon={<ChevronLeft size={24} />}
         right={
           <div className="flex gap-3">
             <Edit2 size={20} onClick={handleEdit} className="text-blue-500" />
@@ -230,7 +231,7 @@ function RecordDetailPage() {
             </div>
             <div className="flex justify-between mt-2">
               <span>录入方式</span>
-              <span>{record.recordedBy === "boss" ? "老板代录" : "员工自报"}</span>
+              <span>{record.recordedBy === "byBoss" ? "老板代录" : "员工自报"}</span>
             </div>
             <div className="flex justify-between mt-2">
               <span>录入时间</span>

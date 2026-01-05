@@ -10,13 +10,14 @@ const AVATAR_COLORS = [
 interface AvatarProps {
   name: string;
   src?: string | null;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
 }
 
 const sizeClasses = {
   sm: "w-8 h-8 text-sm",
   md: "w-10 h-10 text-base",
   lg: "w-16 h-16 text-2xl",
+  xl: "w-20 h-20 text-3xl",
 };
 
 export function Avatar({ name, src, size = "md" }: AvatarProps) {

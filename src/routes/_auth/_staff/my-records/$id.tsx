@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { NavBar, Swiper, Tag, List, DotLoading } from "antd-mobile";
+import { ChevronLeft } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { pieceRecordApi, orderApi, processApi } from "@/api";
 import type { PieceRecordStatus, RecordedBy } from "@/types";
@@ -17,8 +18,8 @@ const STATUS_MAP: Record<PieceRecordStatus, { label: string; color: string }> =
   };
 
 const RECORDED_BY_MAP: Record<RecordedBy, string> = {
-  self: "自己录入",
-  boss: "老板代录",
+  bySelf: "自己录入",
+  byBoss: "老板代录",
 };
 
 function StaffRecordDetailPage() {
@@ -47,7 +48,7 @@ function StaffRecordDetailPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col h-full">
-        <NavBar onBack={() => navigate({ to: "/my-records" })}>
+        <NavBar onBack={() => navigate({ to: "/my-records" })} backIcon={<ChevronLeft size={24} />}>
           计件详情
         </NavBar>
         <div className="flex-1 flex items-center justify-center">
@@ -60,7 +61,7 @@ function StaffRecordDetailPage() {
   if (!record) {
     return (
       <div className="flex flex-col h-full">
-        <NavBar onBack={() => navigate({ to: "/my-records" })}>
+        <NavBar onBack={() => navigate({ to: "/my-records" })} backIcon={<ChevronLeft size={24} />}>
           计件详情
         </NavBar>
         <div className="flex-1 flex items-center justify-center text-gray-500">
@@ -72,9 +73,11 @@ function StaffRecordDetailPage() {
 
   const images = order?.images ?? [];
 
+  console.log(record, process, order);
+
   return (
     <div className="flex flex-col h-full bg-gray-50">
-      <NavBar onBack={() => navigate({ to: "/my-records" })}>
+      <NavBar onBack={() => navigate({ to: "/my-records" })} backIcon={<ChevronLeft size={24} />}>
         计件详情
       </NavBar>
 

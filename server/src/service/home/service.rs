@@ -144,14 +144,20 @@ async fn build_activities(
                 .map(|u| u.display_name.unwrap_or(u.username))
                 .unwrap_or_default();
 
-            let (order_name, process_name) = if let Some(p) = proc {
-                let order_name = orders
-                    .get(&p.order_id)
-                    .map(|o| o.product_name.clone())
-                    .unwrap_or_default();
-                (order_name, p.name)
+            let (order_name, order_image, process_name) = if let Some(p) = proc {
+                let order = orders.get(&p.order_id);
+                let order_name = order.map(|o| o.product_name.clone()).unwrap_or_default();
+                let order_image = order.and_then(|o| {
+                    o.images
+                        .as_ref()
+                        .and_then(|imgs| imgs.as_array())
+                        .and_then(|arr| arr.first())
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                });
+                (order_name, order_image, p.name)
             } else {
-                (String::new(), String::new())
+                (String::new(), None, String::new())
             };
 
             let activity_type = match rec.status {
@@ -165,6 +171,7 @@ async fn build_activities(
                 activity_type,
                 user_name,
                 order_name,
+                order_image,
                 process_name,
                 quantity: rec.quantity,
                 created_at: rec.recorded_at,

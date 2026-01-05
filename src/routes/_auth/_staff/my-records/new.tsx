@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { NavBar, Toast, Form, Button, Picker, Stepper } from "antd-mobile";
+import { ChevronLeft } from "lucide-react";
 import type { Order, Process } from "@/types";
 import { pieceRecordApi, orderApi, processApi } from "@/api";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
@@ -88,7 +89,7 @@ function StaffNewRecordPage() {
 
   return (
     <div>
-      <NavBar onBack={() => navigate({ to: "/my-records" })}>
+      <NavBar onBack={() => navigate({ to: "/my-records" })} backIcon={<ChevronLeft size={24} />}>
         录入计件
       </NavBar>
       <div className="p-4">

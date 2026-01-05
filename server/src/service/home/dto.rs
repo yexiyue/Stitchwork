@@ -41,6 +41,7 @@ pub struct Activity {
     pub activity_type: ActivityType,
     pub user_name: String,
     pub order_name: String,
+    pub order_image: Option<String>,
     pub process_name: String,
     pub quantity: i32,
     pub created_at: DateTime<Utc>,
