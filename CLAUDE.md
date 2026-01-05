@@ -6,6 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 StitchWork is a garment workshop management system (服装加工流程管理系统) for tracking orders, piece-work records, and payroll. Full-stack app with Tauri desktop client, React frontend, and Rust backend.
 
+## Environment Requirements
+
+- Node.js 18+, pnpm
+- Rust 1.83+
+- PostgreSQL
+
 ## Development Commands
 
 ```bash
@@ -43,10 +49,11 @@ StitchWork/
 
 ### Frontend
 
-- **Routing**: TanStack Router with file-based routes. Layout routes: `_auth.tsx` (requires login), `_boss.tsx`, `_staff.tsx`
+- **Routing**: TanStack Router with file-based routes. Layout routes: `_auth.tsx` (requires login), `_boss.tsx`, `_staff.tsx`. Dynamic routes use `$id`. Prefix with `-` to disable a route file.
 - **State**: Zustand with persist middleware for auth (`useAuthStore`)
 - **Data fetching**: TanStack Query
-- **UI**: Ant Design Mobile (Chinese locale), Tailwind CSS 4
+- **UI**: Ant Design Mobile (Chinese locale), Tailwind CSS 4, lucide-react icons
+- **Utilities**: ahooks for React hooks, dayjs for dates, echarts for charts, motion for animations
 - **Path alias**: `@/*` → `src/*`
 
 ### Backend
@@ -62,7 +69,9 @@ StitchWork/
 // src/api/client.ts - auto-injects JWT Bearer token
 client.get<T>(path, params?)
 client.post<T>(path, body?)
+client.put<T>(path, body?)
 client.patch<T>(path, body?)
+client.delete<T>(path)
 ```
 
 ## Environment Variables
@@ -94,20 +103,21 @@ S3_BUCKET=
 - `docs/seaorm-entity-first.md` - SeaORM 2.0 patterns (dense format, schema sync, relations)
 
 <!-- OPENSPEC:START -->
-# OpenSpec Instructions
+## OpenSpec Instructions
 
 These instructions are for AI assistants working in this project.
 
 Always open `@/openspec/AGENTS.md` when the request:
+
 - Mentions planning or proposals (words like proposal, spec, change, plan)
 - Introduces new capabilities, breaking changes, architecture shifts, or big performance/security work
 - Sounds ambiguous and you need the authoritative spec before coding
 
 Use `@/openspec/AGENTS.md` to learn:
+
 - How to create and apply change proposals
 - Spec format and conventions
 - Project structure and guidelines
 
 Keep this managed block so 'openspec update' can refresh the instructions.
-
 <!-- OPENSPEC:END -->

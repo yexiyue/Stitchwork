@@ -1,4 +1,3 @@
-use chrono::NaiveDate;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DbConn, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
     Set,
@@ -6,7 +5,7 @@ use sea_orm::{
 use uuid::Uuid;
 
 use super::dto::{CreateCustomerDto, UpdateCustomerDto};
-use crate::common::{ListData, QueryParams};
+use crate::common::{apply_date_filter, ListData, OwnedByUser, QueryParams};
 use crate::entity::customer::{self, Column, Model};
 use crate::error::{AppError, Result};
 
@@ -16,16 +15,12 @@ pub async fn list(db: &DbConn, params: QueryParams, boss_id: Uuid) -> Result<Lis
     if let Some(ref search) = params.search {
         query = query.filter(Column::Name.contains(search));
     }
-    if let Some(ref start) = params.start_date {
-        if let Ok(date) = NaiveDate::parse_from_str(start, "%Y-%m-%d") {
-            query = query.filter(Column::CreatedAt.gte(date.and_hms_opt(0, 0, 0).unwrap()));
-        }
-    }
-    if let Some(ref end) = params.end_date {
-        if let Ok(date) = NaiveDate::parse_from_str(end, "%Y-%m-%d") {
-            query = query.filter(Column::CreatedAt.lte(date.and_hms_opt(23, 59, 59).unwrap()));
-        }
-    }
+    query = apply_date_filter(
+        query,
+        Column::CreatedAt,
+        params.start_date.as_deref(),
+        params.end_date.as_deref(),
+    );
 
     let order = if params.sort_order == "asc" {
         sea_orm::Order::Asc
@@ -61,9 +56,7 @@ pub async fn get_one(db: &DbConn, id: Uuid, boss_id: Uuid) -> Result<Model> {
         .one(db)
         .await?
         .ok_or_else(|| AppError::NotFound(format!("Customer {} not found", id)))?;
-    if customer.user_id != boss_id {
-        return Err(AppError::Forbidden);
-    }
+    customer.verify_owner(boss_id)?;
     Ok(customer)
 }
 
@@ -72,9 +65,7 @@ pub async fn update(db: &DbConn, id: Uuid, dto: UpdateCustomerDto, boss_id: Uuid
         .one(db)
         .await?
         .ok_or_else(|| AppError::NotFound(format!("Customer {} not found", id)))?;
-    if customer.user_id != boss_id {
-        return Err(AppError::Forbidden);
-    }
+    customer.verify_owner(boss_id)?;
 
     let mut model: customer::ActiveModel = customer.into();
     if let Some(name) = dto.name {
@@ -94,9 +85,7 @@ pub async fn delete(db: &DbConn, id: Uuid, boss_id: Uuid) -> Result<()> {
         .one(db)
         .await?
         .ok_or_else(|| AppError::NotFound(format!("Customer {} not found", id)))?;
-    if customer.user_id != boss_id {
-        return Err(AppError::Forbidden);
-    }
+    customer.verify_owner(boss_id)?;
     customer::Entity::delete_by_id(id).exec(db).await?;
     Ok(())
 }

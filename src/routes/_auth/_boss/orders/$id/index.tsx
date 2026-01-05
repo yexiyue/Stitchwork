@@ -24,27 +24,15 @@ import {
   useUpdateProcess,
   useDeleteProcess,
 } from "@/hooks";
-import type {
-  OrderStatus,
-  Process,
-  CreateProcessDto,
-  UpdateProcessDto,
-} from "@/types";
+import type { Process, CreateProcessDto, UpdateProcessDto } from "@/types";
 import { RelativeTime } from "@/components";
+import { ORDER_STATUS_MAP } from "@/constants";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 export const Route = createFileRoute("/_auth/_boss/orders/$id/")({
   component: OrderDetailPage,
 });
-
-const STATUS_MAP: Record<OrderStatus, { label: string; color: string }> = {
-  pending: { label: "待处理", color: "#faad14" },
-  processing: { label: "进行中", color: "#1890ff" },
-  completed: { label: "已完成", color: "#52c41a" },
-  delivered: { label: "已交付", color: "#722ed1" },
-  cancelled: { label: "已取消", color: "#999" },
-};
 
 function OrderDetailPage() {
   const { id } = Route.useParams();
@@ -163,11 +151,11 @@ function OrderDetailPage() {
           <div className="flex justify-between items-start mb-3">
             <h2 className="text-lg font-medium">{order.productName}</h2>
             <Tag
-              color={STATUS_MAP[order.status].color}
+              color={ORDER_STATUS_MAP[order.status].color}
               fill="outline"
               style={{ "--border-radius": "4px" }}
             >
-              {STATUS_MAP[order.status].label}
+              {ORDER_STATUS_MAP[order.status].label}
             </Tag>
           </div>
           {order.description && (

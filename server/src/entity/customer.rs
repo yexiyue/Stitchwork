@@ -24,3 +24,9 @@ pub struct Model {
 }
 
 impl ActiveModelBehavior for ActiveModel {}
+
+impl crate::common::OwnedByUser for Model {
+    fn user_id(&self) -> Uuid {
+        self.user_id
+    }
+}

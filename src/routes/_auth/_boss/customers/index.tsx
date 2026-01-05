@@ -1,28 +1,21 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import {
-  List,
-  Button,
-  Dialog,
-  SwipeAction,
-  Toast,
-  SearchBar,
-} from "antd-mobile";
+import { List, Dialog, SwipeAction, Toast, SearchBar } from "antd-mobile";
 import { Plus, Search } from "lucide-react";
-import { useDeleteCustomer } from "@/hooks";
+import {
+  useDeleteCustomer,
+  useInfiniteList,
+  useDebouncedSearch,
+} from "@/hooks";
 import type { Customer } from "@/types";
 import { Avatar, RelativeTime, VirtualList, PageHeader } from "@/components";
 import { customerApi } from "@/api";
 import dayjs from "dayjs";
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { useDebounceFn } from "ahooks";
-import { useState, useRef } from "react";
-import type { SearchBarRef } from "antd-mobile/es/components/search-bar";
+import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 
 export const Route = createFileRoute("/_auth/_boss/customers/")({
   component: CustomersPage,
 });
-
-const PAGE_SIZE = 20;
 
 function showCustomerDetail(customer: Customer) {
   Dialog.alert({
@@ -50,34 +43,21 @@ function showCustomerDetail(customer: Customer) {
 function CustomersPage() {
   const navigate = useNavigate();
   const deleteMutation = useDeleteCustomer();
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [showSearch, setShowSearch] = useState(false);
-  const searchInputRef = useRef<SearchBarRef>(null);
-
-  const { run: updateSearch } = useDebounceFn(
-    (val: string) => setDebouncedSearch(val),
-    { wait: 300 }
-  );
-
   const queryClient = useQueryClient();
-  const { data, isFetching, fetchNextPage, hasNextPage, refetch } =
-    useInfiniteQuery({
-      queryKey: ["customers", debouncedSearch],
-      queryFn: ({ pageParam = 1 }) =>
-        customerApi.list({
-          page: pageParam,
-          pageSize: PAGE_SIZE,
-          search: debouncedSearch,
-        }),
-      initialPageParam: 1,
-      getNextPageParam: (lastPage, allPages) =>
-        allPages.flatMap((p) => p.list).length < lastPage.total
-          ? allPages.length + 1
-          : undefined,
-    });
+  const [showSearch, setShowSearch] = useState(false);
 
-  const list = data?.pages.flatMap((p) => p.list) ?? [];
+  // 搜索
+  const { search, debouncedSearch, setSearch, searchInputRef } =
+    useDebouncedSearch();
+
+  // 无限列表
+  const { list, isFetching, hasMore, loadMore, refresh } =
+    useInfiniteList<Customer>(["customers", debouncedSearch], (params) =>
+      customerApi.list({
+        ...params,
+        search: debouncedSearch || undefined,
+      })
+    );
 
   const handleDelete = (customer: Customer) => {
     Dialog.confirm({
@@ -101,63 +81,46 @@ function CustomersPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {showSearch ? (
-        <div className="h-[45px] flex items-center px-3">
+      <PageHeader
+        title="客户管理"
+        right={
+          <div className="flex items-center gap-2">
+            <Search
+              size={20}
+              className="text-gray-500"
+              onClick={() => setShowSearch(!showSearch)}
+            />
+            <Plus
+              size={20}
+              className="text-blue-500"
+              onClick={() => navigate({ to: "/customers/new" })}
+            />
+          </div>
+        }
+      />
+
+      {showSearch && (
+        <div className="px-4 pb-2">
           <SearchBar
             ref={searchInputRef}
             placeholder="搜索客户名称"
             value={search}
-            onChange={(val) => {
-              setSearch(val);
-              updateSearch(val);
-            }}
-            onCancel={() => {
-              setShowSearch(false);
-              setSearch("");
-              updateSearch("");
-            }}
-            showCancelButton
-            autoFocus
-            className="flex-1"
+            onChange={setSearch}
           />
         </div>
-      ) : (
-        <PageHeader title="客户管理" right={
-          <div className="flex items-center gap-2">
-            <Button
-              size="small"
-              fill="none"
-              onClick={() => {
-                setShowSearch(true);
-                setTimeout(() => searchInputRef.current?.focus(), 100);
-              }}
-            >
-              <Search size={20} />
-            </Button>
-            <Button
-              size="small"
-              color="primary"
-              onClick={() => navigate({ to: "/customers/new" })}
-            >
-              <div className="flex items-center">
-                <Plus size={16} className="mr-1" />
-                新增
-              </div>
-            </Button>
-          </div>
-        } />
       )}
 
       <div className="flex flex-1 overflow-hidden">
         <VirtualList
           data={list}
           loading={isFetching}
-          hasMore={!!hasNextPage}
-          onLoadMore={fetchNextPage}
-          onRefresh={refetch}
+          hasMore={hasMore}
+          onLoadMore={loadMore}
+          onRefresh={refresh}
           keyExtractor={(c) => c.id}
           emptyText="暂无客户"
           searchEmpty={!!debouncedSearch && !list.length}
+          estimateSize={72}
           renderItem={(customer) => (
             <SwipeAction
               rightActions={[
@@ -180,25 +143,15 @@ function CustomersPage() {
               ]}
             >
               <List.Item
-                prefix={
-                  <div className="flex h-full flex-col justify-center pr-2">
-                    <Avatar name={customer.name} />
-                  </div>
-                }
+                prefix={<Avatar name={customer.name} size="md" />}
                 description={
-                  <div className="flex justify-between items-center">
-                    <span className="line-clamp-1">
-                      {customer.phone && <span>{customer.phone}</span>}
-                      {customer.phone && customer.description && " · "}
-                      {customer.description}
-                    </span>
-                    <span className="text-xs text-gray-400 shrink-0 ml-2">
-                      <RelativeTime date={customer.createdAt} />
-                    </span>
-                  </div>
+                  <span className="text-gray-400 text-xs">
+                    <RelativeTime date={customer.createdAt} />
+                    {customer.phone && ` · ${customer.phone}`}
+                  </span>
                 }
                 onClick={() => showCustomerDetail(customer)}
-                clickable
+                arrow={false}
               >
                 {customer.name}
               </List.Item>

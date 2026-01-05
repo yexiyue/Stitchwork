@@ -30,6 +30,7 @@ import { Route as AuthStaffMyRecordsIdRouteImport } from './routes/_auth/_staff/
 import { Route as AuthBossRecordsStatsRouteImport } from './routes/_auth/_boss/records/stats'
 import { Route as AuthBossRecordsNewRouteImport } from './routes/_auth/_boss/records/new'
 import { Route as AuthBossRecordsIdRouteImport } from './routes/_auth/_boss/records/$id'
+import { Route as AuthBossOrdersStatsRouteImport } from './routes/_auth/_boss/orders/stats'
 import { Route as AuthBossOrdersNewRouteImport } from './routes/_auth/_boss/orders/new'
 import { Route as AuthBossCustomersNewRouteImport } from './routes/_auth/_boss/customers/new'
 import { Route as AuthBossCustomersIdRouteImport } from './routes/_auth/_boss/customers/$id'
@@ -138,6 +139,11 @@ const AuthBossRecordsIdRoute = AuthBossRecordsIdRouteImport.update({
   path: '/records/$id',
   getParentRoute: () => AuthBossRoute,
 } as any)
+const AuthBossOrdersStatsRoute = AuthBossOrdersStatsRouteImport.update({
+  id: '/orders/stats',
+  path: '/orders/stats',
+  getParentRoute: () => AuthBossRoute,
+} as any)
 const AuthBossOrdersNewRoute = AuthBossOrdersNewRouteImport.update({
   id: '/orders/new',
   path: '/orders/new',
@@ -175,6 +181,7 @@ export interface FileRoutesByFullPath {
   '/customers/$id': typeof AuthBossCustomersIdRoute
   '/customers/new': typeof AuthBossCustomersNewRoute
   '/orders/new': typeof AuthBossOrdersNewRoute
+  '/orders/stats': typeof AuthBossOrdersStatsRoute
   '/records/$id': typeof AuthBossRecordsIdRoute
   '/records/new': typeof AuthBossRecordsNewRoute
   '/records/stats': typeof AuthBossRecordsStatsRoute
@@ -200,6 +207,7 @@ export interface FileRoutesByTo {
   '/customers/$id': typeof AuthBossCustomersIdRoute
   '/customers/new': typeof AuthBossCustomersNewRoute
   '/orders/new': typeof AuthBossOrdersNewRoute
+  '/orders/stats': typeof AuthBossOrdersStatsRoute
   '/records/$id': typeof AuthBossRecordsIdRoute
   '/records/new': typeof AuthBossRecordsNewRoute
   '/records/stats': typeof AuthBossRecordsStatsRoute
@@ -229,6 +237,7 @@ export interface FileRoutesById {
   '/_auth/_boss/customers/$id': typeof AuthBossCustomersIdRoute
   '/_auth/_boss/customers/new': typeof AuthBossCustomersNewRoute
   '/_auth/_boss/orders/new': typeof AuthBossOrdersNewRoute
+  '/_auth/_boss/orders/stats': typeof AuthBossOrdersStatsRoute
   '/_auth/_boss/records/$id': typeof AuthBossRecordsIdRoute
   '/_auth/_boss/records/new': typeof AuthBossRecordsNewRoute
   '/_auth/_boss/records/stats': typeof AuthBossRecordsStatsRoute
@@ -256,6 +265,7 @@ export interface FileRouteTypes {
     | '/customers/$id'
     | '/customers/new'
     | '/orders/new'
+    | '/orders/stats'
     | '/records/$id'
     | '/records/new'
     | '/records/stats'
@@ -281,6 +291,7 @@ export interface FileRouteTypes {
     | '/customers/$id'
     | '/customers/new'
     | '/orders/new'
+    | '/orders/stats'
     | '/records/$id'
     | '/records/new'
     | '/records/stats'
@@ -309,6 +320,7 @@ export interface FileRouteTypes {
     | '/_auth/_boss/customers/$id'
     | '/_auth/_boss/customers/new'
     | '/_auth/_boss/orders/new'
+    | '/_auth/_boss/orders/stats'
     | '/_auth/_boss/records/$id'
     | '/_auth/_boss/records/new'
     | '/_auth/_boss/records/stats'
@@ -480,6 +492,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthBossRecordsIdRouteImport
       parentRoute: typeof AuthBossRoute
     }
+    '/_auth/_boss/orders/stats': {
+      id: '/_auth/_boss/orders/stats'
+      path: '/orders/stats'
+      fullPath: '/orders/stats'
+      preLoaderRoute: typeof AuthBossOrdersStatsRouteImport
+      parentRoute: typeof AuthBossRoute
+    }
     '/_auth/_boss/orders/new': {
       id: '/_auth/_boss/orders/new'
       path: '/orders/new'
@@ -524,6 +543,7 @@ interface AuthBossRouteChildren {
   AuthBossCustomersIdRoute: typeof AuthBossCustomersIdRoute
   AuthBossCustomersNewRoute: typeof AuthBossCustomersNewRoute
   AuthBossOrdersNewRoute: typeof AuthBossOrdersNewRoute
+  AuthBossOrdersStatsRoute: typeof AuthBossOrdersStatsRoute
   AuthBossRecordsIdRoute: typeof AuthBossRecordsIdRoute
   AuthBossRecordsNewRoute: typeof AuthBossRecordsNewRoute
   AuthBossRecordsStatsRoute: typeof AuthBossRecordsStatsRoute
@@ -541,6 +561,7 @@ const AuthBossRouteChildren: AuthBossRouteChildren = {
   AuthBossCustomersIdRoute: AuthBossCustomersIdRoute,
   AuthBossCustomersNewRoute: AuthBossCustomersNewRoute,
   AuthBossOrdersNewRoute: AuthBossOrdersNewRoute,
+  AuthBossOrdersStatsRoute: AuthBossOrdersStatsRoute,
   AuthBossRecordsIdRoute: AuthBossRecordsIdRoute,
   AuthBossRecordsNewRoute: AuthBossRecordsNewRoute,
   AuthBossRecordsStatsRoute: AuthBossRecordsStatsRoute,

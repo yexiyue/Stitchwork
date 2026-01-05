@@ -63,3 +63,69 @@ export interface GroupStat {
 export interface GroupStatsList {
   list: GroupStat[];
 }
+
+// ============ Order Stats ============
+
+export interface OrderStatsParams {
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface OrderOverview {
+  totalOrders: number;
+  pendingOrders: number;
+  processingOrders: number;
+  completedOrders: number;
+  deliveredOrders: number;
+  cancelledOrders: number;
+  totalQuantity: number;
+  totalAmount: string;
+}
+
+export interface MonthlyOrderStat {
+  month: string;
+  orderCount: number;
+  totalQuantity: number;
+  totalAmount: string;
+}
+
+export interface MonthlyOrderStatsList {
+  list: MonthlyOrderStat[];
+}
+
+export interface CustomerContribution {
+  customerId: string;
+  customerName: string;
+  orderCount: number;
+  totalQuantity: number;
+  totalAmount: string;
+}
+
+export interface CustomerContributionList {
+  list: CustomerContribution[];
+}
+
+export interface OrderProgressItem {
+  orderId: string;
+  productName: string;
+  customerName: string;
+  totalQuantity: number;
+  completedQuantity: number;
+  progress: number;
+  status: string;
+}
+
+export interface OrderProgressList {
+  list: OrderProgressItem[];
+}
+
+export interface DailyOrderStat {
+  date: string;
+  orderCount: number;
+  totalQuantity: number;
+  totalAmount: string;
+}
+
+export interface DailyOrderStatsList {
+  list: DailyOrderStat[];
+}

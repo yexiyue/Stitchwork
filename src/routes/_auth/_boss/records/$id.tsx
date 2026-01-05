@@ -14,19 +14,12 @@ import { ImageIcon, Edit2, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { pieceRecordApi, orderApi } from "@/api";
 import { RelativeTime } from "@/components";
-import type { PieceRecordStatus } from "@/types";
+import { RECORD_STATUS_MAP } from "@/constants";
 import { useState } from "react";
 
 export const Route = createFileRoute("/_auth/_boss/records/$id")({
   component: RecordDetailPage,
 });
-
-const STATUS_MAP: Record<PieceRecordStatus, { label: string; color: string }> =
-  {
-    pending: { label: "待审核", color: "#faad14" },
-    approved: { label: "已通过", color: "#52c41a" },
-    rejected: { label: "已拒绝", color: "#ff4d4f" },
-  };
 
 function RecordDetailPage() {
   const { id } = Route.useParams();
@@ -223,11 +216,11 @@ function RecordDetailPage() {
               </div>
             </div>
             <Tag
-              color={STATUS_MAP[record.status].color}
+              color={RECORD_STATUS_MAP[record.status].color}
               fill="outline"
               style={{ "--border-radius": "4px" }}
             >
-              {STATUS_MAP[record.status].label}
+              {RECORD_STATUS_MAP[record.status].label}
             </Tag>
           </div>
           <div className="text-sm text-gray-500 mt-3 pt-3 border-t border-gray-100">

@@ -1,12 +1,14 @@
 import { useNavigate } from "@tanstack/react-router";
 import { Card } from "antd-mobile";
-import { FileEdit, Store, BarChart3 } from "lucide-react";
+import { FileEdit, Store, TrendingUp, Package } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { homeApi, statsApi } from "@/api";
 import { useAuthStore } from "@/stores/auth";
-import { MiniChart, RelativeTime } from "@/components";
+import { MiniChart, RelativeTime, Chart } from "@/components";
 import type { StaffOverview, Activity } from "@/types";
+import type { EChartsOption } from "echarts";
 import dayjs from "dayjs";
+import { useMemo } from "react";
 
 export function StaffHome() {
   const navigate = useNavigate();
@@ -31,8 +33,43 @@ export function StaffHome() {
       }),
   });
 
+  // 本月统计参数
+  const monthParams = {
+    startDate: dayjs().startOf("month").format("YYYY-MM-DD"),
+    endDate: dayjs().endOf("month").format("YYYY-MM-DD"),
+  };
+
+  const { data: byOrderData } = useQuery({
+    queryKey: ["staff-stats-by-order", monthParams],
+    queryFn: () => statsApi.statsByOrder(monthParams),
+  });
+
   const staff = overview as StaffOverview | undefined;
   const chartData = dailyData?.list?.map((d) => d.totalQuantity) ?? [];
+  const byOrder = byOrderData?.list ?? [];
+
+  // 按订单统计柱状图
+  const orderBarOption: EChartsOption = useMemo(() => {
+    const data = byOrder.slice(0, 5);
+    return {
+      tooltip: { trigger: "axis", formatter: "{b}: {c}件" },
+      grid: { left: 10, right: 10, bottom: 10, top: 10, containLabel: true },
+      xAxis: {
+        type: "category",
+        data: data.map((d) => d.name.length > 6 ? d.name.slice(0, 6) + "..." : d.name),
+        axisLabel: { fontSize: 10, rotate: 15 },
+      },
+      yAxis: { type: "value", axisLabel: { fontSize: 10 } },
+      series: [
+        {
+          type: "bar",
+          data: data.map((d) => d.totalQuantity),
+          barMaxWidth: 30,
+          itemStyle: { color: "#3b82f6", borderRadius: [4, 4, 0, 0] },
+        },
+      ],
+    };
+  }, [byOrder]);
 
   return (
     <div className="p-4 pb-20">
@@ -58,41 +95,52 @@ export function StaffHome() {
         <div className="p-4 bg-gray-50 rounded-lg text-center text-gray-500">暂未加入工坊</div>
       )}
 
-      <div className="mt-4 grid grid-cols-2 gap-3">
-        <Card className="!p-3">
-          <div className="text-sm text-gray-500">本月产量</div>
+      {/* 本月数据卡片 */}
+      <div className="mt-4 grid grid-cols-3 gap-3">
+        <Card className="p-3!">
+          <div className="text-xs text-gray-500">本月产量</div>
           <div className="text-xl font-bold text-blue-600 mt-1">{staff?.monthQuantity ?? 0}</div>
+          <div className="text-xs text-gray-400">件</div>
         </Card>
-        <Card className="!p-3">
-          <div className="text-sm text-gray-500">本月收入</div>
-          <div className="text-xl font-bold text-green-600 mt-1">¥{parseFloat(staff?.monthAmount ?? "0").toFixed(2)}</div>
+        <Card className="p-3!">
+          <div className="text-xs text-gray-500">本月收入</div>
+          <div className="text-lg font-bold text-green-600 mt-1">
+            ¥{parseFloat(staff?.monthAmount ?? "0").toFixed(0)}
+          </div>
+          <div className="text-xs text-gray-400">元</div>
+        </Card>
+        <Card className="p-3!">
+          <div className="text-xs text-gray-500">参与订单</div>
+          <div className="text-xl font-bold text-purple-600 mt-1">{byOrder.length}</div>
+          <div className="text-xs text-gray-400">个</div>
         </Card>
       </div>
 
+      {/* 近7日趋势 */}
       {chartData.length > 0 && (
-        <Card className="mt-4 !p-3">
-          <div className="text-sm text-gray-500 mb-2">近7日趋势</div>
+        <Card className="mt-4 p-3!">
+          <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
+            <TrendingUp size={14} />
+            近7日产量趋势
+          </div>
           <MiniChart data={chartData} color="#22c55e" height={60} />
         </Card>
       )}
 
-      <div className="mt-4 grid grid-cols-2 gap-3">
-        <Card className="cursor-pointer" onClick={() => navigate({ to: "/my-records" })}>
-          <div className="flex flex-col items-center gap-2 py-3">
-            <FileEdit size={28} className="text-blue-500" />
-            <span className="text-sm">我的计件</span>
+      {/* 按订单统计 */}
+      {byOrder.length > 0 && (
+        <Card className="mt-4 p-3!">
+          <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
+            <Package size={14} />
+            本月订单产量
           </div>
+          <Chart option={orderBarOption} height={140} />
         </Card>
-        <Card className="cursor-pointer" onClick={() => navigate({ to: "/my-records/stats" })}>
-          <div className="flex flex-col items-center gap-2 py-3">
-            <BarChart3 size={28} className="text-purple-500" />
-            <span className="text-sm">统计报表</span>
-          </div>
-        </Card>
-      </div>
+      )}
 
+      {/* 快捷入口 */}
       <Card
-        className="mt-4 cursor-pointer bg-blue-500 !text-white"
+        className="mt-4 cursor-pointer bg-blue-500 text-white!"
         onClick={() => navigate({ to: "/my-records/new" })}
       >
         <div className="flex items-center justify-center gap-2 py-2">
@@ -101,33 +149,66 @@ export function StaffHome() {
         </div>
       </Card>
 
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        <Card className="cursor-pointer p-3!" onClick={() => navigate({ to: "/my-records" })}>
+          <div className="flex items-center gap-2">
+            <FileEdit size={20} className="text-blue-500" />
+            <span className="text-sm font-medium">我的计件</span>
+          </div>
+        </Card>
+        <Card className="cursor-pointer p-3!" onClick={() => navigate({ to: "/my-records/stats" })}>
+          <div className="flex items-center gap-2">
+            <TrendingUp size={20} className="text-purple-500" />
+            <span className="text-sm font-medium">统计报表</span>
+          </div>
+        </Card>
+      </div>
+
+      {/* 最近记录 */}
       {activities?.list && activities.list.length > 0 && (
         <div className="mt-4">
           <div className="text-sm font-medium text-gray-600 mb-2">最近记录</div>
-          <Card className="!p-0">
+          <div className="space-y-2">
             {activities.list.map((act: Activity) => (
-              <div key={act.id} className="px-3 py-2 border-b border-gray-50 last:border-0">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">
-                    <span
-                      className={
-                        act.activityType === "approve"
-                          ? "text-green-600"
-                          : act.activityType === "reject"
-                            ? "text-red-500"
-                            : "text-orange-500"
-                      }
-                    >
-                      {act.activityType === "submit" ? "待审核" : act.activityType === "approve" ? "已通过" : "已驳回"}
-                    </span>
-                    <span className="text-gray-600 ml-2">{act.quantity}件</span>
-                  </span>
-                  <RelativeTime date={act.createdAt} />
+              <Card key={act.id} className="p-3!">
+                <div className="flex items-start gap-3">
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium ${
+                      act.activityType === "submit"
+                        ? "bg-orange-500"
+                        : act.activityType === "approve"
+                          ? "bg-green-500"
+                          : "bg-red-500"
+                    }`}
+                  >
+                    {act.quantity}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`text-xs px-1.5 py-0.5 rounded ${
+                          act.activityType === "submit"
+                            ? "bg-orange-50 text-orange-600"
+                            : act.activityType === "approve"
+                              ? "bg-green-50 text-green-600"
+                              : "bg-red-50 text-red-600"
+                        }`}
+                      >
+                        {act.activityType === "submit" ? "待审核" : act.activityType === "approve" ? "已通过" : "已驳回"}
+                      </span>
+                      <span className="text-blue-600 font-medium text-sm">{act.quantity}件</span>
+                    </div>
+                    <div className="text-sm text-gray-600 mt-1">
+                      {act.orderName} · {act.processName}
+                    </div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      <RelativeTime date={act.createdAt} />
+                    </div>
+                  </div>
                 </div>
-                <div className="text-xs text-gray-400 mt-0.5">{act.orderName} · {act.processName}</div>
-              </div>
+              </Card>
             ))}
-          </Card>
+          </div>
         </div>
       )}
     </div>
