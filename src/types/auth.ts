@@ -79,4 +79,5 @@ export interface Staff {
   displayName?: string;
   phone?: string;
   avatar?: string;
+  createdAt?: string;
 }

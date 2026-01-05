@@ -1,5 +1,5 @@
 export type PieceRecordStatus = "pending" | "approved" | "rejected";
-export type RecordedBy = "self" | "boss";
+export type RecordedBy = "bySelf" | "byBoss";
 
 export interface PieceRecord {
   id: string;

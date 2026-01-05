@@ -1,6 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
-import { Card, Badge, ProgressBar } from "antd-mobile";
-import { FileEdit, Store, Package, Users, TrendingUp } from "lucide-react";
+import { Card, Badge, ProgressBar, Image } from "antd-mobile";
+import { FileEdit, Store, Package, Users, TrendingUp, ImageIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { homeApi, statsApi } from "@/api";
 import { useAuthStore } from "@/stores/auth";
@@ -131,7 +131,7 @@ export function BossHome() {
   }, [customers]);
 
   return (
-    <div className="p-4 pb-20">
+    <div className="p-3 pb-20 space-y-3">
       {user?.workshop ? (
         <div
           className="p-4 bg-gray-50 rounded-lg"
@@ -167,7 +167,7 @@ export function BossHome() {
         </div>
       )}
 
-      <div className="mt-4 grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <Card className="p-3!">
           <div className="text-sm text-gray-500">今日产量</div>
           <div className="text-xl font-bold text-blue-600 mt-1">
@@ -189,7 +189,7 @@ export function BossHome() {
       </div>
 
       {chartData.length > 0 && (
-        <Card className="mt-4 p-3!">
+        <Card className="p-3!">
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
             <TrendingUp size={14} />
             近7日产量趋势
@@ -200,7 +200,7 @@ export function BossHome() {
 
       {/* 订单状态分布 */}
       {orderOverview && orderOverview.totalOrders > 0 && (
-        <Card className="mt-4 p-3!">
+        <Card className="p-3!">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <Package size={14} />
@@ -216,7 +216,7 @@ export function BossHome() {
 
       {/* 客户贡献度 */}
       {customers.length > 0 && (
-        <Card className="mt-4 p-3!">
+        <Card className="p-3!">
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
             <Users size={14} />
             本月客户贡献
@@ -227,7 +227,7 @@ export function BossHome() {
 
       {/* 员工产量排行 */}
       {workers.length > 0 && (
-        <Card className="mt-4 p-3!">
+        <Card className="p-3!">
           <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
             <Users size={14} />
             本月员工产量
@@ -261,7 +261,7 @@ export function BossHome() {
 
       {/* 进行中订单进度 */}
       {orders.length > 0 && (
-        <Card className="mt-4 p-3!">
+        <Card className="p-3!">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <Package size={14} />
@@ -308,7 +308,7 @@ export function BossHome() {
         </Card>
       )}
 
-      <div className="mt-4 grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <Card
           className="cursor-pointer"
           onClick={() => navigate({ to: "/orders" })}
@@ -325,7 +325,7 @@ export function BossHome() {
         </Card>
         <Card
           className="cursor-pointer"
-          onClick={() => navigate({ to: "/pending" })}
+          onClick={() => navigate({ to: "/records", search: { status: "pending" } })}
         >
           <div className="flex items-center gap-3 py-1">
             <Badge content={boss?.pendingCount || ""}>
@@ -340,30 +340,31 @@ export function BossHome() {
       </div>
 
       {activities?.list && activities.list.length > 0 && (
-        <div className="mt-4">
+        <div>
           <div className="text-sm font-medium text-gray-600 mb-2">最近动态</div>
-          <div className="space-y-2">
+          <div className="space-y-1">
             {activities.list.slice(0, 5).map((act: Activity) => (
-              <Card key={act.id} className="p-3!">
-                <div className="flex items-start gap-3">
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium ${
-                      act.activityType === "submit"
-                        ? "bg-orange-500"
-                        : act.activityType === "approve"
-                        ? "bg-green-500"
-                        : "bg-red-500"
-                    }`}
-                  >
-                    {act.userName.slice(0, 1)}
+              <Card key={act.id} className="shadow-sm border border-gray-100">
+                <div className="flex items-center gap-3">
+                  <div className="shrink-0 w-10 h-10 rounded overflow-hidden bg-gray-100 flex items-center justify-center">
+                    {act.orderImage ? (
+                      <Image
+                        src={act.orderImage}
+                        width="100%"
+                        height="100%"
+                        fit="cover"
+                      />
+                    ) : (
+                      <ImageIcon size={16} className="text-gray-400" />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm">
-                        {act.userName}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm truncate">
+                        {act.userName} · {act.orderName}
                       </span>
                       <span
-                        className={`text-xs px-1.5 py-0.5 rounded ${
+                        className={`text-xs px-1.5 py-0.5 rounded shrink-0 ${
                           act.activityType === "submit"
                             ? "bg-orange-50 text-orange-600"
                             : act.activityType === "approve"
@@ -378,13 +379,10 @@ export function BossHome() {
                           : "已驳回"}
                       </span>
                     </div>
-                    <div className="text-sm text-gray-600 mt-1">
-                      {act.orderName} · {act.processName}
-                      <span className="text-blue-600 ml-1 font-medium">
-                        {act.quantity}件
+                    <div className="flex items-center justify-between text-xs text-gray-400 mt-1">
+                      <span>
+                        {act.processName} · {act.quantity}件
                       </span>
-                    </div>
-                    <div className="text-xs text-gray-400 mt-1">
                       <RelativeTime date={act.createdAt} />
                     </div>
                   </div>

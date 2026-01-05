@@ -16,7 +16,7 @@ import {
   Popup,
   Divider,
 } from "antd-mobile";
-import { Edit, Plus, ImageOff } from "lucide-react";
+import { Edit, Plus, ImageOff, ChevronLeft } from "lucide-react";
 import {
   useOrder,
   useProcesses,
@@ -132,6 +132,7 @@ function OrderDetailPage() {
     <div className="flex flex-col h-full">
       <NavBar
         onBack={() => navigate({ to: "/orders" })}
+        backIcon={<ChevronLeft size={24} />}
         right={
           <Button
             size="small"

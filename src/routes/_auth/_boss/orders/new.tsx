@@ -10,6 +10,7 @@ import {
   Stepper,
   TextArea,
 } from "antd-mobile";
+import { ChevronLeft } from "lucide-react";
 import { useCreateOrder, useCustomers } from "@/hooks";
 import { ImageUploader } from "@/components";
 import { useState } from "react";
@@ -59,7 +60,7 @@ function NewOrderPage() {
 
   return (
     <div>
-      <NavBar onBack={() => navigate({ to: "/orders" })}>新增订单</NavBar>
+      <NavBar onBack={() => navigate({ to: "/orders" })} backIcon={<ChevronLeft size={24} />}>新增订单</NavBar>
       <div className="p-4">
         <Form
           onFinish={handleSubmit}

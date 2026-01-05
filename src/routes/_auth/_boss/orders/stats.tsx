@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { NavBar, ProgressBar, CapsuleTabs } from "antd-mobile";
-import { TrendingUp, Users, Package, ClipboardList } from "lucide-react";
+import { TrendingUp, Users, Package, ClipboardList, ChevronLeft } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { statsApi } from "@/api";
 import { useState, useMemo } from "react";
@@ -182,7 +182,7 @@ function OrderStatsPage() {
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
-      <NavBar onBack={() => navigate({ to: "/orders" })}>订单统计</NavBar>
+      <NavBar onBack={() => navigate({ to: "/orders" })} backIcon={<ChevronLeft size={24} />}>订单统计</NavBar>
 
       <div className="flex-1 overflow-auto">
         {/* 日期选择器 */}

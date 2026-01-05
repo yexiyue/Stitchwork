@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Dropdown, Button } from "antd-mobile";
-import { ChevronRight, Filter, Plus } from "lucide-react";
+import { Dropdown, Button, Image } from "antd-mobile";
+import { ChevronRight, Filter, Plus, BarChart3, ImageIcon } from "lucide-react";
 import type { PieceRecord } from "@/types";
 import { RelativeTime, VirtualList, StatusTag } from "@/components";
 import { pieceRecordApi, statsApi } from "@/api";
@@ -39,14 +39,15 @@ function StaffRecordsPage() {
   const myStats = statsData?.list?.[0];
 
   // 无限列表
-  const { list, isFetching, hasMore, loadMore, refresh } = useInfiniteList<PieceRecord>(
-    ["piece-records", statusFilter.selected],
-    (params) =>
-      pieceRecordApi.list({
-        ...params,
-        status: statusFilter.hasSelected ? statusFilter.selected : undefined,
-      })
-  );
+  const { list, isFetching, hasMore, loadMore, refresh } =
+    useInfiniteList<PieceRecord>(
+      ["piece-records", statusFilter.selected],
+      (params) =>
+        pieceRecordApi.list({
+          ...params,
+          status: statusFilter.hasSelected ? statusFilter.selected : undefined,
+        })
+    );
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -63,7 +64,9 @@ function StaffRecordsPage() {
             </div>
             <div className="flex justify-around">
               <div className="text-center">
-                <div className="text-2xl font-bold">{myStats.totalQuantity}</div>
+                <div className="text-2xl font-bold">
+                  {myStats.totalQuantity}
+                </div>
                 <div className="text-xs opacity-80">件</div>
               </div>
               <div className="w-px bg-white/30" />
@@ -79,14 +82,12 @@ function StaffRecordsPage() {
 
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl">我的计件</h1>
-          <div className="flex items-center gap-2">
-            <div
-              className="flex items-center text-blue-500"
-              onClick={() => navigate({ to: "/my-records/new" })}
-            >
-              <Plus size={20} />
-              <span>录入</span>
-            </div>
+          <div className="flex items-center gap-3">
+            <BarChart3
+              size={20}
+              className="text-gray-500"
+              onClick={() => navigate({ to: "/my-records/stats" })}
+            />
             <Dropdown ref={dropdownRef}>
               <Dropdown.Item key="filter" title={<Filter size={20} />}>
                 <div className="p-2">
@@ -116,6 +117,11 @@ function StaffRecordsPage() {
                 </div>
               </Dropdown.Item>
             </Dropdown>
+            <Plus
+              size={20}
+              className="text-blue-500"
+              onClick={() => navigate({ to: "/my-records/new" })}
+            />
           </div>
         </div>
       </div>
@@ -133,26 +139,28 @@ function StaffRecordsPage() {
           estimateSize={98}
           renderItem={(record: PieceRecord) => (
             <div
-              className="bg-white p-3 mb-2 mx-2 rounded-lg shadow-sm flex gap-3"
+              className="bg-white p-3 mb-2 mx-2 rounded-lg shadow-sm flex gap-3 border border-gray-50"
               onClick={() =>
                 navigate({ to: "/my-records/$id", params: { id: record.id } })
               }
             >
-              {record.orderImage ? (
-                <img
-                  src={record.orderImage}
-                  alt="订单图片"
-                  className="w-14 h-14 rounded object-cover shrink-0"
-                />
-              ) : (
-                <div className="w-14 h-14 rounded bg-gray-100 flex items-center justify-center shrink-0">
-                  <span className="text-gray-400 text-xs">无图</span>
-                </div>
-              )}
+              <div className="shrink-0 h-16 aspect-square rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+                {record.orderImage ? (
+                  <Image
+                    src={record.orderImage}
+                    width="100%"
+                    height="100%"
+                    fit="cover"
+                  />
+                ) : (
+                  <ImageIcon size={24} className="text-gray-400" />
+                )}
+              </div>
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-start mb-1">
                   <span className="font-medium truncate">
-                    {record.orderName || "未知订单"} - {record.processName || "未知工序"}
+                    {record.orderName || "未知订单"} -{" "}
+                    {record.processName || "未知工序"}
                   </span>
                   <StatusTag status={record.status} type="record" />
                 </div>
@@ -161,7 +169,7 @@ function StaffRecordsPage() {
                 </div>
                 <div className="text-xs text-gray-400 mt-1">
                   <RelativeTime date={record.recordedAt} />
-                  {record.recordedBy === "boss" && " · 老板代录"}
+                  {record.recordedBy === "byBoss" && " · 老板代录"}
                 </div>
               </div>
             </div>
