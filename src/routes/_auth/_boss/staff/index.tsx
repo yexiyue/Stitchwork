@@ -33,7 +33,8 @@ function StaffPage() {
   const handleInvite = async () => {
     try {
       const data = await authApi.generateInviteCode();
-      const url = `${window.location.origin}/register-staff?code=${data.code}`;
+      // 使用 custom scheme deep link，扫码直接打开应用
+      const url = `stitchwork://register-staff?code=${data.code}`;
       Dialog.alert({
         title: "邀请员工",
         content: (
