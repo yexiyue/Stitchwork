@@ -24,6 +24,7 @@ export const RECORD_STATUS_MAP: Record<PieceRecordStatus, { label: string; color
   pending: { label: "待审核", color: "#faad14" },
   approved: { label: "已通过", color: "#52c41a" },
   rejected: { label: "已拒绝", color: "#ff4d4f" },
+  settled: { label: "已结算", color: "#722ed1" },
 };
 
 // 计件记录状态选项（用于筛选）
@@ -32,6 +33,7 @@ export const RECORD_STATUS_OPTIONS = [
   { key: "pending", title: "待审核" },
   { key: "approved", title: "已通过" },
   { key: "rejected", title: "已拒绝" },
+  { key: "settled", title: "已结算" },
 ] as const;
 
 // 计件记录状态选项（不含全部，用于员工筛选）
@@ -39,4 +41,5 @@ export const RECORD_STATUS_OPTIONS_NO_ALL = [
   { key: "pending", title: "待审核" },
   { key: "approved", title: "已通过" },
   { key: "rejected", title: "已拒绝" },
+  { key: "settled", title: "已结算" },
 ] as const;

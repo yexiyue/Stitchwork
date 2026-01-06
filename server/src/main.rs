@@ -13,6 +13,7 @@ mod s3;
 mod service;
 
 pub use s3::S3Client;
+pub use service::notification::{Notification, Notifier, SharedNotifier};
 
 /// 邀请码存储: code -> (workshop_id, expires_at)
 pub type InviteCodes = RwLock<HashMap<String, (Uuid, i64)>>;
@@ -22,6 +23,7 @@ pub struct AppState {
     pub db: DbConn,
     pub invite_codes: Arc<InviteCodes>,
     pub s3: Option<S3Client>,
+    pub notifier: SharedNotifier,
 }
 
 #[tokio::main]
@@ -52,6 +54,7 @@ async fn main() {
         db,
         invite_codes: Arc::new(RwLock::new(HashMap::new())),
         s3,
+        notifier: Arc::new(Notifier::new()),
     });
 
     let cors = CorsLayer::new()

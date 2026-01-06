@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Form, Input, Button, Card, Dialog } from "antd-mobile";
+import { Form, Input, Button, Card, Dialog, Toast } from "antd-mobile";
+import { ScanLine } from "lucide-react";
 import { useAuthStore } from "@/stores/auth";
 import { useState, useEffect } from "react";
 
@@ -32,6 +33,34 @@ function LoginPage() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 扫描邀请码二维码
+  const handleScanQR = async () => {
+    try {
+      const { scan, Format } = await import(
+        "@tauri-apps/plugin-barcode-scanner"
+      );
+      const result = await scan({ formats: [Format.QRCode] });
+      if (result?.content) {
+        // 解析 stitchwork://register-staff?code=xxx
+        const url = new URL(result.content);
+        const path = url.pathname.replace(/^\//, "");
+        if (path === "register-staff") {
+          const code = url.searchParams.get("code");
+          if (code) {
+            navigate({ to: "/register-staff", search: { code } });
+            return;
+          }
+        }
+        Toast.show({ content: "无效的邀请码", icon: "fail" });
+      }
+    } catch (e) {
+      // 非移动端或用户取消
+      if (e instanceof Error && !e.message.includes("cancel")) {
+        Toast.show({ content: "扫码功能仅支持移动端", icon: "fail" });
+      }
     }
   };
 
@@ -76,6 +105,19 @@ function LoginPage() {
           >
             立即注册
           </a>
+        </div>
+        <div className="mt-6 pt-4 border-t border-gray-200">
+          <Button
+            block
+            fill="none"
+            onClick={handleScanQR}
+            className="text-gray-600"
+          >
+            <div className="flex items-center justify-center gap-2">
+              <ScanLine size={20} />
+              <span>扫描邀请码加入工坊</span>
+            </div>
+          </Button>
         </div>
       </Card>
     </div>

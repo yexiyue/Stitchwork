@@ -29,17 +29,20 @@
 
 ### 2. 数据访问规则
 
-```
-Boss 角色:
-├── Customer     → WHERE user_id = boss_id
-├── Order        → WHERE boss_id = boss_id
-├── Process      → WHERE boss_id = boss_id
-└── Piece Record → WHERE boss_id = boss_id
+```mermaid
+flowchart LR
+    subgraph Boss["Boss 角色"]
+        B1["Customer"] -->|"WHERE user_id = boss_id"| DB1[(数据)]
+        B2["Order"] -->|"WHERE boss_id = boss_id"| DB1
+        B3["Process"] -->|"WHERE boss_id = boss_id"| DB1
+        B4["Piece Record"] -->|"WHERE boss_id = boss_id"| DB1
+    end
 
-Staff 角色:
-├── Order        → WHERE id IN (参与的订单)
-├── Process      → WHERE id IN (参与的工序)
-└── Piece Record → WHERE user_id = staff_id
+    subgraph Staff["Staff 角色"]
+        S1["Order"] -->|"WHERE id IN (参与的订单)"| DB2[(数据)]
+        S2["Process"] -->|"WHERE id IN (参与的工序)"| DB2
+        S3["Piece Record"] -->|"WHERE user_id = staff_id"| DB2
+    end
 ```
 
 ### 3. Staff 参与数据查询

@@ -1,24 +1,29 @@
 use chrono::NaiveDate;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DbConn, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
-    Set,
+    Set, TransactionTrait,
 };
 use uuid::Uuid;
 
 use super::dto::{CreatePayrollDto, UpdatePayrollDto};
 use crate::common::{ListData, QueryParams};
 use crate::entity::payroll::{self, Column, Model};
+use crate::entity::{payroll_record, piece_record};
 use crate::error::{AppError, Result};
 
 pub async fn list(
     db: &DbConn,
     params: QueryParams,
     user_id: Option<Uuid>,
+    boss_id: Option<Uuid>,
 ) -> Result<ListData<Model>> {
     let mut query = payroll::Entity::find();
 
     if let Some(uid) = user_id {
         query = query.filter(Column::UserId.eq(uid));
+    }
+    if let Some(bid) = boss_id {
+        query = query.filter(Column::BossId.eq(bid));
     }
 
     if let Some(ref start) = params.start_date {
@@ -49,15 +54,65 @@ pub async fn list(
     Ok(ListData { list, total })
 }
 
-pub async fn create(db: &DbConn, dto: CreatePayrollDto) -> Result<Model> {
+pub async fn create(db: &DbConn, dto: CreatePayrollDto, boss_id: Uuid) -> Result<Model> {
+    // 验证计件记录状态
+    if dto.record_ids.is_empty() {
+        return Err(AppError::BadRequest("至少选择一条计件记录".into()));
+    }
+
+    let records = piece_record::Entity::find()
+        .filter(piece_record::Column::Id.is_in(dto.record_ids.clone()))
+        .filter(piece_record::Column::BossId.eq(boss_id))
+        .all(db)
+        .await?;
+
+    if records.len() != dto.record_ids.len() {
+        return Err(AppError::BadRequest("部分计件记录不存在或无权限".into()));
+    }
+
+    for rec in &records {
+        if rec.status != piece_record::PieceRecordStatus::Approved {
+            return Err(AppError::BadRequest(format!(
+                "计件记录 {} 状态不是已批准",
+                rec.id
+            )));
+        }
+    }
+
+    // 使用事务
+    let txn = db.begin().await?;
+
+    // 创建工资单
+    let payroll_id = Uuid::new_v4();
     let model = payroll::ActiveModel {
-        id: Set(Uuid::new_v4()),
+        id: Set(payroll_id),
         user_id: Set(dto.user_id),
+        boss_id: Set(boss_id),
         amount: Set(dto.amount),
+        payment_image: Set(dto.payment_image),
         note: Set(dto.note),
         paid_at: Set(chrono::Utc::now()),
     };
-    Ok(model.insert(db).await?)
+    let payroll = model.insert(&txn).await?;
+
+    // 创建关联记录并更新计件状态
+    for rec in &records {
+        // 创建关联
+        let pr = payroll_record::ActiveModel {
+            id: Set(Uuid::new_v4()),
+            payroll_id: Set(payroll_id),
+            piece_record_id: Set(rec.id),
+        };
+        pr.insert(&txn).await?;
+
+        // 更新计件状态为已结算
+        let mut active: piece_record::ActiveModel = rec.clone().into();
+        active.status = Set(piece_record::PieceRecordStatus::Settled);
+        active.update(&txn).await?;
+    }
+
+    txn.commit().await?;
+    Ok(payroll)
 }
 
 pub async fn get_one(db: &DbConn, id: Uuid, user_id: Option<Uuid>) -> Result<Model> {
@@ -83,6 +138,9 @@ pub async fn update(db: &DbConn, id: Uuid, dto: UpdatePayrollDto) -> Result<Mode
     }
     if let Some(v) = dto.note {
         model.note = Set(Some(v));
+    }
+    if let Some(v) = dto.payment_image {
+        model.payment_image = Set(Some(v));
     }
     Ok(model.update(db).await?)
 }

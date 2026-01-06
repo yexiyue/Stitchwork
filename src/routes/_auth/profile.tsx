@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { List, Button, Dialog, Toast, Input, PullToRefresh } from "antd-mobile";
-import { Users, UserPlus, LogOut, Camera, Store, Phone, User as UserIcon, AtSign, Lock, ClipboardList } from "lucide-react";
+import { Users, UserPlus, LogOut, Camera, Store, Phone, User as UserIcon, AtSign, Lock, ClipboardList, Wallet } from "lucide-react";
 import { useAuthStore, selectIsBoss } from "@/stores/auth";
 import { authApi } from "@/api";
 import { Avatar, useAvatarCropper } from "@/components";
@@ -226,6 +226,9 @@ function ProfilePage() {
             <List.Item prefix={<UserPlus size={20} />} onClick={() => navigate({ to: "/staff" })}>
               员工管理
             </List.Item>
+            <List.Item prefix={<Wallet size={20} />} onClick={() => navigate({ to: "/payroll" })}>
+              工资管理
+            </List.Item>
             <List.Item prefix={<Store size={20} />} onClick={() => navigate({ to: "/workshop" })}>
               工坊设置
             </List.Item>
@@ -235,6 +238,7 @@ function ProfilePage() {
         {!isBoss && (
           <List header="我的">
             <List.Item prefix={<ClipboardList size={20} />} onClick={() => navigate({ to: "/my-records" })}>记件记录</List.Item>
+            <List.Item prefix={<Wallet size={20} />} onClick={() => navigate({ to: "/my-payrolls" })}>工资记录</List.Item>
           </List>
         )}
 
