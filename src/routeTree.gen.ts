@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ScanRouteImport } from './routes/scan'
 import { Route as RegisterStaffRouteImport } from './routes/register-staff'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
@@ -42,6 +43,11 @@ import { Route as AuthBossCustomersIdRouteImport } from './routes/_auth/_boss/cu
 import { Route as AuthBossOrdersIdIndexRouteImport } from './routes/_auth/_boss/orders/$id/index'
 import { Route as AuthBossOrdersIdEditRouteImport } from './routes/_auth/_boss/orders/$id/edit'
 
+const ScanRoute = ScanRouteImport.update({
+  id: '/scan',
+  path: '/scan',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegisterStaffRoute = RegisterStaffRouteImport.update({
   id: '/register-staff',
   path: '/register-staff',
@@ -205,6 +211,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/register-staff': typeof RegisterStaffRoute
+  '/scan': typeof ScanRoute
   '/profile': typeof AuthProfileRoute
   '/': typeof AuthIndexRoute
   '/pending': typeof AuthBossPendingRoute
@@ -236,6 +243,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/register-staff': typeof RegisterStaffRoute
+  '/scan': typeof ScanRoute
   '/profile': typeof AuthProfileRoute
   '/': typeof AuthIndexRoute
   '/pending': typeof AuthBossPendingRoute
@@ -269,6 +277,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/register-staff': typeof RegisterStaffRoute
+  '/scan': typeof ScanRoute
   '/_auth/_boss': typeof AuthBossRouteWithChildren
   '/_auth/_staff': typeof AuthStaffRouteWithChildren
   '/_auth/profile': typeof AuthProfileRoute
@@ -304,6 +313,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/register-staff'
+    | '/scan'
     | '/profile'
     | '/'
     | '/pending'
@@ -335,6 +345,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/register-staff'
+    | '/scan'
     | '/profile'
     | '/'
     | '/pending'
@@ -367,6 +378,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/register-staff'
+    | '/scan'
     | '/_auth/_boss'
     | '/_auth/_staff'
     | '/_auth/profile'
@@ -402,10 +414,18 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
   RegisterStaffRoute: typeof RegisterStaffRoute
+  ScanRoute: typeof ScanRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/scan': {
+      id: '/scan'
+      path: '/scan'
+      fullPath: '/scan'
+      preLoaderRoute: typeof ScanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/register-staff': {
       id: '/register-staff'
       path: '/register-staff'
@@ -722,6 +742,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
   RegisterStaffRoute: RegisterStaffRoute,
+  ScanRoute: ScanRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

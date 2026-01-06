@@ -230,7 +230,7 @@ function NewPayrollPage() {
       </div>
 
       {/* Submit button */}
-      <div className="p-4 bg-white border-t">
+      <div className="p-4 bg-white border-t border-gray-200">
         <Button
           block
           color="primary"

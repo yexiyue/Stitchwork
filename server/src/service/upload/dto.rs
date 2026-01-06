@@ -11,5 +11,5 @@ pub struct PresignRequest {
 #[serde(rename_all = "camelCase")]
 pub struct PresignResponse {
     pub upload_url: String,
-    pub file_url: String,
+    pub key: String,
 }

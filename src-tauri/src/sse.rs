@@ -43,11 +43,15 @@ pub struct NotificationPayload {
 /// SSE 连接状态
 pub struct SseState {
     cancel_token: Option<tokio::sync::watch::Sender<bool>>,
+    channel_id: Option<String>,
 }
 
 impl Default for SseState {
     fn default() -> Self {
-        Self { cancel_token: None }
+        Self {
+            cancel_token: None,
+            channel_id: None,
+        }
     }
 }
 
@@ -58,6 +62,7 @@ async fn start_sse(
     app_handle: AppHandle,
     api_url: String,
     token: String,
+    channel_id: Option<String>,
     mut cancel_rx: tokio::sync::watch::Receiver<bool>,
 ) {
     let url = format!("{}/api/sse/events?token={}", api_url, token);
@@ -90,13 +95,18 @@ async fn start_sse(
                             debug!("SSE message: {}", msg.data);
                             if let Ok(payload) = serde_json::from_str::<NotificationPayload>(&msg.data) {
                                 // 发送本地通知
-                                if let Err(e) = app_handle
+                                let mut builder = app_handle
                                     .notification()
                                     .builder()
                                     .title(&payload.title)
-                                    .body(&payload.body)
-                                    .show()
-                                {
+                                    .body(&payload.body);
+
+                                // 使用高优先级渠道
+                                if let Some(ref ch_id) = channel_id {
+                                    builder = builder.channel_id(ch_id);
+                                }
+
+                                if let Err(e) = builder.show() {
                                     warn!("Failed to show notification: {}", e);
                                 }
 
@@ -138,6 +148,7 @@ pub async fn connect_sse(
     state: tauri::State<'_, SharedSseState>,
     api_url: String,
     token: String,
+    channel_id: Option<String>,
 ) -> Result<(), String> {
     let mut sse_state = state.lock().await;
 
@@ -149,11 +160,12 @@ pub async fn connect_sse(
     // 创建新的取消令牌
     let (cancel_tx, cancel_rx) = tokio::sync::watch::channel(false);
     sse_state.cancel_token = Some(cancel_tx);
+    sse_state.channel_id = channel_id.clone();
 
     // 启动 SSE 任务
     let handle = app_handle.clone();
     tauri::async_runtime::spawn(async move {
-        start_sse(handle, api_url, token, cancel_rx).await;
+        start_sse(handle, api_url, token, channel_id, cancel_rx).await;
     });
 
     Ok(())

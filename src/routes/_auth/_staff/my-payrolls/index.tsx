@@ -126,7 +126,10 @@ function MyPayrollsPage() {
         startDate={startDate}
         endDate={endDate}
         visible={calendarVisible}
-        onVisibleChange={setCalendarVisible}
+        onVisibleChange={(v) => {
+          setCalendarVisible(v);
+          if (!v) dropdownRef.current?.close();
+        }}
         onConfirm={(dates) => {
           handleCalendarConfirm(dates);
           dropdownRef.current?.close();

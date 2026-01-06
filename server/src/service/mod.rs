@@ -38,6 +38,7 @@ pub fn routes() -> Router<Arc<AppState>> {
             .merge(auth::router()) // 登录注册不需要认证
             .merge(share::public_router()) // 公开分享页面不需要认证
             .merge(notification::router()) // SSE 使用 query token 认证
+            .merge(upload::public_router()) // 文件访问不需要认证
             .merge(protected),
     )
 }

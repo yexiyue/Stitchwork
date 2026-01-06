@@ -1,4 +1,5 @@
 {
+  "$schema": "../gen/schemas/mobile-schema.json",
   "identifier": "mobile-capability",
   "platforms": [
     "android",
@@ -9,6 +10,19 @@
   ],
   "permissions": [
     "barcode-scanner:default",
-    "biometric:default"
+    "biometric:default",
+    "barcode-scanner:allow-request-permissions",
+    "barcode-scanner:allow-check-permissions",
+    "barcode-scanner:allow-scan",
+    "barcode-scanner:allow-cancel",
+    "barcode-scanner:allow-vibrate",
+    "barcode-scanner:allow-open-app-settings",
+    "notification:default",
+    "notification:allow-notify",
+    "notification:allow-create-channel",
+    "notification:allow-list-channels",
+    "notification:allow-show",
+    "notification:allow-get-active",
+    "notification:allow-delete-channel"
   ]
 }

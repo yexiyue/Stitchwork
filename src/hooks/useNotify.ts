@@ -4,6 +4,15 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useQueryClient } from "@tanstack/react-query";
 import { Toast } from "antd-mobile";
 import { useAuthStore } from "@/stores/auth";
+import {
+  isPermissionGranted,
+  requestPermission,
+  createChannel,
+  channels,
+  Importance,
+} from "@tauri-apps/plugin-notification";
+
+const CHANNEL_ID = "stitchwork_high";
 
 /** 通知 payload 类型 */
 interface NotificationPayload {
@@ -33,9 +42,27 @@ export function useNotify() {
 
     const setup = async () => {
       try {
-        // 连接 SSE
+        // 检查并请求通知权限 (Android 13+ 需要)
+        let permissionGranted = await isPermissionGranted();
+        if (!permissionGranted) {
+          const permission = await requestPermission();
+          permissionGranted = permission === "granted";
+        }
+
+        // 创建高优先级通知渠道 (Android 8+)
+        const existingChannels = await channels();
+        if (!existingChannels.some((c) => c.id === CHANNEL_ID)) {
+          await createChannel({
+            id: CHANNEL_ID,
+            name: "重要通知",
+            importance: Importance.High,
+            vibration: true,
+          });
+        }
+
+        // 连接 SSE，传递 channel_id
         const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
-        await invoke("connect_sse", { apiUrl, token });
+        await invoke("connect_sse", { apiUrl, token, channelId: CHANNEL_ID });
 
         // 监听通知事件
         unlisten = await listen<NotificationPayload>("notification", (event) => {
