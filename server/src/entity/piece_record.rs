@@ -13,6 +13,7 @@ pub enum PieceRecordStatus {
     Pending,
     Approved,
     Rejected,
+    Settled,
 }
 
 #[derive(
@@ -43,13 +44,14 @@ pub struct Model {
     pub recorded_by: RecordedBy,
     pub recorded_at: DateTimeUtc,
 
-    #[serde(skip)]
     #[sea_orm(belongs_to, from = "process_id", to = "id")]
     pub process: HasOne<super::process::Entity>,
 
-    #[serde(skip)]
     #[sea_orm(belongs_to, from = "user_id", to = "id")]
     pub user: HasOne<super::user::Entity>,
+
+    #[sea_orm(has_one, via = "payroll_record")]
+    pub payroll: HasOne<super::payroll::Entity>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

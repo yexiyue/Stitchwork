@@ -323,6 +323,42 @@ pub async fn reject(db: &DbConn, id: Uuid, boss_id: Uuid) -> Result<Model> {
     Ok(model.update(db).await?)
 }
 
+/// 查询待处理的记录（用于批量操作前获取通知所需信息）
+pub async fn get_pending_records(
+    db: &DbConn,
+    ids: &[Uuid],
+    boss_id: Uuid,
+) -> Result<Vec<PieceRecordResponse>> {
+    let records = piece_record::Entity::load()
+        .with(process::Entity)
+        .filter(piece_record::Column::Id.is_in(ids.to_vec()))
+        .filter(piece_record::Column::BossId.eq(boss_id))
+        .filter(piece_record::Column::Status.eq(PieceRecordStatus::Pending))
+        .all(db)
+        .await?;
+
+    Ok(records
+        .into_iter()
+        .map(|r| PieceRecordResponse {
+            id: r.id,
+            process_id: r.process_id,
+            user_id: r.user_id,
+            boss_id: r.boss_id,
+            quantity: r.quantity,
+            amount: r.amount,
+            status: r.status,
+            recorded_by: r.recorded_by,
+            recorded_at: r.recorded_at,
+            process_name: r.process.as_ref().map(|p| p.name.clone()),
+            user_name: None,
+            order_id: r.process.as_ref().map(|p| p.order_id),
+            order_name: None,
+            order_image: None,
+            piece_price: r.process.as_ref().map(|p| p.piece_price),
+        })
+        .collect())
+}
+
 pub async fn batch_approve(db: &DbConn, ids: Vec<Uuid>, boss_id: Uuid) -> Result<u64> {
     let result = piece_record::Entity::update_many()
         .col_expr(

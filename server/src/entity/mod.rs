@@ -1,6 +1,7 @@
 pub mod customer;
 pub mod order;
 pub mod payroll;
+pub mod payroll_record;
 pub mod piece_record;
 pub mod process;
 pub mod share;

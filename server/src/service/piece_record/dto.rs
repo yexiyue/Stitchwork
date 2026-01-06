@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::entity::piece_record::{PieceRecordStatus, RecordedBy};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreatePieceRecordDto {
     pub process_id: Uuid,

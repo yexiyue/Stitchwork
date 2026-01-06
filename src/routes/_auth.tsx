@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, redirect, useNavigate, useLocation } from "@ta
 import { TabBar } from "antd-mobile";
 import { Home, ClipboardList, FileEdit, User } from "lucide-react";
 import { useAuthStore, selectIsBoss } from "@/stores/auth";
+import { useNotify } from "@/hooks/useNotify";
 
 export const Route = createFileRoute("/_auth")({
   beforeLoad: () => {
@@ -32,11 +33,15 @@ function AuthLayout() {
   const isBoss = useAuthStore(selectIsBoss);
   const tabs = isBoss ? bossTabs : staffTabs;
 
+  // 启用实时通知
+  useNotify();
+
   // 子页面映射到对应的 tab
   const subPageMap: Record<string, string> = {
     "/customers": "/profile",
     "/staff": "/profile",
     "/workshop": "/profile",
+    "/payroll": "/profile",
   };
   const mappedPath = Object.entries(subPageMap).find(([prefix]) =>
     location.pathname.startsWith(prefix)

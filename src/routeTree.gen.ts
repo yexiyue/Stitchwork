@@ -20,16 +20,21 @@ import { Route as AuthBossRouteImport } from './routes/_auth/_boss'
 import { Route as AuthBossWorkshopRouteImport } from './routes/_auth/_boss/workshop'
 import { Route as AuthBossPendingRouteImport } from './routes/_auth/_boss/pending'
 import { Route as AuthStaffMyRecordsIndexRouteImport } from './routes/_auth/_staff/my-records/index'
+import { Route as AuthStaffMyPayrollsIndexRouteImport } from './routes/_auth/_staff/my-payrolls/index'
 import { Route as AuthBossStaffIndexRouteImport } from './routes/_auth/_boss/staff/index'
 import { Route as AuthBossRecordsIndexRouteImport } from './routes/_auth/_boss/records/index'
+import { Route as AuthBossPayrollIndexRouteImport } from './routes/_auth/_boss/payroll/index'
 import { Route as AuthBossOrdersIndexRouteImport } from './routes/_auth/_boss/orders/index'
 import { Route as AuthBossCustomersIndexRouteImport } from './routes/_auth/_boss/customers/index'
 import { Route as AuthStaffMyRecordsStatsRouteImport } from './routes/_auth/_staff/my-records/stats'
 import { Route as AuthStaffMyRecordsNewRouteImport } from './routes/_auth/_staff/my-records/new'
 import { Route as AuthStaffMyRecordsIdRouteImport } from './routes/_auth/_staff/my-records/$id'
+import { Route as AuthStaffMyPayrollsIdRouteImport } from './routes/_auth/_staff/my-payrolls/$id'
 import { Route as AuthBossRecordsStatsRouteImport } from './routes/_auth/_boss/records/stats'
 import { Route as AuthBossRecordsNewRouteImport } from './routes/_auth/_boss/records/new'
 import { Route as AuthBossRecordsIdRouteImport } from './routes/_auth/_boss/records/$id'
+import { Route as AuthBossPayrollNewRouteImport } from './routes/_auth/_boss/payroll/new'
+import { Route as AuthBossPayrollIdRouteImport } from './routes/_auth/_boss/payroll/$id'
 import { Route as AuthBossOrdersStatsRouteImport } from './routes/_auth/_boss/orders/stats'
 import { Route as AuthBossOrdersNewRouteImport } from './routes/_auth/_boss/orders/new'
 import { Route as AuthBossCustomersNewRouteImport } from './routes/_auth/_boss/customers/new'
@@ -89,6 +94,12 @@ const AuthStaffMyRecordsIndexRoute = AuthStaffMyRecordsIndexRouteImport.update({
   path: '/my-records/',
   getParentRoute: () => AuthStaffRoute,
 } as any)
+const AuthStaffMyPayrollsIndexRoute =
+  AuthStaffMyPayrollsIndexRouteImport.update({
+    id: '/my-payrolls/',
+    path: '/my-payrolls/',
+    getParentRoute: () => AuthStaffRoute,
+  } as any)
 const AuthBossStaffIndexRoute = AuthBossStaffIndexRouteImport.update({
   id: '/staff/',
   path: '/staff/',
@@ -97,6 +108,11 @@ const AuthBossStaffIndexRoute = AuthBossStaffIndexRouteImport.update({
 const AuthBossRecordsIndexRoute = AuthBossRecordsIndexRouteImport.update({
   id: '/records/',
   path: '/records/',
+  getParentRoute: () => AuthBossRoute,
+} as any)
+const AuthBossPayrollIndexRoute = AuthBossPayrollIndexRouteImport.update({
+  id: '/payroll/',
+  path: '/payroll/',
   getParentRoute: () => AuthBossRoute,
 } as any)
 const AuthBossOrdersIndexRoute = AuthBossOrdersIndexRouteImport.update({
@@ -124,6 +140,11 @@ const AuthStaffMyRecordsIdRoute = AuthStaffMyRecordsIdRouteImport.update({
   path: '/my-records/$id',
   getParentRoute: () => AuthStaffRoute,
 } as any)
+const AuthStaffMyPayrollsIdRoute = AuthStaffMyPayrollsIdRouteImport.update({
+  id: '/my-payrolls/$id',
+  path: '/my-payrolls/$id',
+  getParentRoute: () => AuthStaffRoute,
+} as any)
 const AuthBossRecordsStatsRoute = AuthBossRecordsStatsRouteImport.update({
   id: '/records/stats',
   path: '/records/stats',
@@ -137,6 +158,16 @@ const AuthBossRecordsNewRoute = AuthBossRecordsNewRouteImport.update({
 const AuthBossRecordsIdRoute = AuthBossRecordsIdRouteImport.update({
   id: '/records/$id',
   path: '/records/$id',
+  getParentRoute: () => AuthBossRoute,
+} as any)
+const AuthBossPayrollNewRoute = AuthBossPayrollNewRouteImport.update({
+  id: '/payroll/new',
+  path: '/payroll/new',
+  getParentRoute: () => AuthBossRoute,
+} as any)
+const AuthBossPayrollIdRoute = AuthBossPayrollIdRouteImport.update({
+  id: '/payroll/$id',
+  path: '/payroll/$id',
   getParentRoute: () => AuthBossRoute,
 } as any)
 const AuthBossOrdersStatsRoute = AuthBossOrdersStatsRouteImport.update({
@@ -182,16 +213,21 @@ export interface FileRoutesByFullPath {
   '/customers/new': typeof AuthBossCustomersNewRoute
   '/orders/new': typeof AuthBossOrdersNewRoute
   '/orders/stats': typeof AuthBossOrdersStatsRoute
+  '/payroll/$id': typeof AuthBossPayrollIdRoute
+  '/payroll/new': typeof AuthBossPayrollNewRoute
   '/records/$id': typeof AuthBossRecordsIdRoute
   '/records/new': typeof AuthBossRecordsNewRoute
   '/records/stats': typeof AuthBossRecordsStatsRoute
+  '/my-payrolls/$id': typeof AuthStaffMyPayrollsIdRoute
   '/my-records/$id': typeof AuthStaffMyRecordsIdRoute
   '/my-records/new': typeof AuthStaffMyRecordsNewRoute
   '/my-records/stats': typeof AuthStaffMyRecordsStatsRoute
   '/customers': typeof AuthBossCustomersIndexRoute
   '/orders': typeof AuthBossOrdersIndexRoute
+  '/payroll': typeof AuthBossPayrollIndexRoute
   '/records': typeof AuthBossRecordsIndexRoute
   '/staff': typeof AuthBossStaffIndexRoute
+  '/my-payrolls': typeof AuthStaffMyPayrollsIndexRoute
   '/my-records': typeof AuthStaffMyRecordsIndexRoute
   '/orders/$id/edit': typeof AuthBossOrdersIdEditRoute
   '/orders/$id': typeof AuthBossOrdersIdIndexRoute
@@ -208,16 +244,21 @@ export interface FileRoutesByTo {
   '/customers/new': typeof AuthBossCustomersNewRoute
   '/orders/new': typeof AuthBossOrdersNewRoute
   '/orders/stats': typeof AuthBossOrdersStatsRoute
+  '/payroll/$id': typeof AuthBossPayrollIdRoute
+  '/payroll/new': typeof AuthBossPayrollNewRoute
   '/records/$id': typeof AuthBossRecordsIdRoute
   '/records/new': typeof AuthBossRecordsNewRoute
   '/records/stats': typeof AuthBossRecordsStatsRoute
+  '/my-payrolls/$id': typeof AuthStaffMyPayrollsIdRoute
   '/my-records/$id': typeof AuthStaffMyRecordsIdRoute
   '/my-records/new': typeof AuthStaffMyRecordsNewRoute
   '/my-records/stats': typeof AuthStaffMyRecordsStatsRoute
   '/customers': typeof AuthBossCustomersIndexRoute
   '/orders': typeof AuthBossOrdersIndexRoute
+  '/payroll': typeof AuthBossPayrollIndexRoute
   '/records': typeof AuthBossRecordsIndexRoute
   '/staff': typeof AuthBossStaffIndexRoute
+  '/my-payrolls': typeof AuthStaffMyPayrollsIndexRoute
   '/my-records': typeof AuthStaffMyRecordsIndexRoute
   '/orders/$id/edit': typeof AuthBossOrdersIdEditRoute
   '/orders/$id': typeof AuthBossOrdersIdIndexRoute
@@ -238,16 +279,21 @@ export interface FileRoutesById {
   '/_auth/_boss/customers/new': typeof AuthBossCustomersNewRoute
   '/_auth/_boss/orders/new': typeof AuthBossOrdersNewRoute
   '/_auth/_boss/orders/stats': typeof AuthBossOrdersStatsRoute
+  '/_auth/_boss/payroll/$id': typeof AuthBossPayrollIdRoute
+  '/_auth/_boss/payroll/new': typeof AuthBossPayrollNewRoute
   '/_auth/_boss/records/$id': typeof AuthBossRecordsIdRoute
   '/_auth/_boss/records/new': typeof AuthBossRecordsNewRoute
   '/_auth/_boss/records/stats': typeof AuthBossRecordsStatsRoute
+  '/_auth/_staff/my-payrolls/$id': typeof AuthStaffMyPayrollsIdRoute
   '/_auth/_staff/my-records/$id': typeof AuthStaffMyRecordsIdRoute
   '/_auth/_staff/my-records/new': typeof AuthStaffMyRecordsNewRoute
   '/_auth/_staff/my-records/stats': typeof AuthStaffMyRecordsStatsRoute
   '/_auth/_boss/customers/': typeof AuthBossCustomersIndexRoute
   '/_auth/_boss/orders/': typeof AuthBossOrdersIndexRoute
+  '/_auth/_boss/payroll/': typeof AuthBossPayrollIndexRoute
   '/_auth/_boss/records/': typeof AuthBossRecordsIndexRoute
   '/_auth/_boss/staff/': typeof AuthBossStaffIndexRoute
+  '/_auth/_staff/my-payrolls/': typeof AuthStaffMyPayrollsIndexRoute
   '/_auth/_staff/my-records/': typeof AuthStaffMyRecordsIndexRoute
   '/_auth/_boss/orders/$id/edit': typeof AuthBossOrdersIdEditRoute
   '/_auth/_boss/orders/$id/': typeof AuthBossOrdersIdIndexRoute
@@ -266,16 +312,21 @@ export interface FileRouteTypes {
     | '/customers/new'
     | '/orders/new'
     | '/orders/stats'
+    | '/payroll/$id'
+    | '/payroll/new'
     | '/records/$id'
     | '/records/new'
     | '/records/stats'
+    | '/my-payrolls/$id'
     | '/my-records/$id'
     | '/my-records/new'
     | '/my-records/stats'
     | '/customers'
     | '/orders'
+    | '/payroll'
     | '/records'
     | '/staff'
+    | '/my-payrolls'
     | '/my-records'
     | '/orders/$id/edit'
     | '/orders/$id'
@@ -292,16 +343,21 @@ export interface FileRouteTypes {
     | '/customers/new'
     | '/orders/new'
     | '/orders/stats'
+    | '/payroll/$id'
+    | '/payroll/new'
     | '/records/$id'
     | '/records/new'
     | '/records/stats'
+    | '/my-payrolls/$id'
     | '/my-records/$id'
     | '/my-records/new'
     | '/my-records/stats'
     | '/customers'
     | '/orders'
+    | '/payroll'
     | '/records'
     | '/staff'
+    | '/my-payrolls'
     | '/my-records'
     | '/orders/$id/edit'
     | '/orders/$id'
@@ -321,16 +377,21 @@ export interface FileRouteTypes {
     | '/_auth/_boss/customers/new'
     | '/_auth/_boss/orders/new'
     | '/_auth/_boss/orders/stats'
+    | '/_auth/_boss/payroll/$id'
+    | '/_auth/_boss/payroll/new'
     | '/_auth/_boss/records/$id'
     | '/_auth/_boss/records/new'
     | '/_auth/_boss/records/stats'
+    | '/_auth/_staff/my-payrolls/$id'
     | '/_auth/_staff/my-records/$id'
     | '/_auth/_staff/my-records/new'
     | '/_auth/_staff/my-records/stats'
     | '/_auth/_boss/customers/'
     | '/_auth/_boss/orders/'
+    | '/_auth/_boss/payroll/'
     | '/_auth/_boss/records/'
     | '/_auth/_boss/staff/'
+    | '/_auth/_staff/my-payrolls/'
     | '/_auth/_staff/my-records/'
     | '/_auth/_boss/orders/$id/edit'
     | '/_auth/_boss/orders/$id/'
@@ -422,6 +483,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthStaffMyRecordsIndexRouteImport
       parentRoute: typeof AuthStaffRoute
     }
+    '/_auth/_staff/my-payrolls/': {
+      id: '/_auth/_staff/my-payrolls/'
+      path: '/my-payrolls'
+      fullPath: '/my-payrolls'
+      preLoaderRoute: typeof AuthStaffMyPayrollsIndexRouteImport
+      parentRoute: typeof AuthStaffRoute
+    }
     '/_auth/_boss/staff/': {
       id: '/_auth/_boss/staff/'
       path: '/staff'
@@ -434,6 +502,13 @@ declare module '@tanstack/react-router' {
       path: '/records'
       fullPath: '/records'
       preLoaderRoute: typeof AuthBossRecordsIndexRouteImport
+      parentRoute: typeof AuthBossRoute
+    }
+    '/_auth/_boss/payroll/': {
+      id: '/_auth/_boss/payroll/'
+      path: '/payroll'
+      fullPath: '/payroll'
+      preLoaderRoute: typeof AuthBossPayrollIndexRouteImport
       parentRoute: typeof AuthBossRoute
     }
     '/_auth/_boss/orders/': {
@@ -471,6 +546,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthStaffMyRecordsIdRouteImport
       parentRoute: typeof AuthStaffRoute
     }
+    '/_auth/_staff/my-payrolls/$id': {
+      id: '/_auth/_staff/my-payrolls/$id'
+      path: '/my-payrolls/$id'
+      fullPath: '/my-payrolls/$id'
+      preLoaderRoute: typeof AuthStaffMyPayrollsIdRouteImport
+      parentRoute: typeof AuthStaffRoute
+    }
     '/_auth/_boss/records/stats': {
       id: '/_auth/_boss/records/stats'
       path: '/records/stats'
@@ -490,6 +572,20 @@ declare module '@tanstack/react-router' {
       path: '/records/$id'
       fullPath: '/records/$id'
       preLoaderRoute: typeof AuthBossRecordsIdRouteImport
+      parentRoute: typeof AuthBossRoute
+    }
+    '/_auth/_boss/payroll/new': {
+      id: '/_auth/_boss/payroll/new'
+      path: '/payroll/new'
+      fullPath: '/payroll/new'
+      preLoaderRoute: typeof AuthBossPayrollNewRouteImport
+      parentRoute: typeof AuthBossRoute
+    }
+    '/_auth/_boss/payroll/$id': {
+      id: '/_auth/_boss/payroll/$id'
+      path: '/payroll/$id'
+      fullPath: '/payroll/$id'
+      preLoaderRoute: typeof AuthBossPayrollIdRouteImport
       parentRoute: typeof AuthBossRoute
     }
     '/_auth/_boss/orders/stats': {
@@ -544,11 +640,14 @@ interface AuthBossRouteChildren {
   AuthBossCustomersNewRoute: typeof AuthBossCustomersNewRoute
   AuthBossOrdersNewRoute: typeof AuthBossOrdersNewRoute
   AuthBossOrdersStatsRoute: typeof AuthBossOrdersStatsRoute
+  AuthBossPayrollIdRoute: typeof AuthBossPayrollIdRoute
+  AuthBossPayrollNewRoute: typeof AuthBossPayrollNewRoute
   AuthBossRecordsIdRoute: typeof AuthBossRecordsIdRoute
   AuthBossRecordsNewRoute: typeof AuthBossRecordsNewRoute
   AuthBossRecordsStatsRoute: typeof AuthBossRecordsStatsRoute
   AuthBossCustomersIndexRoute: typeof AuthBossCustomersIndexRoute
   AuthBossOrdersIndexRoute: typeof AuthBossOrdersIndexRoute
+  AuthBossPayrollIndexRoute: typeof AuthBossPayrollIndexRoute
   AuthBossRecordsIndexRoute: typeof AuthBossRecordsIndexRoute
   AuthBossStaffIndexRoute: typeof AuthBossStaffIndexRoute
   AuthBossOrdersIdEditRoute: typeof AuthBossOrdersIdEditRoute
@@ -562,11 +661,14 @@ const AuthBossRouteChildren: AuthBossRouteChildren = {
   AuthBossCustomersNewRoute: AuthBossCustomersNewRoute,
   AuthBossOrdersNewRoute: AuthBossOrdersNewRoute,
   AuthBossOrdersStatsRoute: AuthBossOrdersStatsRoute,
+  AuthBossPayrollIdRoute: AuthBossPayrollIdRoute,
+  AuthBossPayrollNewRoute: AuthBossPayrollNewRoute,
   AuthBossRecordsIdRoute: AuthBossRecordsIdRoute,
   AuthBossRecordsNewRoute: AuthBossRecordsNewRoute,
   AuthBossRecordsStatsRoute: AuthBossRecordsStatsRoute,
   AuthBossCustomersIndexRoute: AuthBossCustomersIndexRoute,
   AuthBossOrdersIndexRoute: AuthBossOrdersIndexRoute,
+  AuthBossPayrollIndexRoute: AuthBossPayrollIndexRoute,
   AuthBossRecordsIndexRoute: AuthBossRecordsIndexRoute,
   AuthBossStaffIndexRoute: AuthBossStaffIndexRoute,
   AuthBossOrdersIdEditRoute: AuthBossOrdersIdEditRoute,
@@ -578,16 +680,20 @@ const AuthBossRouteWithChildren = AuthBossRoute._addFileChildren(
 )
 
 interface AuthStaffRouteChildren {
+  AuthStaffMyPayrollsIdRoute: typeof AuthStaffMyPayrollsIdRoute
   AuthStaffMyRecordsIdRoute: typeof AuthStaffMyRecordsIdRoute
   AuthStaffMyRecordsNewRoute: typeof AuthStaffMyRecordsNewRoute
   AuthStaffMyRecordsStatsRoute: typeof AuthStaffMyRecordsStatsRoute
+  AuthStaffMyPayrollsIndexRoute: typeof AuthStaffMyPayrollsIndexRoute
   AuthStaffMyRecordsIndexRoute: typeof AuthStaffMyRecordsIndexRoute
 }
 
 const AuthStaffRouteChildren: AuthStaffRouteChildren = {
+  AuthStaffMyPayrollsIdRoute: AuthStaffMyPayrollsIdRoute,
   AuthStaffMyRecordsIdRoute: AuthStaffMyRecordsIdRoute,
   AuthStaffMyRecordsNewRoute: AuthStaffMyRecordsNewRoute,
   AuthStaffMyRecordsStatsRoute: AuthStaffMyRecordsStatsRoute,
+  AuthStaffMyPayrollsIndexRoute: AuthStaffMyPayrollsIndexRoute,
   AuthStaffMyRecordsIndexRoute: AuthStaffMyRecordsIndexRoute,
 }
 

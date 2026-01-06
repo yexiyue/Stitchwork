@@ -7,6 +7,8 @@ use uuid::Uuid;
 pub struct CreatePayrollDto {
     pub user_id: Uuid,
     pub amount: Decimal,
+    pub record_ids: Vec<Uuid>,
+    pub payment_image: Option<String>,
     pub note: Option<String>,
 }
 
@@ -14,5 +16,6 @@ pub struct CreatePayrollDto {
 #[serde(rename_all = "camelCase")]
 pub struct UpdatePayrollDto {
     pub amount: Option<Decimal>,
+    pub payment_image: Option<String>,
     pub note: Option<String>,
 }

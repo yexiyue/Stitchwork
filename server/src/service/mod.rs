@@ -1,6 +1,7 @@
 pub mod auth;
 pub mod customer;
 pub mod home;
+pub mod notification;
 pub mod order;
 pub mod payroll;
 pub mod piece_record;
@@ -36,6 +37,7 @@ pub fn routes() -> Router<Arc<AppState>> {
         Router::new()
             .merge(auth::router()) // 登录注册不需要认证
             .merge(share::public_router()) // 公开分享页面不需要认证
+            .merge(notification::router()) // SSE 使用 query token 认证
             .merge(protected),
     )
 }

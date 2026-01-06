@@ -15,6 +15,7 @@ const STATUS_MAP: Record<PieceRecordStatus, { label: string; color: string }> =
     pending: { label: "待审核", color: "#faad14" },
     approved: { label: "已通过", color: "#52c41a" },
     rejected: { label: "已拒绝", color: "#ff4d4f" },
+    settled: { label: "已结算", color: "#722ed1" },
   };
 
 const RECORDED_BY_MAP: Record<RecordedBy, string> = {

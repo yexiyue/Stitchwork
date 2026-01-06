@@ -21,6 +21,10 @@ pnpm build            # TypeScript check + Vite build
 pnpm tauri dev        # Run Tauri desktop app in dev mode
 pnpm tauri build      # Build desktop app
 
+# Android
+pnpm tauri android dev    # Run Android app in dev mode
+pnpm tauri android build  # Build Android APK/AAB
+
 # Backend (Rust + Axum)
 cd server && cargo run    # API server on port 3000
 cd server && cargo build  # Build server
@@ -34,10 +38,12 @@ StitchWork/
 ├── src/                    # React frontend
 │   ├── api/                # API client with JWT auth
 │   ├── components/         # Shared UI components
+│   ├── hooks/              # Custom hooks (useNotify, etc.)
 │   ├── routes/             # TanStack Router file-based routes
 │   ├── stores/             # Zustand state (auth, app)
 │   └── types/              # TypeScript types
 ├── src-tauri/              # Tauri desktop wrapper
+│   └── src/sse.rs          # SSE client for realtime notifications
 └── server/                 # Axum backend
     └── src/
         ├── entity/         # SeaORM entities (Entity First)
@@ -56,12 +62,46 @@ StitchWork/
 - **Utilities**: ahooks for React hooks, dayjs for dates, echarts for charts, motion for animations
 - **Path alias**: `@/*` → `src/*`
 
+### Tauri
+
+**Plugins:**
+
+- **notification**: System local notifications
+- **deep-link**: Custom URI scheme `stitchwork://` for staff invitation QR codes
+- **barcode-scanner**: QR code scanning on mobile (Android/iOS only)
+- **opener**: Open external URLs
+
+**SSE Client** (`src-tauri/src/sse.rs`): Rust-native SSE client for realtime notifications. Runs in background, maintains connection when app is backgrounded, sends local notifications and emits events to frontend.
+
 ### Backend
 
 - **Entity First ORM**: Define entities in `server/src/entity/`, schema auto-syncs on startup via `db.get_schema_registry("stitchwork_server::entity::*").sync(&db)`
 - **Service structure**: Each feature has `mod.rs`, `dto.rs`, `controller.rs`, `service.rs`
 - **Auth**: JWT tokens, Argon2 password hashing
 - **API response format**: `{ code: 0, message: "", data: T }` where code 0 = success
+- **Realtime notifications**: SSE endpoint at `GET /api/sse/events?token=<jwt>`, Notifier service uses DashMap + tokio broadcast channels
+- **Relation queries**: Choose pattern based on use case:
+
+  - `.load().with()` (ModelEx): 单条记录或不分页列表，直接访问关联
+  - `load_one`/`load_many`: 统计聚合、需后续处理的场景
+  - HashMap 批量查询: 分页查询后批量加载、按 ID 索引
+
+```rust
+// ModelEx 模式 - 推荐用于非分页场景
+let records = piece_record::Entity::load()
+    .with(user::Entity)                                  // 单个关联
+    .with((process::Entity, order::Entity))              // 嵌套关联
+    .filter(...)
+    .all(db)
+    .await?;
+r.process.as_ref().map(|p| p.name.clone())               // 直接访问
+
+// 分页场景 - 使用 HashMap 批量加载
+let records = query.paginate(db, page_size).fetch_page(page).await?;
+let processes: HashMap<Uuid, Model> = process::Entity::find()
+    .filter(Column::Id.is_in(ids))
+    .all(db).await?.into_iter().map(|p| (p.id, p)).collect();
+```
 
 ### API Client
 
@@ -101,6 +141,10 @@ S3_BUCKET=
 - `docs/design.md` - System design and business flow
 - `docs/database.md` - ER diagrams
 - `docs/seaorm-entity-first.md` - SeaORM 2.0 patterns (dense format, schema sync, relations)
+- `docs/ui-components.md` - Ant Design Mobile component patterns (Form, Picker, VirtualList)
+- `docs/dev-notes/` - Development notes (realtime-notifications, etc.)
+
+**Diagrams**: Use Mermaid format (`\`\`\`mermaid`) for all diagrams in documentation.
 
 <!-- OPENSPEC:START -->
 ## OpenSpec Instructions

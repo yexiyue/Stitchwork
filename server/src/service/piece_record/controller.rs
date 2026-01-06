@@ -9,8 +9,10 @@ use uuid::Uuid;
 use super::dto::{BatchApproveDto, CreatePieceRecordDto, PieceRecordResponse, UpdatePieceRecordDto};
 use crate::common::{ApiResponse, ListData, QueryParams};
 use crate::entity::piece_record::Model;
+use crate::entity::user::Role;
 use crate::error::{AppJson, Result};
 use crate::service::auth::Claims;
+use crate::service::notification::Notification;
 use crate::AppState;
 
 use super::service;
@@ -75,9 +77,22 @@ async fn create(
     Extension(claims): Extension<Claims>,
     AppJson(dto): AppJson<CreatePieceRecordDto>,
 ) -> Result<ApiResponse<Model>> {
-    Ok(ApiResponse::ok(
-        service::create(&state.db, dto, &claims).await?,
-    ))
+    let record = service::create(&state.db, dto.clone(), &claims).await?;
+
+    // 员工提交计件时通知老板
+    if claims.role == Role::Staff {
+        let response = service::get_one(&state.db, record.id, &claims).await?;
+        state.notifier.send(
+            record.boss_id,
+            Notification::RecordSubmitted {
+                user_name: response.user_name.unwrap_or_default(),
+                process_name: response.process_name.unwrap_or_default(),
+                quantity: record.quantity,
+            },
+        );
+    }
+
+    Ok(ApiResponse::ok(record))
 }
 
 async fn get_one(
@@ -118,9 +133,22 @@ async fn approve(
     Extension(claims): Extension<Claims>,
 ) -> Result<ApiResponse<Model>> {
     claims.require_boss()?;
-    Ok(ApiResponse::ok(
-        service::approve(&state.db, id, claims.sub).await?,
-    ))
+
+    // 先获取记录详情用于通知
+    let response = service::get_one(&state.db, id, &claims).await?;
+    let record = service::approve(&state.db, id, claims.sub).await?;
+
+    // 通知员工审批通过
+    state.notifier.send(
+        record.user_id,
+        Notification::RecordApproved {
+            process_name: response.process_name.unwrap_or_default(),
+            quantity: record.quantity,
+            amount: record.amount.to_string(),
+        },
+    );
+
+    Ok(ApiResponse::ok(record))
 }
 
 async fn reject(
@@ -129,9 +157,21 @@ async fn reject(
     Extension(claims): Extension<Claims>,
 ) -> Result<ApiResponse<Model>> {
     claims.require_boss()?;
-    Ok(ApiResponse::ok(
-        service::reject(&state.db, id, claims.sub).await?,
-    ))
+
+    // 先获取记录详情用于通知
+    let response = service::get_one(&state.db, id, &claims).await?;
+    let record = service::reject(&state.db, id, claims.sub).await?;
+
+    // 通知员工审批拒绝
+    state.notifier.send(
+        record.user_id,
+        Notification::RecordRejected {
+            process_name: response.process_name.unwrap_or_default(),
+            quantity: record.quantity,
+        },
+    );
+
+    Ok(ApiResponse::ok(record))
 }
 
 async fn batch_approve(
@@ -141,9 +181,25 @@ async fn batch_approve(
     AppJson(dto): AppJson<BatchApproveDto>,
 ) -> Result<ApiResponse<u64>> {
     claims.require_boss()?;
-    Ok(ApiResponse::ok(
-        service::batch_approve(&state.db, dto.ids, claims.sub).await?,
-    ))
+
+    // 先获取待处理记录用于通知
+    let pending_records = service::get_pending_records(&state.db, &dto.ids, claims.sub).await?;
+
+    let count = service::batch_approve(&state.db, dto.ids, claims.sub).await?;
+
+    // 发送通知给每个员工
+    for record in pending_records {
+        state.notifier.send(
+            record.user_id,
+            Notification::RecordApproved {
+                process_name: record.process_name.unwrap_or_default(),
+                quantity: record.quantity,
+                amount: record.amount.to_string(),
+            },
+        );
+    }
+
+    Ok(ApiResponse::ok(count))
 }
 
 async fn batch_reject(
@@ -153,7 +209,22 @@ async fn batch_reject(
     AppJson(dto): AppJson<BatchApproveDto>,
 ) -> Result<ApiResponse<u64>> {
     claims.require_boss()?;
-    Ok(ApiResponse::ok(
-        service::batch_reject(&state.db, dto.ids, claims.sub).await?,
-    ))
+
+    // 先获取待处理记录用于通知
+    let pending_records = service::get_pending_records(&state.db, &dto.ids, claims.sub).await?;
+
+    let count = service::batch_reject(&state.db, dto.ids, claims.sub).await?;
+
+    // 发送通知给每个员工
+    for record in pending_records {
+        state.notifier.send(
+            record.user_id,
+            Notification::RecordRejected {
+                process_name: record.process_name.unwrap_or_default(),
+                quantity: record.quantity,
+            },
+        );
+    }
+
+    Ok(ApiResponse::ok(count))
 }

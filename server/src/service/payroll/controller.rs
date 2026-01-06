@@ -11,6 +11,7 @@ use crate::entity::payroll::Model;
 use crate::entity::user::Role;
 use crate::error::{AppJson, Result};
 use crate::service::auth::Claims;
+use crate::service::notification::Notification;
 use crate::AppState;
 
 use super::service;
@@ -40,13 +41,13 @@ async fn list(
     Extension(claims): Extension<Claims>,
     Query(params): Query<QueryParams>,
 ) -> Result<ApiResponse<ListData<Model>>> {
-    let user_id = if claims.role == Role::Staff {
-        Some(claims.sub)
+    let (user_id, boss_id) = if claims.role == Role::Staff {
+        (Some(claims.sub), None)
     } else {
-        None
+        (None, Some(claims.sub))
     };
     Ok(ApiResponse::ok(
-        service::list(&state.db, params, user_id).await?,
+        service::list(&state.db, params, user_id, boss_id).await?,
     ))
 }
 
@@ -57,7 +58,17 @@ async fn create(
     AppJson(dto): AppJson<CreatePayrollDto>,
 ) -> Result<ApiResponse<Model>> {
     claims.require_boss()?;
-    Ok(ApiResponse::ok(service::create(&state.db, dto).await?))
+    let payroll = service::create(&state.db, dto, claims.sub).await?;
+
+    // 通知员工收到工资
+    state.notifier.send(
+        payroll.user_id,
+        Notification::PayrollReceived {
+            amount: payroll.amount.to_string(),
+        },
+    );
+
+    Ok(ApiResponse::ok(payroll))
 }
 
 async fn get_one(
