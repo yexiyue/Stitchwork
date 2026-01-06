@@ -1,7 +1,8 @@
-import { Popup, Image } from "antd-mobile";
+import { Popup } from "antd-mobile";
 import type { Order } from "@/types";
 import { RelativeTime } from "./RelativeTime";
 import { ImageOff } from "lucide-react";
+import { OssImage } from "./OssImage";
 
 interface OrderPickerProps {
   visible: boolean;
@@ -39,7 +40,7 @@ export function OrderPicker({
               onClick={() => onSelect(order)}
             >
               {order.images?.length ? (
-                <Image
+                <OssImage
                   src={order.images[0]}
                   width={56}
                   height={56}

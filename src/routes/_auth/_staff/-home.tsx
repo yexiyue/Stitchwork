@@ -1,10 +1,10 @@
 import { useNavigate } from "@tanstack/react-router";
-import { Card, Image } from "antd-mobile";
+import { Card } from "antd-mobile";
 import { FileEdit, Store, TrendingUp, Package, ImageIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { homeApi, statsApi } from "@/api";
 import { useAuthStore } from "@/stores/auth";
-import { MiniChart, RelativeTime, Chart } from "@/components";
+import { MiniChart, RelativeTime, Chart, OssImage } from "@/components";
 import type { StaffOverview, Activity } from "@/types";
 import type { EChartsOption } from "echarts";
 import dayjs from "dayjs";
@@ -79,7 +79,7 @@ export function StaffHome() {
         <div className="p-4 bg-gray-50 rounded-lg">
           <div className="flex items-start gap-3">
             {user.workshop.image ? (
-              <img
+              <OssImage
                 src={user.workshop.image}
                 className="w-16 h-16 rounded-lg object-cover"
               />
@@ -184,7 +184,7 @@ export function StaffHome() {
                 <div className="flex items-center gap-3">
                   <div className="shrink-0 w-10 h-10 rounded overflow-hidden bg-gray-100 flex items-center justify-center">
                     {act.orderImage ? (
-                      <Image
+                      <OssImage
                         src={act.orderImage}
                         width="100%"
                         height="100%"

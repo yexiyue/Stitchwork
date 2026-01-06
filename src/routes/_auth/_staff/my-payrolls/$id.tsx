@@ -1,9 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { NavBar, Image, ImageViewer } from "antd-mobile";
+import { NavBar, ImageViewer } from "antd-mobile";
 import { ChevronLeft, ImageIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { payrollApi } from "@/api";
-import { RelativeTime } from "@/components";
+import { OssImage, RelativeTime } from "@/components";
 import { useState } from "react";
 
 export const Route = createFileRoute("/_auth/_staff/my-payrolls/$id")({
@@ -82,7 +82,7 @@ function MyPayrollDetailPage() {
               className="h-40 w-40 rounded-lg overflow-hidden cursor-pointer"
               onClick={() => setImageViewerVisible(true)}
             >
-              <Image
+              <OssImage
                 src={payroll.paymentImage}
                 width="100%"
                 height="100%"

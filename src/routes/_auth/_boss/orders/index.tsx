@@ -5,13 +5,12 @@ import {
   Toast,
   SearchBar,
   Dropdown,
-  Image,
   ImageViewer,
 } from "antd-mobile";
 import { Plus, ImageOff, Calendar, Filter, Users, BarChart3 } from "lucide-react";
 import { useDeleteOrder, useCustomers, useInfiniteList, useDebouncedSearch, useToggleFilter, useDateRange } from "@/hooks";
 import type { Order } from "@/types";
-import { RelativeTime, VirtualList, StatusTag, DateRangeButton } from "@/components";
+import { RelativeTime, VirtualList, StatusTag, DateRangeButton, OssImage } from "@/components";
 import { orderApi } from "@/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
@@ -129,13 +128,17 @@ function OrdersPage() {
             title={
               <Filter
                 size={16}
-                className={statusFilter.hasSelected ? "text-blue-500" : "text-gray-500"}
+                className={
+                  statusFilter.hasSelected ? "text-blue-500" : "text-gray-500"
+                }
               />
             }
           >
             <div className="p-2">
               <div
-                className={`p-3 rounded ${!statusFilter.hasSelected ? "bg-blue-50 text-blue-500" : ""}`}
+                className={`p-3 rounded ${
+                  !statusFilter.hasSelected ? "bg-blue-50 text-blue-500" : ""
+                }`}
                 onClick={() => {
                   statusFilter.clear();
                   dropdownRef.current?.close();
@@ -147,7 +150,9 @@ function OrdersPage() {
                 <div
                   key={opt.key}
                   className={`p-3 rounded flex items-center justify-between ${
-                    statusFilter.isSelected(opt.key) ? "bg-blue-50 text-blue-500" : ""
+                    statusFilter.isSelected(opt.key)
+                      ? "bg-blue-50 text-blue-500"
+                      : ""
                   }`}
                   onClick={() => statusFilter.toggle(opt.key)}
                 >
@@ -162,13 +167,17 @@ function OrdersPage() {
             title={
               <Users
                 size={16}
-                className={customerFilter.hasSelected ? "text-blue-500" : "text-gray-500"}
+                className={
+                  customerFilter.hasSelected ? "text-blue-500" : "text-gray-500"
+                }
               />
             }
           >
             <div className="p-2 max-h-64 overflow-y-auto">
               <div
-                className={`p-3 rounded ${!customerFilter.hasSelected ? "bg-blue-50 text-blue-500" : ""}`}
+                className={`p-3 rounded ${
+                  !customerFilter.hasSelected ? "bg-blue-50 text-blue-500" : ""
+                }`}
                 onClick={() => {
                   customerFilter.clear();
                   dropdownRef.current?.close();
@@ -180,7 +189,9 @@ function OrdersPage() {
                 <div
                   key={c.id}
                   className={`p-3 rounded ${
-                    customerFilter.isSelected(c.id) ? "bg-blue-50 text-blue-500" : ""
+                    customerFilter.isSelected(c.id)
+                      ? "bg-blue-50 text-blue-500"
+                      : ""
                   }`}
                   onClick={() => {
                     customerFilter.setSelected([c.id]);
@@ -225,7 +236,10 @@ function OrdersPage() {
                   text: "编辑",
                   color: "primary",
                   onClick: () =>
-                    navigate({ to: "/orders/$id/edit", params: { id: order.id } }),
+                    navigate({
+                      to: "/orders/$id/edit",
+                      params: { id: order.id },
+                    }),
                 },
                 {
                   key: "delete",
@@ -237,10 +251,12 @@ function OrdersPage() {
             >
               <div
                 className="bg-white p-3 mb-2 mx-2 rounded-lg shadow-sm flex gap-3"
-                onClick={() => navigate({ to: "/orders/$id", params: { id: order.id } })}
+                onClick={() =>
+                  navigate({ to: "/orders/$id", params: { id: order.id } })
+                }
               >
                 {order.images?.length ? (
-                  <Image
+                  <OssImage
                     src={order.images[0]}
                     width={72}
                     height={72}
@@ -258,7 +274,9 @@ function OrdersPage() {
                 )}
                 <div className="flex-1 min-w-0 flex flex-col justify-between">
                   <div className="flex justify-between items-start">
-                    <span className="font-medium truncate">{order.productName}</span>
+                    <span className="font-medium truncate">
+                      {order.productName}
+                    </span>
                     <StatusTag status={order.status} type="order" />
                   </div>
                   <div className="text-sm text-gray-500">

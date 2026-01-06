@@ -25,7 +25,7 @@ import {
   useDeleteProcess,
 } from "@/hooks";
 import type { Process, CreateProcessDto, UpdateProcessDto } from "@/types";
-import { RelativeTime } from "@/components";
+import { OssImage, RelativeTime } from "@/components";
 import { ORDER_STATUS_MAP } from "@/constants";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -169,7 +169,7 @@ function OrderDetailPage() {
           {order.images?.length ? (
             <div className="flex gap-2 overflow-x-auto">
               {order.images.map((url, i) => (
-                <Image
+                <OssImage
                   key={i}
                   src={url}
                   width={80}

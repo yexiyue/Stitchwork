@@ -7,7 +7,6 @@ import {
   Picker,
   Checkbox,
   TextArea,
-  Image,
 } from "antd-mobile";
 import { ChevronLeft, ImageIcon } from "lucide-react";
 import type { Staff, PieceRecord } from "@/types";
@@ -15,7 +14,7 @@ import { payrollApi, pieceRecordApi } from "@/api";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
 import { useStaffList } from "@/hooks";
-import { ImageUploader } from "@/components";
+import { ImageUploader, OssImage } from "@/components";
 
 export const Route = createFileRoute("/_auth/_boss/payroll/new")({
   component: NewPayrollPage,
@@ -141,7 +140,9 @@ function NewPayrollPage() {
             {/* Records selection */}
             <div className="bg-white rounded-lg mt-3 p-3">
               <div className="flex justify-between items-center mb-3">
-                <span className="font-medium">待结算计件 ({records.length})</span>
+                <span className="font-medium">
+                  待结算计件 ({records.length})
+                </span>
                 {records.length > 0 && (
                   <Button size="mini" onClick={handleSelectAll}>
                     {selectedRecordIds.length === records.length
@@ -170,7 +171,7 @@ function NewPayrollPage() {
                       />
                       <div className="shrink-0 h-12 aspect-square rounded overflow-hidden bg-gray-200 flex items-center justify-center">
                         {record.orderImage ? (
-                          <Image
+                          <OssImage
                             src={record.orderImage}
                             width="100%"
                             height="100%"

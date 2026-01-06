@@ -13,7 +13,7 @@ import {
 import { ImageIcon, Edit2, Trash2, ChevronLeft } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { pieceRecordApi, orderApi } from "@/api";
-import { RelativeTime } from "@/components";
+import { OssImage, RelativeTime } from "@/components";
 import { RECORD_STATUS_MAP } from "@/constants";
 import { useState } from "react";
 
@@ -167,7 +167,7 @@ function RecordDetailPage() {
               {images.map((img, idx) => (
                 <Swiper.Item key={idx}>
                   <div className="h-64 flex items-center justify-center bg-gray-100">
-                    <Image src={img} fit="contain" height="100%" />
+                    <OssImage src={img} fit="contain" height="100%" />
                   </div>
                 </Swiper.Item>
               ))}
@@ -182,9 +182,13 @@ function RecordDetailPage() {
         {/* 订单信息 */}
         <div className="bg-white mt-2 p-4">
           <div className="text-sm text-gray-500 mb-2">订单信息</div>
-          <div className="font-medium text-lg">{record.orderName || "未知订单"}</div>
+          <div className="font-medium text-lg">
+            {record.orderName || "未知订单"}
+          </div>
           {order?.description && (
-            <div className="text-sm text-gray-600 mt-1">{order.description}</div>
+            <div className="text-sm text-gray-600 mt-1">
+              {order.description}
+            </div>
           )}
           {order?.quantity && (
             <div className="text-sm text-gray-500 mt-1">
@@ -210,7 +214,8 @@ function RecordDetailPage() {
           <div className="flex justify-between items-center">
             <div>
               <div className="text-2xl font-bold text-blue-600">
-                {record.quantity} <span className="text-base font-normal">件</span>
+                {record.quantity}{" "}
+                <span className="text-base font-normal">件</span>
               </div>
               <div className="text-lg text-green-600 mt-1">
                 ¥{record.amount}
@@ -231,11 +236,15 @@ function RecordDetailPage() {
             </div>
             <div className="flex justify-between mt-2">
               <span>录入方式</span>
-              <span>{record.recordedBy === "byBoss" ? "老板代录" : "员工自报"}</span>
+              <span>
+                {record.recordedBy === "byBoss" ? "老板代录" : "员工自报"}
+              </span>
             </div>
             <div className="flex justify-between mt-2">
               <span>录入时间</span>
-              <span><RelativeTime date={record.recordedAt} /></span>
+              <span>
+                <RelativeTime date={record.recordedAt} />
+              </span>
             </div>
           </div>
         </div>
@@ -281,11 +290,16 @@ function RecordDetailPage() {
           />
           {piecePrice !== null && editQuantity && (
             <div className="text-sm text-gray-500 mt-2">
-              修改后金额: ¥{(piecePrice * parseInt(editQuantity || "0", 10)).toFixed(2)}
+              修改后金额: ¥
+              {(piecePrice * parseInt(editQuantity || "0", 10)).toFixed(2)}
             </div>
           )}
           <div className="flex gap-3 mt-4">
-            <Button block fill="outline" onClick={() => setEditPopupVisible(false)}>
+            <Button
+              block
+              fill="outline"
+              onClick={() => setEditPopupVisible(false)}
+            >
               取消
             </Button>
             <Button

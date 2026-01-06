@@ -1,8 +1,9 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
 import type { LoginUser } from "@/types";
 import { authApi } from "@/api";
 import { setToken, clearToken } from "@/api/client";
+import { TauriStoreState } from "./tauriStoreState";
 
 interface AuthState {
   token: string | null;
@@ -11,6 +12,9 @@ interface AuthState {
   logout: () => void;
   updateUser: (updates: Partial<LoginUser>) => void;
 }
+
+const storage = new TauriStoreState("auth-store.json");
+await storage.init();
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -33,6 +37,7 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "auth-storage",
+      storage: createJSONStorage(() => storage),
       partialize: (state) => ({ token: state.token, user: state.user }),
     }
   )

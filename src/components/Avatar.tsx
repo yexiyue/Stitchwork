@@ -1,3 +1,5 @@
+import { OssImage } from "./OssImage";
+
 const AVATAR_COLORS = [
   "bg-blue-500",
   "bg-green-500",
@@ -26,7 +28,7 @@ export function Avatar({ name, src, size = "md" }: AvatarProps) {
 
   if (src) {
     return (
-      <img
+      <OssImage
         src={src}
         alt={name}
         className={`${sizeClasses[size]} rounded-full object-cover`}

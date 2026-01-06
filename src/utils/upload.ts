@@ -1,6 +1,7 @@
 import imageCompression from "browser-image-compression";
 import { uploadApi } from "@/api";
 
+/** 上传图片，返回 key */
 export async function uploadImage(
   file: File | Blob,
   options?: { maxSizeMB?: number; maxWidthOrHeight?: number }
@@ -12,7 +13,7 @@ export async function uploadImage(
     { maxSizeMB, maxWidthOrHeight, useWebWorker: true }
   );
 
-  const { uploadUrl, fileUrl } = await uploadApi.presign(
+  const { uploadUrl, key } = await uploadApi.presign(
     "image.jpg",
     compressed.type || "image/jpeg"
   );
@@ -23,5 +24,5 @@ export async function uploadImage(
     headers: { "Content-Type": compressed.type || "image/jpeg" },
   });
 
-  return fileUrl;
+  return key;
 }

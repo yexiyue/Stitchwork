@@ -1,8 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Dropdown, Image } from "antd-mobile";
+import { Dropdown } from "antd-mobile";
 import { ImageIcon, Calendar } from "lucide-react";
 import type { Payroll } from "@/types";
-import { RelativeTime, VirtualList, DateRangeButton } from "@/components";
+import {
+  RelativeTime,
+  VirtualList,
+  DateRangeButton,
+  OssImage,
+} from "@/components";
 import { payrollApi } from "@/api";
 import { useRef } from "react";
 import type { DropdownRef } from "antd-mobile/es/components/dropdown";
@@ -91,7 +96,7 @@ function MyPayrollsPage() {
             >
               <div className="shrink-0 h-16 aspect-square rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
                 {payroll.paymentImage ? (
-                  <Image
+                  <OssImage
                     src={payroll.paymentImage}
                     width="100%"
                     height="100%"

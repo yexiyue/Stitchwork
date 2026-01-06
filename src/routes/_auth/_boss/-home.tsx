@@ -1,10 +1,10 @@
 import { useNavigate } from "@tanstack/react-router";
-import { Card, Badge, ProgressBar, Image } from "antd-mobile";
+import { Card, Badge, ProgressBar } from "antd-mobile";
 import { FileEdit, Store, Package, Users, TrendingUp, ImageIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { homeApi, statsApi } from "@/api";
 import { useAuthStore } from "@/stores/auth";
-import { MiniChart, RelativeTime, Chart } from "@/components";
+import { MiniChart, RelativeTime, Chart, OssImage } from "@/components";
 import type { BossOverview, Activity } from "@/types";
 import type { EChartsOption } from "echarts";
 import dayjs from "dayjs";
@@ -139,7 +139,7 @@ export function BossHome() {
         >
           <div className="flex items-start gap-3">
             {user.workshop.image ? (
-              <img
+              <OssImage
                 src={user.workshop.image}
                 className="w-16 h-16 rounded-lg object-cover"
               />
@@ -325,7 +325,9 @@ export function BossHome() {
         </Card>
         <Card
           className="cursor-pointer"
-          onClick={() => navigate({ to: "/records", search: { status: "pending" } })}
+          onClick={() =>
+            navigate({ to: "/records", search: { status: "pending" } })
+          }
         >
           <div className="flex items-center gap-3 py-1">
             <Badge content={boss?.pendingCount || ""}>
@@ -348,7 +350,7 @@ export function BossHome() {
                 <div className="flex items-center gap-3">
                   <div className="shrink-0 w-10 h-10 rounded overflow-hidden bg-gray-100 flex items-center justify-center">
                     {act.orderImage ? (
-                      <Image
+                      <OssImage
                         src={act.orderImage}
                         width="100%"
                         height="100%"
