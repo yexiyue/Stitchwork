@@ -23,27 +23,20 @@ export interface UpdateShareRequest {
   isActive?: boolean;
 }
 
-export interface PublicOrderInfo {
-  id: string;
-  productName: string;
-  description?: string;
-  images?: unknown;
-  quantity: number;
-}
-
 export interface PublicProcessInfo {
   id: string;
   name: string;
   description?: string;
   piecePrice: string;
   orderProductName: string;
+  remainingQuantity: number;
 }
 
 export interface PublicShareResponse {
   title: string;
   workshopName?: string;
-  workshopDesc?: string;
+  workshopAddress?: string;
+  bossPhone?: string;
   avatar?: string;
-  orders: PublicOrderInfo[];
   processes: PublicProcessInfo[];
 }

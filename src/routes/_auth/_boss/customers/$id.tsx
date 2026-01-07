@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Form, Input, Button, NavBar, Dialog, Toast } from "antd-mobile";
 import { ChevronLeft } from "lucide-react";
 import { useCustomer, useUpdateCustomer } from "@/hooks";
+import { BiometricGuard } from "@/components";
 import type { UpdateCustomerDto } from "@/types";
 
 export const Route = createFileRoute("/_auth/_boss/customers/$id")({
@@ -32,43 +33,48 @@ function EditCustomerPage() {
   }
 
   return (
-    <div>
-      <NavBar
-        onBack={() => navigate({ to: "/customers" })}
-        backIcon={<ChevronLeft size={24} />}
-      >
-        编辑客户
-      </NavBar>
-      <div className="p-4">
-        <Form
-          initialValues={customer}
-          onFinish={handleSubmit}
-          footer={
-            <Button
-              block
-              type="submit"
-              color="primary"
-              loading={updateMutation.isPending}
-            >
-              保存
-            </Button>
-          }
+    <BiometricGuard
+      reason="编辑客户信息需要验证身份"
+      onCancel={() => navigate({ to: "/customers" })}
+    >
+      <div>
+        <NavBar
+          onBack={() => navigate({ to: "/customers" })}
+          backIcon={<ChevronLeft size={24} />}
         >
-          <Form.Item
-            name="name"
-            label="名称"
-            rules={[{ required: true, message: "请输入客户名称" }]}
+          编辑客户
+        </NavBar>
+        <div className="p-4">
+          <Form
+            initialValues={customer}
+            onFinish={handleSubmit}
+            footer={
+              <Button
+                block
+                type="submit"
+                color="primary"
+                loading={updateMutation.isPending}
+              >
+                保存
+              </Button>
+            }
           >
-            <Input placeholder="请输入客户名称" clearable />
-          </Form.Item>
-          <Form.Item name="phone" label="电话">
-            <Input placeholder="请输入电话" clearable />
-          </Form.Item>
-          <Form.Item name="description" label="备注">
-            <Input placeholder="请输入备注" clearable />
-          </Form.Item>
-        </Form>
+            <Form.Item
+              name="name"
+              label="名称"
+              rules={[{ required: true, message: "请输入客户名称" }]}
+            >
+              <Input placeholder="请输入客户名称" clearable />
+            </Form.Item>
+            <Form.Item name="phone" label="电话">
+              <Input placeholder="请输入电话" clearable />
+            </Form.Item>
+            <Form.Item name="description" label="备注">
+              <Input placeholder="请输入备注" clearable />
+            </Form.Item>
+          </Form>
+        </div>
       </div>
-    </div>
+    </BiometricGuard>
   );
 }

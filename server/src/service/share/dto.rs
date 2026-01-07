@@ -23,20 +23,10 @@ pub struct UpdateShareRequest {
 pub struct PublicShareResponse {
     pub title: String,
     pub workshop_name: Option<String>,
-    pub workshop_desc: Option<String>,
+    pub workshop_address: Option<String>,
+    pub boss_phone: Option<String>,
     pub avatar: Option<String>,
-    pub orders: Vec<PublicOrderInfo>,
     pub processes: Vec<PublicProcessInfo>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PublicOrderInfo {
-    pub id: Uuid,
-    pub product_name: String,
-    pub description: Option<String>,
-    pub images: Option<serde_json::Value>,
-    pub quantity: i32,
 }
 
 #[derive(Debug, Serialize)]
@@ -47,4 +37,5 @@ pub struct PublicProcessInfo {
     pub description: Option<String>,
     pub piece_price: rust_decimal::Decimal,
     pub order_product_name: String,
+    pub remaining_quantity: i32,
 }

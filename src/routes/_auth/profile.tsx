@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { List, Button, Dialog, Toast, Input, PullToRefresh } from "antd-mobile";
-import { Users, UserPlus, LogOut, Camera, Store, Phone, User as UserIcon, AtSign, Lock, ClipboardList, Wallet } from "lucide-react";
+import { Users, UserPlus, LogOut, Camera, Store, Phone, User as UserIcon, AtSign, Lock, ClipboardList, Wallet, Share2 } from "lucide-react";
 import { useAuthStore, selectIsBoss } from "@/stores/auth";
 import { authApi } from "@/api";
 import { Avatar, useAvatarCropper } from "@/components";
@@ -231,6 +231,9 @@ function ProfilePage() {
             </List.Item>
             <List.Item prefix={<Store size={20} />} onClick={() => navigate({ to: "/workshop" })}>
               工坊设置
+            </List.Item>
+            <List.Item prefix={<Share2 size={20} />} onClick={() => navigate({ to: "/shares" })}>
+              招工分享
             </List.Item>
           </List>
         )}

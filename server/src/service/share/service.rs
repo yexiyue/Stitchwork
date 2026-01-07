@@ -1,11 +1,11 @@
-use sea_orm::{ActiveModelTrait, ColumnTrait, DbConn, EntityTrait, QueryFilter, Set};
+use sea_orm::{ActiveModelTrait, ColumnTrait, DbConn, EntityTrait, ExprTrait, QueryFilter, Set};
 use uuid::Uuid;
 
-use crate::entity::{order, process, share, user, workshop};
+use crate::entity::{order, piece_record, process, share, user, workshop};
 use crate::error::{AppError, Result};
 
 use super::dto::{
-    CreateShareRequest, PublicOrderInfo, PublicProcessInfo, PublicShareResponse, UpdateShareRequest,
+    CreateShareRequest, PublicProcessInfo, PublicShareResponse, UpdateShareRequest,
 };
 
 pub async fn create(db: &DbConn, boss_id: Uuid, req: CreateShareRequest) -> Result<share::Model> {
@@ -93,26 +93,7 @@ pub async fn get_public(db: &DbConn, token: &str) -> Result<PublicShareResponse>
         .one(db)
         .await?;
 
-    let order_ids: Vec<Uuid> = serde_json::from_value(share.order_ids).unwrap_or_default();
     let process_ids: Vec<Uuid> = serde_json::from_value(share.process_ids).unwrap_or_default();
-
-    let orders: Vec<PublicOrderInfo> = if !order_ids.is_empty() {
-        order::Entity::find()
-            .filter(order::Column::Id.is_in(order_ids))
-            .all(db)
-            .await?
-            .into_iter()
-            .map(|o| PublicOrderInfo {
-                id: o.id,
-                product_name: o.product_name,
-                description: o.description,
-                images: o.images,
-                quantity: o.quantity,
-            })
-            .collect()
-    } else {
-        vec![]
-    };
 
     let processes: Vec<PublicProcessInfo> = if !process_ids.is_empty() {
         let procs = process::Entity::find()
@@ -120,23 +101,52 @@ pub async fn get_public(db: &DbConn, token: &str) -> Result<PublicShareResponse>
             .all(db)
             .await?;
 
+        // 获取关联订单信息（产品名和数量）
         let related_order_ids: Vec<Uuid> = procs.iter().map(|p| p.order_id).collect();
-        let related_orders: std::collections::HashMap<Uuid, String> = order::Entity::find()
+        let related_orders: std::collections::HashMap<Uuid, (String, i32)> = order::Entity::find()
             .filter(order::Column::Id.is_in(related_order_ids))
             .all(db)
             .await?
             .into_iter()
-            .map(|o| (o.id, o.product_name))
+            .map(|o| (o.id, (o.product_name, o.quantity)))
             .collect();
+
+        // 计算每个工序的已完成数量（Approved + Settled）
+        let completed_records = piece_record::Entity::find()
+            .filter(piece_record::Column::ProcessId.is_in(process_ids.clone()))
+            .filter(
+                piece_record::Column::Status
+                    .eq(piece_record::PieceRecordStatus::Approved)
+                    .or(piece_record::Column::Status.eq(piece_record::PieceRecordStatus::Settled)),
+            )
+            .all(db)
+            .await?;
+
+        // 按工序ID汇总已完成数量
+        let mut completed_map: std::collections::HashMap<Uuid, i32> =
+            std::collections::HashMap::new();
+        for record in completed_records {
+            *completed_map.entry(record.process_id).or_insert(0) += record.quantity;
+        }
 
         procs
             .into_iter()
-            .map(|p| PublicProcessInfo {
-                id: p.id,
-                name: p.name,
-                description: p.description,
-                piece_price: p.piece_price,
-                order_product_name: related_orders.get(&p.order_id).cloned().unwrap_or_default(),
+            .map(|p| {
+                let (product_name, order_quantity) = related_orders
+                    .get(&p.order_id)
+                    .cloned()
+                    .unwrap_or_else(|| (String::new(), 0));
+                let completed = completed_map.get(&p.id).copied().unwrap_or(0);
+                let remaining = std::cmp::Ord::max(order_quantity - completed, 0);
+
+                PublicProcessInfo {
+                    id: p.id,
+                    name: p.name,
+                    description: p.description,
+                    piece_price: p.piece_price,
+                    order_product_name: product_name,
+                    remaining_quantity: remaining,
+                }
             })
             .collect()
     } else {
@@ -146,9 +156,9 @@ pub async fn get_public(db: &DbConn, token: &str) -> Result<PublicShareResponse>
     Ok(PublicShareResponse {
         title: share.title,
         workshop_name: ws.as_ref().map(|w| w.name.clone()),
-        workshop_desc: ws.and_then(|w| w.desc),
+        workshop_address: ws.as_ref().and_then(|w| w.address.clone()),
+        boss_phone: boss.phone,
         avatar: boss.avatar,
-        orders,
         processes,
     })
 }

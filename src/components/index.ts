@@ -14,3 +14,4 @@ export { StatsGrid } from "./StatsGrid";
 export { DateRangeButton } from "./DateRangeButton";
 export { StatusTag } from "./StatusTag";
 export { EmptyState } from "./EmptyState";
+export { BiometricGuard } from "./BiometricGuard";

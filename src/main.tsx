@@ -2,8 +2,8 @@ import React from "react";
 import ReactDOM, { createRoot } from "react-dom/client";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { unstableSetRender } from "antd-mobile";
-import { onOpenUrl, getCurrent } from "@tauri-apps/plugin-deep-link";
 import { routeTree } from "./routeTree.gen";
+import { isTauri } from "@/utils/platform";
 import "./index.css";
 
 // React 19 compatibility for antd-mobile
@@ -48,21 +48,23 @@ function handleDeepLink(urls: string[]) {
 
 // 初始化 deep link 监听
 async function initDeepLink() {
-  // 检查应用启动时是否有 deep link
+  if (!isTauri()) return;
+
   try {
+    const { onOpenUrl, getCurrent } = await import(
+      "@tauri-apps/plugin-deep-link"
+    );
+
+    // 检查应用启动时是否有 deep link
     const urls = await getCurrent();
     if (urls && urls.length > 0) {
       handleDeepLink(urls);
     }
-  } catch {
-    // 非 Tauri 环境或无初始 deep link
-  }
 
-  // 监听后续 deep link 事件
-  try {
+    // 监听后续 deep link 事件
     await onOpenUrl(handleDeepLink);
   } catch {
-    // 非 Tauri 环境
+    // deep link 插件不可用
   }
 }
 

@@ -1,16 +1,8 @@
 import { useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useQueryClient } from "@tanstack/react-query";
 import { Toast } from "antd-mobile";
 import { useAuthStore } from "@/stores/auth";
-import {
-  isPermissionGranted,
-  requestPermission,
-  createChannel,
-  channels,
-  Importance,
-} from "@tauri-apps/plugin-notification";
+import { isTauri } from "@/utils/platform";
 
 const CHANNEL_ID = "stitchwork_high";
 
@@ -30,18 +22,32 @@ interface NotificationPayload {
  * 3. 显示 Toast 提示
  * 4. 刷新相关数据
  * 5. 登出时断开连接
+ *
+ * 注意：仅在 Tauri 环境下生效，浏览器环境跳过
  */
 export function useNotify() {
   const token = useAuthStore((s) => s.token);
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!token) return;
+    if (!token || !isTauri()) return;
 
-    let unlisten: UnlistenFn | null = null;
+    let unlisten: (() => void) | null = null;
+    let disconnectOnCleanup = true;
 
     const setup = async () => {
       try {
+        // 动态导入 Tauri 模块
+        const { invoke } = await import("@tauri-apps/api/core");
+        const { listen } = await import("@tauri-apps/api/event");
+        const {
+          isPermissionGranted,
+          requestPermission,
+          createChannel,
+          channels,
+          Importance,
+        } = await import("@tauri-apps/plugin-notification");
+
         // 检查并请求通知权限 (Android 13+ 需要)
         let permissionGranted = await isPermissionGranted();
         if (!permissionGranted) {
@@ -98,6 +104,7 @@ export function useNotify() {
         });
       } catch (error) {
         console.error("Failed to setup notifications:", error);
+        disconnectOnCleanup = false;
       }
     };
 
@@ -105,7 +112,11 @@ export function useNotify() {
 
     return () => {
       // 清理：断开 SSE 并取消监听
-      invoke("disconnect_sse").catch(console.error);
+      if (disconnectOnCleanup) {
+        import("@tauri-apps/api/core")
+          .then(({ invoke }) => invoke("disconnect_sse"))
+          .catch(console.error);
+      }
       unlisten?.();
     };
   }, [token, queryClient]);

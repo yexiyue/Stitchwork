@@ -14,7 +14,12 @@ import {
   useDebouncedSearch,
 } from "@/hooks";
 import type { Customer } from "@/types";
-import { Avatar, RelativeTime, VirtualList } from "@/components";
+import {
+  Avatar,
+  RelativeTime,
+  VirtualList,
+  BiometricGuard,
+} from "@/components";
 import { customerApi } from "@/api";
 import dayjs from "dayjs";
 import { useQueryClient } from "@tanstack/react-query";
@@ -88,134 +93,139 @@ function CustomersPage() {
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      <NavBar
-        onBack={() => navigate({ to: "/profile" })}
-        backIcon={<ChevronLeft size={24} />}
-        right={
+    <BiometricGuard
+      reason="查看客户信息需要验证身份"
+      onCancel={() => navigate({ to: "/profile" })}
+    >
+      <div className="flex flex-col h-full overflow-hidden">
+        <NavBar
+          onBack={() => navigate({ to: "/profile" })}
+          backIcon={<ChevronLeft size={24} />}
+          right={
+            <AnimatePresence mode="wait">
+              {showSearch ? (
+                <motion.div
+                  key="close"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <X
+                    size={20}
+                    className="text-gray-500"
+                    onClick={() => {
+                      setShowSearch(false);
+                      setSearch("");
+                    }}
+                  />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="actions"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex justify-end gap-3"
+                >
+                  <Search
+                    size={20}
+                    className="text-gray-500"
+                    onClick={() => setShowSearch(true)}
+                  />
+                  <Plus
+                    size={20}
+                    className="text-blue-500"
+                    onClick={() => navigate({ to: "/customers/new" })}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          }
+        >
           <AnimatePresence mode="wait">
             {showSearch ? (
               <motion.div
-                key="close"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+                key="search"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.15 }}
               >
-                <X
-                  size={20}
-                  className="text-gray-500"
-                  onClick={() => {
-                    setShowSearch(false);
-                    setSearch("");
-                  }}
+                <SearchBar
+                  ref={searchInputRef}
+                  placeholder="搜索客户名称"
+                  value={search}
+                  onChange={setSearch}
                 />
               </motion.div>
             ) : (
               <motion.div
-                key="actions"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex justify-end gap-3"
+                key="title"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.15 }}
               >
-                <Search
-                  size={20}
-                  className="text-gray-500"
-                  onClick={() => setShowSearch(true)}
-                />
-                <Plus
-                  size={20}
-                  className="text-blue-500"
-                  onClick={() => navigate({ to: "/customers/new" })}
-                />
+                客户管理
               </motion.div>
             )}
           </AnimatePresence>
-        }
-      >
-        <AnimatePresence mode="wait">
-          {showSearch ? (
-            <motion.div
-              key="search"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              transition={{ duration: 0.15 }}
-            >
-              <SearchBar
-                ref={searchInputRef}
-                placeholder="搜索客户名称"
-                value={search}
-                onChange={setSearch}
-              />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="title"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.15 }}
-            >
-              客户管理
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </NavBar>
+        </NavBar>
 
-      <div className="flex flex-1 overflow-hidden">
-        <VirtualList
-          data={list}
-          loading={isFetching}
-          hasMore={hasMore}
-          onLoadMore={loadMore}
-          onRefresh={refresh}
-          keyExtractor={(c) => c.id}
-          emptyText="暂无客户"
-          searchEmpty={!!debouncedSearch && !list.length}
-          estimateSize={72}
-          renderItem={(customer) => (
-            <SwipeAction
-              rightActions={[
-                {
-                  key: "edit",
-                  text: "编辑",
-                  color: "primary",
-                  onClick: () =>
-                    navigate({
-                      to: "/customers/$id",
-                      params: { id: customer.id },
-                    }),
-                },
-                {
-                  key: "delete",
-                  text: "删除",
-                  color: "danger",
-                  onClick: () => handleDelete(customer),
-                },
-              ]}
-            >
-              <List.Item
-                prefix={
-                  <div className="flex h-full items-center mr-2">
-                    <Avatar name={customer.name} size="md" />
-                  </div>
-                }
-                description={customer.phone || undefined}
-                extra={
-                  <span className="text-xs text-gray-400">
-                    <RelativeTime date={customer.createdAt} />
-                  </span>
-                }
-                onClick={() => showCustomerDetail(customer)}
-                arrow={false}
+        <div className="flex flex-1 overflow-hidden">
+          <VirtualList
+            data={list}
+            loading={isFetching}
+            hasMore={hasMore}
+            onLoadMore={loadMore}
+            onRefresh={refresh}
+            keyExtractor={(c) => c.id}
+            emptyText="暂无客户"
+            searchEmpty={!!debouncedSearch && !list.length}
+            estimateSize={72}
+            renderItem={(customer) => (
+              <SwipeAction
+                rightActions={[
+                  {
+                    key: "edit",
+                    text: "编辑",
+                    color: "primary",
+                    onClick: () =>
+                      navigate({
+                        to: "/customers/$id",
+                        params: { id: customer.id },
+                      }),
+                  },
+                  {
+                    key: "delete",
+                    text: "删除",
+                    color: "danger",
+                    onClick: () => handleDelete(customer),
+                  },
+                ]}
               >
-                {customer.name}
-              </List.Item>
-            </SwipeAction>
-          )}
-        />
+                <List.Item
+                  prefix={
+                    <div className="flex h-full items-center mr-2">
+                      <Avatar name={customer.name} size="md" />
+                    </div>
+                  }
+                  description={customer.phone || undefined}
+                  extra={
+                    <span className="text-xs text-gray-400">
+                      <RelativeTime date={customer.createdAt} />
+                    </span>
+                  }
+                  onClick={() => showCustomerDetail(customer)}
+                  arrow={false}
+                >
+                  {customer.name}
+                </List.Item>
+              </SwipeAction>
+            )}
+          />
+        </div>
       </div>
-    </div>
+    </BiometricGuard>
   );
 }

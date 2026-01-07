@@ -1,26 +1,60 @@
-import { load, type Store } from "@tauri-apps/plugin-store";
 import type { StateStorage } from "zustand/middleware";
+import { isTauri } from "@/utils/platform";
+
+// Tauri Store 类型
+type TauriStore = {
+  get: <T>(key: string) => Promise<T | null | undefined>;
+  set: (key: string, value: unknown) => Promise<void>;
+  delete: (key: string) => Promise<boolean>;
+  save: () => Promise<void>;
+};
 
 export class TauriStoreState implements StateStorage {
-  private store: Store | null = null;
+  private store: TauriStore | null = null;
+  private prefix: string;
 
-  constructor(public storeName: string) {}
+  constructor(public storeName: string) {
+    // 用于 localStorage 的 key 前缀
+    this.prefix = storeName.replace(".json", "");
+  }
 
   async init() {
-    this.store = await load(this.storeName);
+    if (isTauri()) {
+      try {
+        const { load } = await import("@tauri-apps/plugin-store");
+        this.store = await load(this.storeName);
+      } catch {
+        // Tauri store 加载失败，回退到 localStorage
+        console.warn("Tauri store not available, using localStorage");
+      }
+    }
   }
 
   async getItem(name: string) {
-    return (await this.store?.get<string>(name)) || null;
+    if (this.store) {
+      return (await this.store.get<string>(name)) || null;
+    }
+    // 浏览器环境使用 localStorage
+    return localStorage.getItem(`${this.prefix}:${name}`);
   }
 
   async setItem(name: string, value: string) {
-    await this.store?.set(name, value);
-    await this.store?.save();
+    if (this.store) {
+      await this.store.set(name, value);
+      await this.store.save();
+    } else {
+      // 浏览器环境使用 localStorage
+      localStorage.setItem(`${this.prefix}:${name}`, value);
+    }
   }
 
   async removeItem(name: string) {
-    await this.store?.delete(name);
-    await this.store?.save();
+    if (this.store) {
+      await this.store.delete(name);
+      await this.store.save();
+    } else {
+      // 浏览器环境使用 localStorage
+      localStorage.removeItem(`${this.prefix}:${name}`);
+    }
   }
 }
