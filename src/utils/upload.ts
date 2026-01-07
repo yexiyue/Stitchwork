@@ -3,7 +3,7 @@ import { uploadApi } from "@/api";
 import { useAuthStore } from "@/stores/auth";
 import { isTauri } from "./platform";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const API_URL = import.meta.env.VITE_API_URL || "http://47.115.172.218:8080";
 
 /** Upload result from Tauri */
 interface UploadResult {

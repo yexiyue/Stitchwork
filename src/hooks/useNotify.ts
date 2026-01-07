@@ -126,7 +126,8 @@ export function useNotify() {
         }
 
         // 连接 SSE，传递 channel_id (仅 Android)
-        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
+        const apiUrl =
+          import.meta.env.VITE_API_URL || "http://47.115.172.218:8080";
         await invoke("connect_sse", { apiUrl, token, channelId });
 
         // 监听通知事件
@@ -159,7 +160,7 @@ export function useNotify() {
   useEffect(() => {
     if (!token || isTauri()) return;
 
-    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
+    const apiUrl = import.meta.env.VITE_API_URL || "http://47.115.172.218:8080";
     // 浏览器 EventSource 不支持自定义 headers，使用 query parameter
     const url = `${apiUrl}/api/sse/events?token=${encodeURIComponent(token)}`;
 
