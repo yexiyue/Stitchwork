@@ -1,5 +1,5 @@
 use axum::{routing::get, Router};
-use sea_orm::{Database, DbConn};
+use sea_orm::{ActiveModelTrait, ColumnTrait, Database, DbConn, EntityTrait, QueryFilter, Set};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -26,6 +26,52 @@ pub struct AppState {
     pub notifier: SharedNotifier,
 }
 
+/// 初始化超级管理员（如果不存在）
+async fn init_super_admin(db: &DbConn) -> Result<(), Box<dyn std::error::Error>> {
+    use entity::user::{self, Role};
+
+    // 检查是否已有超管
+    let existing = user::Entity::find()
+        .filter(user::Column::IsSuperAdmin.eq(true))
+        .one(db)
+        .await?;
+
+    if existing.is_some() {
+        return Ok(());
+    }
+
+    // 从环境变量读取超管配置
+    let username = match std::env::var("ADMIN_USERNAME") {
+        Ok(v) if !v.is_empty() => v,
+        _ => return Ok(()), // 未配置则跳过
+    };
+    let password = std::env::var("ADMIN_PASSWORD")
+        .expect("ADMIN_PASSWORD must be set when ADMIN_USERNAME is configured");
+    let phone = std::env::var("ADMIN_PHONE")
+        .expect("ADMIN_PHONE must be set when ADMIN_USERNAME is configured");
+
+    let password_hash = service::auth::hash_password(&password)
+        .map_err(|e| format!("Failed to hash password: {}", e))?;
+
+    let admin = user::ActiveModel {
+        id: Set(Uuid::new_v4()),
+        username: Set(username.clone()),
+        password_hash: Set(password_hash),
+        role: Set(Role::Boss), // 超管也是 Boss 角色
+        display_name: Set(Some("超级管理员".to_string())),
+        phone: Set(phone),
+        avatar: Set(None),
+        workshop_id: Set(None),
+        is_super_admin: Set(true),
+        created_at: Set(chrono::Utc::now()),
+    };
+
+    admin.insert(db).await?;
+    tracing::info!("Super admin '{}' created", username);
+
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
@@ -43,6 +89,11 @@ async fn main() {
         .sync(&db)
         .await
         .expect("Failed to sync schema");
+
+    // 初始化超级管理员
+    if let Err(e) = init_super_admin(&db).await {
+        tracing::error!("Failed to init super admin: {}", e);
+    }
 
     // S3 客户端（可选）
     let s3 = s3::S3Config::from_env().map(|c| S3Client::new(&c));

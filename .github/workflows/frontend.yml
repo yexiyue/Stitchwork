@@ -9,6 +9,7 @@ on:
       - "index.html"
       - "package.json"
       - "vite.config.ts"
+      - ".env.production"
   workflow_dispatch:
 
 env:

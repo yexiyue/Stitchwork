@@ -330,7 +330,7 @@ async fn get_workshop_for_user(
     Ok(ws.as_ref().map(to_response))
 }
 
-fn hash_password(password: &str) -> Result<String> {
+pub fn hash_password(password: &str) -> Result<String> {
     let salt = SaltString::generate(&mut OsRng);
     Argon2::default()
         .hash_password(password.as_bytes(), &salt)
