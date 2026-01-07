@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   NavBar,
-  Image,
   Tag,
   Button,
   Dialog,
@@ -59,8 +58,7 @@ function RecordDetailPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (quantity: number) =>
-      pieceRecordApi.update(id, { quantity }),
+    mutationFn: (quantity: number) => pieceRecordApi.update(id, { quantity }),
     onSuccess: () => {
       Toast.show({ content: "修改成功" });
       setEditPopupVisible(false);
@@ -124,7 +122,12 @@ function RecordDetailPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col h-full">
-        <NavBar onBack={() => navigate({ to: "/records" })} backIcon={<ChevronLeft size={24} />}>计件详情</NavBar>
+        <NavBar
+          onBack={() => navigate({ to: "/records" })}
+          backIcon={<ChevronLeft size={24} />}
+        >
+          计件详情
+        </NavBar>
         <div className="flex-1 flex items-center justify-center">加载中...</div>
       </div>
     );
@@ -133,7 +136,12 @@ function RecordDetailPage() {
   if (!record) {
     return (
       <div className="flex flex-col h-full">
-        <NavBar onBack={() => navigate({ to: "/records" })} backIcon={<ChevronLeft size={24} />}>计件详情</NavBar>
+        <NavBar
+          onBack={() => navigate({ to: "/records" })}
+          backIcon={<ChevronLeft size={24} />}
+        >
+          计件详情
+        </NavBar>
         <div className="flex-1 flex items-center justify-center text-gray-500">
           记录不存在
         </div>
@@ -141,7 +149,8 @@ function RecordDetailPage() {
     );
   }
 
-  const images = order?.images || (record.orderImage ? [record.orderImage] : []);
+  const images =
+    order?.images || (record.orderImage ? [record.orderImage] : []);
   const piecePrice = record.piecePrice ? parseFloat(record.piecePrice) : null;
 
   return (

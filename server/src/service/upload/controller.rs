@@ -37,6 +37,52 @@ async fn presign(
         .ok_or(AppError::Internal("S3 not configured".to_string()))?;
 
     let ext = req.filename.rsplit('.').next().unwrap_or("jpg");
+
+    // If hash provided, check if file already exists (instant upload)
+    if let Some(ref hash) = req.hash {
+        let key = format!("uploads/{}.{}", hash, ext);
+
+        // Check if object exists in S3/OSS
+        let exists = s3
+            .client
+            .head_object()
+            .bucket(&s3.bucket)
+            .key(&key)
+            .send()
+            .await
+            .is_ok();
+
+        if exists {
+            // Instant upload - file already exists
+            return Ok(ApiResponse::ok(PresignResponse {
+                upload_url: None,
+                key,
+                exists: true,
+            }));
+        }
+
+        // File doesn't exist, generate presigned URL with hash-based key
+        let presigning_config = PresigningConfig::expires_in(Duration::from_secs(900))
+            .expect("valid presigning config");
+
+        let presigned = s3
+            .client
+            .put_object()
+            .bucket(&s3.bucket)
+            .key(&key)
+            .content_type(&req.content_type)
+            .presigned(presigning_config)
+            .await
+            .map_err(|e| AppError::Internal(e.to_string()))?;
+
+        return Ok(ApiResponse::ok(PresignResponse {
+            upload_url: Some(presigned.uri().to_string()),
+            key,
+            exists: false,
+        }));
+    }
+
+    // No hash provided - fallback to UUID-based key (backwards compatibility)
     let key = format!("uploads/{}.{}", Uuid::new_v4(), ext);
 
     let presigning_config =
@@ -53,8 +99,9 @@ async fn presign(
         .map_err(|e| AppError::Internal(e.to_string()))?;
 
     Ok(ApiResponse::ok(PresignResponse {
-        upload_url: presigned.uri().to_string(),
+        upload_url: Some(presigned.uri().to_string()),
         key,
+        exists: false,
     }))
 }
 

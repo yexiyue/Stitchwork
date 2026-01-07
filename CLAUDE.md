@@ -69,6 +69,8 @@ StitchWork/
 - **notification**: System local notifications
 - **deep-link**: Custom URI scheme `stitchwork://` for staff invitation QR codes
 - **barcode-scanner**: QR code scanning on mobile (Android/iOS only)
+- **biometric**: Fingerprint/face authentication (Android/iOS only)
+- **store**: Persistent key-value storage
 - **opener**: Open external URLs
 
 **SSE Client** (`src-tauri/src/sse.rs`): Rust-native SSE client for realtime notifications. Runs in background, maintains connection when app is backgrounded, sends local notifications and emits events to frontend.
@@ -123,11 +125,12 @@ VITE_API_URL=http://localhost:3000
 # Backend (server/.env)
 DATABASE_URL=postgres://user:pass@localhost/stitchwork
 JWT_SECRET=your-secret
-# Optional S3
+# Object Storage (Aliyun OSS via S3-compatible API)
 AWS_REGION=
 AWS_ACCESS_KEY_ID=
 AWS_SECRET_ACCESS_KEY=
 S3_BUCKET=
+S3_ENDPOINT=  # e.g., https://oss-cn-hangzhou.aliyuncs.com
 ```
 
 ## Business Domain
@@ -142,6 +145,7 @@ S3_BUCKET=
 - `docs/database.md` - ER diagrams
 - `docs/seaorm-entity-first.md` - SeaORM 2.0 patterns (dense format, schema sync, relations)
 - `docs/ui-components.md` - Ant Design Mobile component patterns (Form, Picker, VirtualList)
+- `docs/image-upload.md` - Image upload and compression patterns
 - `docs/dev-notes/` - Development notes (realtime-notifications, etc.)
 
 **Diagrams**: Use Mermaid format (`\`\`\`mermaid`) for all diagrams in documentation.

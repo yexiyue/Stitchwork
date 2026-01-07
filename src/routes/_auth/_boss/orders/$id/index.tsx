@@ -3,7 +3,6 @@ import {
   NavBar,
   Button,
   Tag,
-  Image,
   ImageViewer,
   List,
   SwipeAction,

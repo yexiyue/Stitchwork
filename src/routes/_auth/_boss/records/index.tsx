@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Dialog, Toast, Dropdown, SwipeAction, Image } from "antd-mobile";
+import { Dialog, Toast, Dropdown, SwipeAction } from "antd-mobile";
 import {
   Filter,
   Plus,
