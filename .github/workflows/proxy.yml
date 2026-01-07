@@ -39,7 +39,7 @@ jobs:
           CC_x86_64_unknown_linux_musl: clang
           CXX_x86_64_unknown_linux_musl: clang++
           AR_x86_64_unknown_linux_musl: llvm-ar
-          CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_RUSTFLAGS: "-C linker=rust-lld -C link-arg=-fuse-ld=lld"
+          CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_RUSTFLAGS: "-C linker=rust-lld"
 
       - name: Deploy to ECS
         uses: appleboy/scp-action@v0.1.7
