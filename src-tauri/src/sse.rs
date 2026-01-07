@@ -1,6 +1,5 @@
 use futures::StreamExt;
 use log::{debug, info, warn};
-use reqwest_eventsource::{Event, EventSource};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Duration;
@@ -55,7 +54,6 @@ pub struct SseState {
     channel_id: Option<String>,
 }
 
-
 pub type SharedSseState = Arc<Mutex<SseState>>;
 
 /// 启动 SSE 连接
@@ -77,53 +75,90 @@ async fn start_sse(
         }
 
         info!("Connecting to SSE: {}", url);
-        let request = client
+        let response = client
             .get(&url)
-            .header("Authorization", format!("Bearer {}", token));
-        let mut es = EventSource::new(request).unwrap();
+            .header("Authorization", format!("Bearer {}", token))
+            .header("Accept", "text/event-stream")
+            .header("Cache-Control", "no-cache")
+            .send()
+            .await;
+
+        let response = match response {
+            Ok(r) if r.status().is_success() => {
+                info!("SSE connection opened");
+                r
+            }
+            Ok(r) => {
+                warn!("SSE connection failed: {}", r.status());
+                tokio::time::sleep(Duration::from_secs(5)).await;
+                continue;
+            }
+            Err(e) => {
+                warn!("SSE connection error: {}", e);
+                tokio::time::sleep(Duration::from_secs(5)).await;
+                continue;
+            }
+        };
+
+        let mut stream = response.bytes_stream();
+        let mut buffer = String::new();
 
         loop {
             tokio::select! {
                 _ = cancel_rx.changed() => {
                     if *cancel_rx.borrow() {
                         info!("SSE connection cancelled");
-                        es.close();
                         return;
                     }
                 }
-                event = es.next() => {
-                    match event {
-                        Some(Ok(Event::Open)) => {
-                            info!("SSE connection opened");
-                        }
-                        Some(Ok(Event::Message(msg))) => {
-                            debug!("SSE message: {}", msg.data);
-                            if let Ok(payload) = serde_json::from_str::<NotificationPayload>(&msg.data) {
-                                // 发送本地通知
-                                let mut builder = app_handle
-                                    .notification()
-                                    .builder()
-                                    .title(&payload.title)
-                                    .body(&payload.body);
+                chunk = stream.next() => {
+                    match chunk {
+                        Some(Ok(bytes)) => {
+                            if let Ok(text) = std::str::from_utf8(&bytes) {
+                                buffer.push_str(text);
 
-                                // 使用高优先级渠道
-                                if let Some(ref ch_id) = channel_id {
-                                    builder = builder.channel_id(ch_id);
-                                }
+                                // 处理完整的事件（以双换行分隔）
+                                while let Some(pos) = buffer.find("\n\n") {
+                                    let event = buffer[..pos].to_string();
+                                    buffer = buffer[pos + 2..].to_string();
 
-                                if let Err(e) = builder.show() {
-                                    warn!("Failed to show notification: {}", e);
-                                }
+                                    // 解析 data 行
+                                    for line in event.lines() {
+                                        if let Some(data) = line.strip_prefix("data:") {
+                                            let data = data.trim();
+                                            if data.is_empty() {
+                                                continue;
+                                            }
+                                            debug!("SSE message: {}", data);
+                                            if let Ok(payload) = serde_json::from_str::<NotificationPayload>(data) {
+                                                // 发送本地通知
+                                                let mut builder = app_handle
+                                                    .notification()
+                                                    .builder()
+                                                    .title(&payload.title)
+                                                    .body(&payload.body);
 
-                                // 通知前端刷新数据
-                                if let Err(e) = app_handle.emit("notification", &payload) {
-                                    warn!("Failed to emit notification event: {}", e);
+                                                // 使用高优先级渠道
+                                                if let Some(ref ch_id) = channel_id {
+                                                    builder = builder.channel_id(ch_id);
+                                                }
+
+                                                if let Err(e) = builder.show() {
+                                                    warn!("Failed to show notification: {}", e);
+                                                }
+
+                                                // 通知前端刷新数据
+                                                if let Err(e) = app_handle.emit("notification", &payload) {
+                                                    warn!("Failed to emit notification event: {}", e);
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
                         Some(Err(e)) => {
                             warn!("SSE error: {}", e);
-                            es.close();
                             break; // 退出内层循环，尝试重连
                         }
                         None => {
