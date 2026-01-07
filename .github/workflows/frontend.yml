@@ -1,0 +1,59 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "index.html"
+      - "package.json"
+      - "vite.config.ts"
+  workflow_dispatch:
+
+env:
+  ECS_HOST: 47.115.172.218
+  ECS_USER: root
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build frontend
+        run: pnpm build
+        env:
+          VITE_API_URL: ""
+
+      - name: Deploy to ECS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ env.ECS_HOST }}
+          username: ${{ env.ECS_USER }}
+          key: ${{ secrets.ECS_SSH_KEY }}
+          source: dist/*
+          target: /var/www/stitchwork/
+          strip_components: 1
+
+      - name: Reload Nginx
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ env.ECS_HOST }}
+          username: ${{ env.ECS_USER }}
+          key: ${{ secrets.ECS_SSH_KEY }}
+          script: |
+            nginx -t && systemctl reload nginx || true

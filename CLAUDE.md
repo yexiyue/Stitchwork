@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-StitchWork is a garment workshop management system (服装加工流程管理系统) for tracking orders, piece-work records, and payroll. Full-stack app with Tauri desktop client, React frontend, and Rust backend.
+StitchWork is a garment workshop management system (服装加工流程管理系统) for tracking orders, piece-work records, and payroll. Full-stack app with Tauri mobile client (Android), React frontend (browser), and Rust backend.
 
 ## Environment Requirements
 
@@ -18,8 +18,7 @@ StitchWork is a garment workshop management system (服装加工流程管理系�
 # Frontend (React + Vite)
 pnpm dev              # Dev server on port 1420
 pnpm build            # TypeScript check + Vite build
-pnpm tauri dev        # Run Tauri desktop app in dev mode
-pnpm tauri build      # Build desktop app
+pnpm tsc --noEmit     # TypeScript check only (no build)
 
 # Android
 pnpm tauri android dev    # Run Android app in dev mode
@@ -42,8 +41,10 @@ StitchWork/
 │   ├── routes/             # TanStack Router file-based routes
 │   ├── stores/             # Zustand state (auth, app)
 │   └── types/              # TypeScript types
-├── src-tauri/              # Tauri desktop wrapper
-│   └── src/sse.rs          # SSE client for realtime notifications
+├── src-tauri/              # Tauri mobile wrapper (Android)
+│   └── src/
+│       ├── sse.rs          # SSE client for realtime notifications
+│       └── image.rs        # Image compression + blake3 dedup
 └── server/                 # Axum backend
     └── src/
         ├── entity/         # SeaORM entities (Entity First)
@@ -66,9 +67,10 @@ StitchWork/
 
 **Plugins:**
 
-- **notification**: System local notifications
+- **notification**: System local notifications (Android uses high-priority channels)
+- **os**: Platform detection (`platform()` returns "android", "ios", etc.)
 - **deep-link**: Custom URI scheme `stitchwork://` for staff invitation QR codes
-- **barcode-scanner**: QR code scanning on mobile (Android/iOS only)
+- **barcode-scanner**: QR code scanning on mobile (Android/iOS only). Request permission in login page before navigating to scan page.
 - **biometric**: Fingerprint/face authentication (Android/iOS only)
 - **store**: Persistent key-value storage
 - **opener**: Open external URLs
@@ -163,6 +165,9 @@ S3_ENDPOINT=  # e.g., https://oss-cn-hangzhou.aliyuncs.com
   - `browser-compatibility.md` - Tauri/browser dual-environment patterns
   - `barcode-scanner.md` - QR code scanning
   - `image-upload-optimization.md` - Tauri Rust image compression + blake3 dedup
+  - `tauri-notification.md` - Tauri notification plugin setup
+  - `jwt-auth.md` - JWT authentication implementation
+  - `entity-refactor-employment.md` - Entity relationship refactoring notes
 
 **Diagrams**: Use Mermaid format (`\`\`\`mermaid`) for all diagrams in documentation.
 

@@ -233,6 +233,20 @@ pub async fn update_profile(db: &DbConn, user_id: Uuid, req: UpdateProfileReques
         .await?
         .ok_or_else(|| AppError::NotFound("用户不存在".to_string()))?;
 
+    // 检查手机号唯一性
+    if let Some(ref new_phone) = req.phone {
+        if new_phone != &user.phone {
+            let existing = user::Entity::find()
+                .filter(user::Column::Phone.eq(new_phone))
+                .filter(user::Column::Id.ne(user_id))
+                .one(db)
+                .await?;
+            if existing.is_some() {
+                return Err(AppError::BadRequest("手机号已被使用".to_string()));
+            }
+        }
+    }
+
     let mut active: user::ActiveModel = user.into();
     if let Some(v) = req.display_name {
         active.display_name = Set(Some(v));

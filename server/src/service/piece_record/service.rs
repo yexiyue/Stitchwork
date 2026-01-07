@@ -153,13 +153,43 @@ pub async fn create(db: &DbConn, dto: CreatePieceRecordDto, claims: &Claims) -> 
     let proc = process::Entity::find_by_id(dto.process_id)
         .one(db)
         .await?
-        .ok_or_else(|| AppError::NotFound(format!("Process {} not found", dto.process_id)))?;
+        .ok_or_else(|| AppError::NotFound("工序不存在".to_string()))?;
+
+    // 确定实际的 user_id，防止越权
+    let actual_user_id = match claims.role {
+        Role::Staff => {
+            // 员工只能为自己创建记录
+            claims.sub
+        }
+        Role::Boss => {
+            // 老板必须是该工序的所有者
+            if proc.boss_id != claims.sub {
+                return Err(AppError::Forbidden);
+            }
+            // 验证目标用户是本工坊的员工
+            let target_user = user::Entity::find_by_id(dto.user_id)
+                .one(db)
+                .await?
+                .ok_or_else(|| AppError::NotFound("用户不存在".to_string()))?;
+            // 获取老板的工坊
+            let workshop = entity::workshop::Entity::find()
+                .filter(entity::workshop::Column::OwnerId.eq(claims.sub))
+                .one(db)
+                .await?
+                .ok_or_else(|| AppError::NotFound("工坊不存在".to_string()))?;
+            // 目标用户必须属于该工坊
+            if target_user.workshop_id != Some(workshop.id) {
+                return Err(AppError::BadRequest("该用户不属于您的工坊".to_string()));
+            }
+            dto.user_id
+        }
+    };
 
     // 自动更新订单状态: pending → processing
     let ord = order::Entity::find_by_id(proc.order_id)
         .one(db)
         .await?
-        .ok_or_else(|| AppError::NotFound(format!("Order {} not found", proc.order_id)))?;
+        .ok_or_else(|| AppError::NotFound("订单不存在".to_string()))?;
     if ord.status == OrderStatus::Pending {
         let order_model = order::ActiveModel {
             id: Set(ord.id),
@@ -180,7 +210,7 @@ pub async fn create(db: &DbConn, dto: CreatePieceRecordDto, claims: &Claims) -> 
     let model = piece_record::ActiveModel {
         id: Set(Uuid::new_v4()),
         process_id: Set(dto.process_id),
-        user_id: Set(dto.user_id),
+        user_id: Set(actual_user_id),
         boss_id: Set(proc.boss_id),
         quantity: Set(dto.quantity),
         amount: Set(amount),

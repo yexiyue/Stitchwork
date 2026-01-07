@@ -103,7 +103,8 @@ pub async fn generate_invite_code(
 ) -> Result<InviteCodeResponse> {
     let ws = get_boss_workshop(db, boss_id).await?;
 
-    let code = Uuid::new_v4().to_string()[..8].to_string();
+    // 使用 16 位邀请码增加安全性 (8位太短容易被暴力破解)
+    let code = Uuid::new_v4().to_string().replace("-", "")[..16].to_string();
     let expires_at = chrono::Utc::now().timestamp() + 3600 * 24;
 
     invite_codes

@@ -24,7 +24,7 @@ impl Claims {
 
 fn get_secret() -> Vec<u8> {
     std::env::var("JWT_SECRET")
-        .unwrap_or_else(|_| "default_secret_change_in_production".to_string())
+        .expect("JWT_SECRET 环境变量必须设置")
         .into_bytes()
 }
 

@@ -1,20 +1,20 @@
-name: Deploy Server
+name: Deploy Proxy
 
 on:
   push:
     branches:
       - main
     paths:
-      - "server/**"
+      - "proxy/**"
   workflow_dispatch:
 
 env:
-  BINARY_NAME: stitchwork-server
+  BINARY_NAME: stitchwork-proxy
   ECS_HOST: 47.115.172.218
   ECS_USER: root
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -36,29 +36,15 @@ jobs:
       - name: Build release
         run: cargo build --release --target x86_64-unknown-linux-musl -p ${{ env.BINARY_NAME }}
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.BINARY_NAME }}
-          path: target/x86_64-unknown-linux-musl/release/${{ env.BINARY_NAME }}
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ env.BINARY_NAME }}
-
       - name: Deploy to ECS
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ env.ECS_HOST }}
           username: ${{ env.ECS_USER }}
           key: ${{ secrets.ECS_SSH_KEY }}
-          source: ${{ env.BINARY_NAME }}
+          source: target/x86_64-unknown-linux-musl/release/${{ env.BINARY_NAME }}
           target: /opt/stitchwork/
+          strip_components: 4
 
       - name: Restart service
         uses: appleboy/ssh-action@v1.0.0
@@ -68,4 +54,4 @@ jobs:
           key: ${{ secrets.ECS_SSH_KEY }}
           script: |
             chmod +x /opt/stitchwork/${{ env.BINARY_NAME }}
-            systemctl restart stitchwork || true
+            systemctl restart stitchwork-proxy || true
