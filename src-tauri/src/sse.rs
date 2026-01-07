@@ -29,6 +29,14 @@ pub enum Notification {
     PayrollReceived {
         amount: String,
     },
+    UserRegistered {
+        username: String,
+        phone: String,
+    },
+    StaffJoined {
+        username: String,
+        phone: String,
+    },
 }
 
 /// SSE 响应 payload
@@ -65,7 +73,8 @@ async fn start_sse(
     channel_id: Option<String>,
     mut cancel_rx: tokio::sync::watch::Receiver<bool>,
 ) {
-    let url = format!("{}/api/sse/events?token={}", api_url, token);
+    let url = format!("{}/api/sse/events", api_url);
+    let client = reqwest::Client::new();
 
     loop {
         // 检查是否需要取消
@@ -75,7 +84,10 @@ async fn start_sse(
         }
 
         info!("Connecting to SSE: {}", url);
-        let mut es = EventSource::get(&url);
+        let request = client
+            .get(&url)
+            .header("Authorization", format!("Bearer {}", token));
+        let mut es = EventSource::new(request).unwrap();
 
         loop {
             tokio::select! {

@@ -1,5 +1,6 @@
 use axum::{
     extract::{Query, State},
+    http::HeaderMap,
     response::sse::{Event, KeepAlive, Sse},
     routing::get,
     Router,
@@ -14,17 +15,30 @@ use super::Notification;
 
 #[derive(Debug, Deserialize)]
 pub struct SseQuery {
-    token: String,
+    token: Option<String>,
 }
 
 /// SSE 事件流端点
-/// GET /api/sse/events?token=<jwt>
+/// GET /api/sse/events
+/// 认证方式（优先级从高到低）：
+/// 1. Authorization: Bearer <token>
+/// 2. ?token=<jwt>
 async fn sse_events(
     State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
     Query(query): Query<SseQuery>,
 ) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, AppError> {
+    // 优先从 Authorization header 获取 token
+    let token = headers
+        .get("authorization")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.strip_prefix("Bearer "))
+        .map(|s| s.to_string())
+        .or(query.token)
+        .ok_or(AppError::Unauthorized)?;
+
     // 验证 token
-    let claims = verify_token(&query.token).map_err(|_| AppError::Unauthorized)?;
+    let claims = verify_token(&token).map_err(|_| AppError::Unauthorized)?;
     let user_id = claims.sub;
 
     // 订阅通知

@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, redirect, useNavigate, useLocation } from "@tanstack/react-router";
 import { TabBar } from "antd-mobile";
-import { Home, ClipboardList, FileEdit, User } from "lucide-react";
-import { useAuthStore, selectIsBoss } from "@/stores/auth";
+import { Home, ClipboardList, FileEdit, User, Key, Shield } from "lucide-react";
+import { useAuthStore, selectIsBoss, selectIsSuperAdmin } from "@/stores/auth";
 import { useNotify } from "@/hooks/useNotify";
 import { useBiometricTimeout } from "@/hooks";
 
@@ -14,6 +14,13 @@ export const Route = createFileRoute("/_auth")({
   },
   component: AuthLayout,
 });
+
+const adminTabs = [
+  { key: "/admin", title: "首页", icon: <Home size={24} /> },
+  { key: "/admin/register-codes", title: "注册码", icon: <Key size={24} /> },
+  { key: "/admin/users", title: "用户", icon: <Shield size={24} /> },
+  { key: "/profile", title: "我的", icon: <User size={24} /> },
+];
 
 const bossTabs = [
   { key: "/", title: "首页", icon: <Home size={24} /> },
@@ -32,7 +39,8 @@ function AuthLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const isBoss = useAuthStore(selectIsBoss);
-  const tabs = isBoss ? bossTabs : staffTabs;
+  const isSuperAdmin = useAuthStore(selectIsSuperAdmin);
+  const tabs = isSuperAdmin ? adminTabs : isBoss ? bossTabs : staffTabs;
 
   // 启用实时通知
   useNotify();

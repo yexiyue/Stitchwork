@@ -157,7 +157,7 @@ pub async fn get_public(db: &DbConn, token: &str) -> Result<PublicShareResponse>
         title: share.title,
         workshop_name: ws.as_ref().map(|w| w.name.clone()),
         workshop_address: ws.as_ref().and_then(|w| w.address.clone()),
-        boss_phone: boss.phone,
+        boss_phone: Some(boss.phone),
         avatar: boss.avatar,
         processes,
     })

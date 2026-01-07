@@ -18,8 +18,9 @@ pub struct LoginUser {
     pub username: String,
     pub role: Role,
     pub display_name: Option<String>,
-    pub phone: Option<String>,
+    pub phone: String,
     pub avatar: Option<String>,
+    pub is_super_admin: bool,
     pub workshop: Option<WorkshopResponse>,
 }
 
@@ -35,6 +36,8 @@ pub struct LoginResponse {
 pub struct RegisterRequest {
     pub username: String,
     pub password: String,
+    pub phone: String,
+    pub register_code: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -57,5 +60,6 @@ pub struct ChangePasswordRequest {
 pub struct RegisterStaffRequest {
     pub username: String,
     pub password: String,
+    pub phone: String,
     pub invite_code: String,
 }

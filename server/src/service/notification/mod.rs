@@ -31,6 +31,10 @@ pub enum Notification {
     },
     /// 工资发放 → 通知员工
     PayrollReceived { amount: String },
+    /// 新用户注册 → 通知超管
+    UserRegistered { username: String, phone: String },
+    /// 员工加入工坊 → 通知老板
+    StaffJoined { username: String, phone: String },
 }
 
 impl Notification {
@@ -40,6 +44,8 @@ impl Notification {
             Self::RecordApproved { .. } => "计件已通过",
             Self::RecordRejected { .. } => "计件被拒绝",
             Self::PayrollReceived { .. } => "收到工资",
+            Self::UserRegistered { .. } => "新用户注册",
+            Self::StaffJoined { .. } => "新员工加入",
         }
     }
 
@@ -60,6 +66,8 @@ impl Notification {
                 quantity,
             } => format!("{}工序 {}件", process_name, quantity),
             Self::PayrollReceived { amount } => format!("¥{}", amount),
+            Self::UserRegistered { username, phone } => format!("{} ({})", username, phone),
+            Self::StaffJoined { username, phone } => format!("{} ({}) 加入了工坊", username, phone),
         }
     }
 }

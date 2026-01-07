@@ -4,6 +4,7 @@ pub mod payroll;
 pub mod payroll_record;
 pub mod piece_record;
 pub mod process;
+pub mod register_code;
 pub mod share;
 pub mod user;
 pub mod workshop;

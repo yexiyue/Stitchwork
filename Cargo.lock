@@ -6075,6 +6075,7 @@ dependencies = [
  "dotenvy",
  "futures",
  "jsonwebtoken",
+ "rand 0.9.2",
  "rust_decimal",
  "sea-orm",
  "serde",

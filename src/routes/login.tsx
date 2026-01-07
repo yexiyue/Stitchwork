@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Form, Input, Button, Card, Dialog } from "antd-mobile";
 import { ScanLine } from "lucide-react";
-import { useAuthStore } from "@/stores/auth";
+import { useAuthStore, selectIsSuperAdmin } from "@/stores/auth";
 import { useState, useEffect } from "react";
 
 export const Route = createFileRoute("/login")({
@@ -12,19 +12,21 @@ function LoginPage() {
   const navigate = useNavigate();
   const login = useAuthStore((s) => s.login);
   const isAuthenticated = useAuthStore((s) => !!s.token);
+  const isSuperAdmin = useAuthStore(selectIsSuperAdmin);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate({ to: "/" });
+      navigate({ to: isSuperAdmin ? "/admin" : "/" });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, isSuperAdmin, navigate]);
 
   const onFinish = async (values: { username: string; password: string }) => {
     setLoading(true);
     try {
       await login(values.username, values.password);
-      navigate({ to: "/" });
+      const state = useAuthStore.getState();
+      navigate({ to: state.user?.isSuperAdmin ? "/admin" : "/" });
     } catch (e) {
       Dialog.alert({
         content:

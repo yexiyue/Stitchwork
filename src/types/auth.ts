@@ -18,8 +18,9 @@ export interface LoginUser {
   username: string;
   role: Role;
   displayName?: string;
-  phone?: string;
+  phone: string;
   avatar?: string;
+  isSuperAdmin: boolean;
   workshop?: Workshop;
 }
 
@@ -31,11 +32,14 @@ export interface LoginResponse {
 export interface RegisterRequest {
   username: string;
   password: string;
+  phone: string;
+  registerCode: string;
 }
 
 export interface RegisterStaffRequest {
   username: string;
   password: string;
+  phone: string;
   inviteCode: string;
 }
 

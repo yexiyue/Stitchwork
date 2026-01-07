@@ -3,15 +3,18 @@ use argon2::{
     Argon2,
 };
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DbConn, EntityLoaderTrait, EntityTrait, QueryFilter, Set,
+    ActiveModelTrait, ColumnTrait, DbConn, EntityLoaderTrait, EntityTrait, ExprTrait, QueryFilter,
+    Set,
 };
 use uuid::Uuid;
 
 use crate::entity::{
+    register_code,
     user::{self, Role},
     workshop,
 };
 use crate::error::{AppError, Result};
+use crate::service::notification::{Notification, SharedNotifier};
 use crate::service::workshop::service::to_response;
 
 use std::sync::Arc;
@@ -24,8 +27,13 @@ use super::jwt::create_token;
 use crate::InviteCodes;
 
 pub async fn login(db: &DbConn, req: LoginRequest) -> Result<LoginResponse> {
+    // 支持用户名或手机号登录
     let user = user::Entity::find()
-        .filter(user::Column::Username.eq(&req.username))
+        .filter(
+            user::Column::Username
+                .eq(&req.username)
+                .or(user::Column::Phone.eq(&req.username)),
+        )
         .one(db)
         .await?
         .ok_or_else(|| AppError::BadRequest("用户名或密码错误".to_string()))?;
@@ -51,12 +59,29 @@ pub async fn login(db: &DbConn, req: LoginRequest) -> Result<LoginResponse> {
             display_name: user.display_name,
             phone: user.phone,
             avatar: user.avatar,
+            is_super_admin: user.is_super_admin,
             workshop,
         },
     })
 }
 
-pub async fn register(db: &DbConn, req: RegisterRequest) -> Result<Uuid> {
+pub async fn register(db: &DbConn, notifier: &SharedNotifier, req: RegisterRequest) -> Result<Uuid> {
+    // 验证注册码
+    let code = register_code::Entity::find()
+        .filter(register_code::Column::Code.eq(&req.register_code))
+        .one(db)
+        .await?
+        .ok_or_else(|| AppError::BadRequest("注册码无效".to_string()))?;
+
+    if !code.is_active {
+        return Err(AppError::BadRequest("注册码已禁用".to_string()));
+    }
+
+    if code.used_by.is_some() {
+        return Err(AppError::BadRequest("注册码已被使用".to_string()));
+    }
+
+    // 检查用户名是否已存在
     if user::Entity::find()
         .filter(user::Column::Username.eq(&req.username))
         .one(db)
@@ -66,27 +91,58 @@ pub async fn register(db: &DbConn, req: RegisterRequest) -> Result<Uuid> {
         return Err(AppError::BadRequest("用户名已存在".to_string()));
     }
 
+    // 检查手机号是否已存在
+    if user::Entity::find()
+        .filter(user::Column::Phone.eq(&req.phone))
+        .one(db)
+        .await?
+        .is_some()
+    {
+        return Err(AppError::BadRequest("手机号已被使用".to_string()));
+    }
+
     let password_hash = hash_password(&req.password)?;
+    let user_id = Uuid::new_v4();
+
+    let username = req.username.clone();
+    let phone = req.phone.clone();
 
     let user = user::ActiveModel {
-        id: Set(Uuid::new_v4()),
+        id: Set(user_id),
         username: Set(req.username),
         password_hash: Set(password_hash),
         role: Set(Role::Boss),
         display_name: Set(None),
-        phone: Set(None),
+        phone: Set(req.phone),
         avatar: Set(None),
         workshop_id: Set(None),
+        is_super_admin: Set(false),
         created_at: Set(chrono::Utc::now()),
     };
 
     let user = user.insert(db).await?;
+
+    // 标记注册码为已使用
+    let mut code_active: register_code::ActiveModel = code.into();
+    code_active.used_by = Set(Some(user_id));
+    code_active.used_at = Set(Some(chrono::Utc::now()));
+    code_active.update(db).await?;
+
+    // 通知所有超管
+    let super_admins = user::Entity::find()
+        .filter(user::Column::IsSuperAdmin.eq(true))
+        .all(db)
+        .await?;
+    let admin_ids: Vec<Uuid> = super_admins.iter().map(|u| u.id).collect();
+    notifier.send_many(&admin_ids, Notification::UserRegistered { username, phone });
+
     Ok(user.id)
 }
 
 pub async fn register_staff(
     db: &DbConn,
     invite_codes: &Arc<InviteCodes>,
+    notifier: &SharedNotifier,
     req: RegisterStaffRequest,
 ) -> Result<LoginResponse> {
     // 验证邀请码
@@ -110,7 +166,20 @@ pub async fn register_staff(
         return Err(AppError::BadRequest("用户名已存在".to_string()));
     }
 
+    // 检查手机号是否已存在
+    if user::Entity::find()
+        .filter(user::Column::Phone.eq(&req.phone))
+        .one(db)
+        .await?
+        .is_some()
+    {
+        return Err(AppError::BadRequest("手机号已被使用".to_string()));
+    }
+
     let password_hash = hash_password(&req.password)?;
+
+    let username = req.username.clone();
+    let phone = req.phone.clone();
 
     // 创建 Staff 用户并绑定工坊
     let new_user = user::ActiveModel {
@@ -119,9 +188,10 @@ pub async fn register_staff(
         password_hash: Set(password_hash),
         role: Set(Role::Staff),
         display_name: Set(None),
-        phone: Set(None),
+        phone: Set(req.phone),
         avatar: Set(None),
         workshop_id: Set(Some(workshop_id)),
+        is_super_admin: Set(false),
         created_at: Set(chrono::Utc::now()),
     };
 
@@ -137,6 +207,11 @@ pub async fn register_staff(
         .one(db)
         .await?;
 
+    // 通知工坊老板
+    if let Some(ref workshop) = ws {
+        notifier.send(workshop.owner_id, Notification::StaffJoined { username, phone });
+    }
+
     Ok(LoginResponse {
         token,
         user: LoginUser {
@@ -146,6 +221,7 @@ pub async fn register_staff(
             display_name: user.display_name,
             phone: user.phone,
             avatar: user.avatar,
+            is_super_admin: user.is_super_admin,
             workshop: ws.as_ref().map(to_response),
         },
     })
@@ -162,7 +238,7 @@ pub async fn update_profile(db: &DbConn, user_id: Uuid, req: UpdateProfileReques
         active.display_name = Set(Some(v));
     }
     if let Some(v) = req.phone {
-        active.phone = Set(Some(v));
+        active.phone = Set(v);
     }
     if let Some(v) = req.avatar {
         active.avatar = Set(Some(v));
@@ -213,6 +289,7 @@ pub async fn get_profile(db: &DbConn, user_id: Uuid) -> Result<LoginUser> {
         display_name: user.display_name,
         phone: user.phone,
         avatar: user.avatar,
+        is_super_admin: user.is_super_admin,
         workshop,
     })
 }

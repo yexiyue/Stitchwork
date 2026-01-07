@@ -30,13 +30,20 @@ function RegisterStaffPage() {
     );
   }
 
+  const phonePattern = /^1\d{10}$/;
+
   const onFinish = async (values: {
     username: string;
     password: string;
     confirmPassword: string;
+    phone: string;
   }) => {
     if (values.password !== values.confirmPassword) {
       Dialog.alert({ content: "两次密码不一致", confirmText: "确定" });
+      return;
+    }
+    if (!phonePattern.test(values.phone)) {
+      Dialog.alert({ content: "手机号格式不正确", confirmText: "确定" });
       return;
     }
     setLoading(true);
@@ -44,6 +51,7 @@ function RegisterStaffPage() {
       const res = await authApi.registerStaff({
         username: values.username,
         password: values.password,
+        phone: values.phone,
         inviteCode: code,
       });
       // 设置登录状态
@@ -87,6 +95,13 @@ function RegisterStaffPage() {
             rules={[{ required: true, message: "请输入用户名" }]}
           >
             <Input placeholder="请输入用户名" clearable />
+          </Form.Item>
+          <Form.Item
+            name="phone"
+            label="手机号"
+            rules={[{ required: true, message: "请输入手机号" }]}
+          >
+            <Input placeholder="请输入手机号" type="tel" maxLength={11} clearable />
           </Form.Item>
           <Form.Item
             name="password"

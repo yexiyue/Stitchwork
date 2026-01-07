@@ -1,3 +1,4 @@
+pub mod admin;
 pub mod auth;
 pub mod customer;
 pub mod home;
@@ -19,6 +20,7 @@ use crate::AppState;
 pub fn routes() -> Router<Arc<AppState>> {
     // 需要认证的路由
     let protected = Router::new()
+        .merge(admin::router()) // 超管路由（有自己的 super_admin_middleware）
         .merge(auth::protected_router())
         .merge(customer::router())
         .merge(home::router())

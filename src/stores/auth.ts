@@ -46,3 +46,4 @@ export const useAuthStore = create<AuthState>()(
 // Helper selectors
 export const selectIsAuthenticated = (state: AuthState) => !!state.token;
 export const selectIsBoss = (state: AuthState) => state.user?.role === "boss";
+export const selectIsSuperAdmin = (state: AuthState) => state.user?.isSuperAdmin === true;

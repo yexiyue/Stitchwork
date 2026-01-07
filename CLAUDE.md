@@ -73,7 +73,14 @@ StitchWork/
 - **store**: Persistent key-value storage
 - **opener**: Open external URLs
 
-**SSE Client** (`src-tauri/src/sse.rs`): Rust-native SSE client for realtime notifications. Runs in background, maintains connection when app is backgrounded, sends local notifications and emits events to frontend.
+**SSE Client** (`src-tauri/src/sse.rs`): Rust-native SSE client for realtime notifications. Uses `Authorization: Bearer <token>` header. Runs in background, maintains connection when app is backgrounded, sends local notifications and emits events to frontend.
+
+**Browser Compatibility**: The app runs in both Tauri and browser environments. Use `isTauri()` from `@/utils/platform` to detect runtime. Key patterns:
+
+- Dynamic import Tauri modules to avoid browser errors
+- `TauriStoreState` falls back to localStorage in browser
+- Biometric auth auto-passes in browser
+- SSE notifications use native `EventSource` with query parameter auth (`?token=<jwt>`)
 
 ### Backend
 
@@ -81,7 +88,7 @@ StitchWork/
 - **Service structure**: Each feature has `mod.rs`, `dto.rs`, `controller.rs`, `service.rs`
 - **Auth**: JWT tokens, Argon2 password hashing
 - **API response format**: `{ code: 0, message: "", data: T }` where code 0 = success
-- **Realtime notifications**: SSE endpoint at `GET /api/sse/events?token=<jwt>`, Notifier service uses DashMap + tokio broadcast channels
+- **Realtime notifications**: SSE endpoint at `GET /api/sse/events`. Supports `Authorization: Bearer <token>` header (Tauri) or `?token=<jwt>` query param (browser). Notifier service uses DashMap + tokio broadcast channels
 - **Relation queries**: Choose pattern based on use case:
 
   - `.load().with()` (ModelEx): 单条记录或不分页列表，直接访问关联
@@ -135,9 +142,13 @@ S3_ENDPOINT=  # e.g., https://oss-cn-hangzhou.aliyuncs.com
 
 ## Business Domain
 
-- **Roles**: Boss (老板) manages everything; Staff (员工) views own records
+- **Roles**:
+  - **Super Admin (超管)**: Platform-level admin, manages registration codes and all users. Not associated with any workshop. Access via `/admin/*` routes.
+  - **Boss (老板)**: Workshop owner, manages orders, processes, staff, and payroll within their workshop.
+  - **Staff (员工)**: Workshop employee, views own piece-work records and payroll.
+- **Registration**: Boss registration requires a valid registration code (8-char, one-time use). Phone number is required and must be unique. Login supports both username and phone number.
 - **Flow**: 拿货 → 创建订单 → 添加工序 → 分配任务 → 计件录入 → 出货/工资发放
-- **Entities**: user, workshop, customer, order, process, piece_record, payroll, share
+- **Entities**: user, workshop, customer, order, process, piece_record, payroll, share, register_code
 
 ## Documentation
 
@@ -146,7 +157,12 @@ S3_ENDPOINT=  # e.g., https://oss-cn-hangzhou.aliyuncs.com
 - `docs/seaorm-entity-first.md` - SeaORM 2.0 patterns (dense format, schema sync, relations)
 - `docs/ui-components.md` - Ant Design Mobile component patterns (Form, Picker, VirtualList)
 - `docs/image-upload.md` - Image upload and compression patterns
-- `docs/dev-notes/` - Development notes (realtime-notifications, etc.)
+- `docs/dev-notes/` - Development notes:
+  - `realtime-notifications.md` - SSE + local notifications (Tauri & browser)
+  - `biometric-auth.md` - Tauri biometric authentication
+  - `browser-compatibility.md` - Tauri/browser dual-environment patterns
+  - `barcode-scanner.md` - QR code scanning
+  - `image-upload-optimization.md` - Tauri Rust image compression + blake3 dedup
 
 **Diagrams**: Use Mermaid format (`\`\`\`mermaid`) for all diagrams in documentation.
 

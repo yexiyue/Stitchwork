@@ -26,9 +26,14 @@ pub struct Model {
     pub password_hash: String,
     pub role: Role,
     pub display_name: Option<String>,
-    pub phone: Option<String>,
+
+    #[sea_orm(unique)]
+    pub phone: String,
     pub avatar: Option<String>,
     pub workshop_id: Option<Uuid>,
+
+    #[sea_orm(default_value = "false")]
+    pub is_super_admin: bool,
     pub created_at: DateTimeUtc,
 
     #[serde(skip)]

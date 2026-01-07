@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { List, Button, Dialog, Toast, Input, PullToRefresh } from "antd-mobile";
-import { Users, UserPlus, LogOut, Camera, Store, Phone, User as UserIcon, AtSign, Lock, ClipboardList, Wallet, Share2 } from "lucide-react";
-import { useAuthStore, selectIsBoss } from "@/stores/auth";
+import { Users, UserPlus, LogOut, Camera, Store, Phone, User as UserIcon, AtSign, Lock, ClipboardList, Wallet, Share2, Shield } from "lucide-react";
+import { useAuthStore, selectIsBoss, selectIsSuperAdmin } from "@/stores/auth";
 import { authApi } from "@/api";
 import { Avatar, useAvatarCropper } from "@/components";
 import { uploadImage } from "@/utils/upload";
@@ -16,6 +16,7 @@ function ProfilePage() {
   const logout = useAuthStore((s) => s.logout);
   const updateUser = useAuthStore((s) => s.updateUser);
   const isBoss = useAuthStore(selectIsBoss);
+  const isSuperAdmin = useAuthStore(selectIsSuperAdmin);
 
   const { openFilePicker, FileInput, CropPopup } = useAvatarCropper({
     onConfirm: async (blob) => {
@@ -217,6 +218,14 @@ function ProfilePage() {
             密码
           </List.Item>
         </List>
+
+        {isSuperAdmin && (
+          <List header="超级管理">
+            <List.Item prefix={<Shield size={20} />} onClick={() => navigate({ to: "/admin" })}>
+              管理后台
+            </List.Item>
+          </List>
+        )}
 
         {isBoss && (
           <List header="管理">

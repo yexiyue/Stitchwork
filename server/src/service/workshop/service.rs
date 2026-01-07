@@ -185,7 +185,7 @@ pub async fn get_staff_list(
             id: s.id,
             username: s.username,
             display_name: s.display_name,
-            phone: s.phone,
+            phone: Some(s.phone),
             avatar: s.avatar,
         })
         .collect();
