@@ -8,7 +8,13 @@ const CHANNEL_ID = "stitchwork_high";
 
 /** 通知 payload 类型 */
 interface NotificationPayload {
-  type: "record_submitted" | "record_approved" | "record_rejected" | "payroll_received" | "user_registered" | "staff_joined";
+  type:
+    | "record_submitted"
+    | "record_approved"
+    | "record_rejected"
+    | "payroll_received"
+    | "user_registered"
+    | "staff_joined";
   title: string;
   body: string;
 }
@@ -87,6 +93,7 @@ export function useNotify() {
         // 动态导入 Tauri 模块
         const { invoke } = await import("@tauri-apps/api/core");
         const { listen } = await import("@tauri-apps/api/event");
+        const { platform } = await import("@tauri-apps/plugin-os");
         const {
           isPermissionGranted,
           requestPermission,
@@ -102,25 +109,33 @@ export function useNotify() {
           permissionGranted = permission === "granted";
         }
 
-        // 创建高优先级通知渠道 (Android 8+)
-        const existingChannels = await channels();
-        if (!existingChannels.some((c) => c.id === CHANNEL_ID)) {
-          await createChannel({
-            id: CHANNEL_ID,
-            name: "重要通知",
-            importance: Importance.High,
-            vibration: true,
-          });
+        // 创建高优先级通知渠道 (Android 8+ only)
+        let channelId: string | undefined;
+        const os = platform();
+        if (os === "android") {
+          const existingChannels = await channels();
+          if (!existingChannels.some((c) => c.id === CHANNEL_ID)) {
+            await createChannel({
+              id: CHANNEL_ID,
+              name: "重要通知",
+              importance: Importance.High,
+              vibration: true,
+            });
+          }
+          channelId = CHANNEL_ID;
         }
 
-        // 连接 SSE，传递 channel_id
+        // 连接 SSE，传递 channel_id (仅 Android)
         const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
-        await invoke("connect_sse", { apiUrl, token, channelId: CHANNEL_ID });
+        await invoke("connect_sse", { apiUrl, token, channelId });
 
         // 监听通知事件
-        unlisten = await listen<NotificationPayload>("notification", (event) => {
-          handleNotification(event.payload, queryClient);
-        });
+        unlisten = await listen<NotificationPayload>(
+          "notification",
+          (event) => {
+            handleNotification(event.payload, queryClient);
+          }
+        );
       } catch (error) {
         console.error("Failed to setup Tauri notifications:", error);
         disconnectOnCleanup = false;

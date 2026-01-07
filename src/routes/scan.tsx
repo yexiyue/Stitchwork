@@ -2,13 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { Toast } from "antd-mobile";
 import { X, Image } from "lucide-react";
-import {
-  scan,
-  Format,
-  checkPermissions,
-  requestPermissions,
-  cancel,
-} from "@tauri-apps/plugin-barcode-scanner";
+import { scan, Format, cancel } from "@tauri-apps/plugin-barcode-scanner";
 import jsQR from "jsqr";
 
 export const Route = createFileRoute("/scan")({
@@ -48,18 +42,7 @@ function ScanPage() {
       scanning.current = true;
 
       try {
-        // 检查并请求相机权限
-        let permission = await checkPermissions();
-        if (permission !== "granted") {
-          permission = await requestPermissions();
-          if (permission !== "granted") {
-            Toast.show({ content: "需要相机权限才能扫码", icon: "fail" });
-            navigate({ to: "/login" });
-            return;
-          }
-        }
-
-        // 开始扫描
+        // 权限已在登录页面检查，直接开始扫描
         const result = await scan({ formats: [Format.QRCode], windowed: true });
 
         // 恢复背景

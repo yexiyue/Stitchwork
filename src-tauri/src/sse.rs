@@ -49,19 +49,12 @@ pub struct NotificationPayload {
 }
 
 /// SSE 连接状态
+#[derive(Default)]
 pub struct SseState {
     cancel_token: Option<tokio::sync::watch::Sender<bool>>,
     channel_id: Option<String>,
 }
 
-impl Default for SseState {
-    fn default() -> Self {
-        Self {
-            cancel_token: None,
-            channel_id: None,
-        }
-    }
-}
 
 pub type SharedSseState = Arc<Mutex<SseState>>;
 

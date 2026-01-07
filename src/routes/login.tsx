@@ -1,8 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Form, Input, Button, Card, Dialog } from "antd-mobile";
+import { Form, Input, Button, Card, Dialog, Toast } from "antd-mobile";
 import { ScanLine } from "lucide-react";
 import { useAuthStore, selectIsSuperAdmin } from "@/stores/auth";
 import { useState, useEffect } from "react";
+import { isTauri } from "@/utils/platform";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -20,6 +21,34 @@ function LoginPage() {
       navigate({ to: isSuperAdmin ? "/admin" : "/" });
     }
   }, [isAuthenticated, isSuperAdmin, navigate]);
+
+  // 扫码前先请求相机权限
+  const handleScanClick = async () => {
+    if (!isTauri()) {
+      Toast.show({ content: "请在 App 中使用扫码功能", icon: "fail" });
+      return;
+    }
+
+    try {
+      const { checkPermissions, requestPermissions } = await import(
+        "@tauri-apps/plugin-barcode-scanner"
+      );
+
+      let permission = await checkPermissions();
+      if (permission !== "granted") {
+        permission = await requestPermissions();
+      }
+
+      if (permission === "granted") {
+        navigate({ to: "/scan" });
+      } else {
+        Toast.show({ content: "需要相机权限才能扫码", icon: "fail" });
+      }
+    } catch (e) {
+      console.error("Failed to check camera permission:", e);
+      Toast.show({ content: "无法访问相机", icon: "fail" });
+    }
+  };
 
   const onFinish = async (values: { username: string; password: string }) => {
     setLoading(true);
@@ -84,7 +113,7 @@ function LoginPage() {
           <Button
             block
             fill="none"
-            onClick={() => navigate({ to: "/scan" })}
+            onClick={handleScanClick}
             className="text-gray-600"
           >
             <div className="flex items-center justify-center gap-2">
