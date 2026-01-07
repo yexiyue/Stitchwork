@@ -3,7 +3,6 @@ use sea_orm::{Database, DbConn};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 use tower_http::cors::{Any, CorsLayer};
 use uuid::Uuid;
 
@@ -63,19 +62,11 @@ async fn main() {
         .allow_methods(Any)
         .allow_headers(Any);
 
-    // 速率限制: 每秒 10 个请求，突发最多 30 个
-    let governor_conf = Arc::new(
-        GovernorConfigBuilder::default()
-            .per_second(10)
-            .burst_size(30)
-            .finish()
-            .unwrap(),
-    );
+    // 注意: 限流已移至 Pingora 代理层
 
     let app = Router::new()
         .route("/health", get(|| async { "OK" }))
         .merge(service::routes())
-        .layer(GovernorLayer::new(governor_conf))
         .layer(cors)
         .with_state(state);
 

@@ -4,7 +4,15 @@ use http::StatusCode;
 use pingora::prelude::*;
 use pingora::proxy::{http_proxy_service, ProxyHttp, Session};
 use pingora::upstreams::peer::HttpPeer;
+use pingora_limits::rate::Rate;
 use std::path::PathBuf;
+use std::sync::Arc;
+use std::time::Duration;
+
+/// 全局限流器 (leaky bucket)
+/// 每秒 10 个请求，突发最多 30 个
+static RATE_LIMITER: std::sync::LazyLock<Arc<Rate>> =
+    std::sync::LazyLock::new(|| Arc::new(Rate::new(Duration::from_secs(1))));
 
 /// 请求上下文
 pub struct RequestCtx {
@@ -111,12 +119,36 @@ impl ProxyHttp for StitchWorkProxy {
         RequestCtx { is_static: false }
     }
 
-    /// 请求过滤器 - 处理静态文件请求
+    /// 请求过滤器 - 限流 + 静态文件处理
     async fn request_filter(&self, session: &mut Session, ctx: &mut Self::CTX) -> Result<bool> {
         let path = session.req_header().uri.path();
 
-        // API 请求交给 upstream 处理
+        // 限流检查 (仅对 API 请求)
         if self.is_api_request(path) {
+            let client_ip = session
+                .client_addr()
+                .map(|a| a.to_string())
+                .unwrap_or_else(|| "unknown".to_string());
+
+            // 每秒 10 个请求，突发最多 30 个
+            let curr_rate = RATE_LIMITER.observe(&client_ip, 1);
+            if curr_rate > 30 {
+                tracing::warn!("Rate limit exceeded for {}: {} req/s", client_ip, curr_rate);
+
+                let mut header =
+                    pingora_http::ResponseHeader::build(StatusCode::TOO_MANY_REQUESTS, None)?;
+                header.insert_header("Content-Type", "application/json")?;
+                header.insert_header("Retry-After", "1")?;
+
+                let body = Bytes::from(r#"{"code":429,"message":"Too many requests"}"#);
+                header.insert_header("Content-Length", body.len().to_string())?;
+
+                session.write_response_header(Box::new(header), false).await?;
+                session.write_response_body(Some(body), true).await?;
+
+                return Ok(true); // 请求已处理
+            }
+
             return Ok(false); // 继续代理流程
         }
 
