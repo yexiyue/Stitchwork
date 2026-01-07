@@ -143,7 +143,9 @@ impl ProxyHttp for StitchWorkProxy {
                 let body = Bytes::from(r#"{"code":429,"message":"Too many requests"}"#);
                 header.insert_header("Content-Length", body.len().to_string())?;
 
-                session.write_response_header(Box::new(header), false).await?;
+                session
+                    .write_response_header(Box::new(header), false)
+                    .await?;
                 session.write_response_body(Some(body), true).await?;
 
                 return Ok(true); // 请求已处理
@@ -170,21 +172,24 @@ impl ProxyHttp for StitchWorkProxy {
                 }
 
                 // 发送响应
-                session.write_response_header(Box::new(header), false).await?;
+                session
+                    .write_response_header(Box::new(header), false)
+                    .await?;
                 session.write_response_body(Some(content), true).await?;
 
                 Ok(true) // 请求已处理完毕
             }
             None => {
                 // 404 Not Found
-                let mut header =
-                    pingora_http::ResponseHeader::build(StatusCode::NOT_FOUND, None)?;
+                let mut header = pingora_http::ResponseHeader::build(StatusCode::NOT_FOUND, None)?;
                 header.insert_header("Content-Type", "text/plain")?;
 
                 let body = Bytes::from("404 Not Found");
                 header.insert_header("Content-Length", body.len().to_string())?;
 
-                session.write_response_header(Box::new(header), false).await?;
+                session
+                    .write_response_header(Box::new(header), false)
+                    .await?;
                 session.write_response_body(Some(body), true).await?;
 
                 Ok(true)

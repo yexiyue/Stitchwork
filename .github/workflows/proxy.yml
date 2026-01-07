@@ -14,7 +14,7 @@ env:
   ECS_USER: root
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -41,15 +41,29 @@ jobs:
           AR_x86_64_unknown_linux_musl: llvm-ar
           CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_RUSTFLAGS: "-C linker=rust-lld"
 
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BINARY_NAME }}
+          path: target/x86_64-unknown-linux-musl/release/${{ env.BINARY_NAME }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BINARY_NAME }}
+
       - name: Deploy to ECS
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ env.ECS_HOST }}
           username: ${{ env.ECS_USER }}
           key: ${{ secrets.ECS_SSH_KEY }}
-          source: target/x86_64-unknown-linux-musl/release/${{ env.BINARY_NAME }}
+          source: ${{ env.BINARY_NAME }}
           target: /opt/stitchwork/
-          strip_components: 4
 
       - name: Restart service
         uses: appleboy/ssh-action@v1.0.0
