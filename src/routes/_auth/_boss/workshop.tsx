@@ -3,6 +3,7 @@ import { Form, Input, Button, Toast, TextArea } from "antd-mobile";
 import { useAuthStore } from "@/stores/auth";
 import { authApi } from "@/api";
 import { PageHeader, ImageUploader } from "@/components";
+import { useWorkshopSettings } from "@/hooks";
 import { useState } from "react";
 
 export const Route = createFileRoute("/_auth/_boss/workshop")({
@@ -15,12 +16,15 @@ function WorkshopPage() {
   const updateUser = useAuthStore((s) => s.updateUser);
   const [saving, setSaving] = useState(false);
   const workshop = user?.workshop;
+  const { businessLabel } = useWorkshopSettings();
 
   const handleSubmit = async (values: {
     name: string;
     desc?: string;
     address?: string;
     image?: string;
+    pieceUnit?: string;
+    businessLabel?: string;
   }) => {
     setSaving(true);
     try {
@@ -38,7 +42,7 @@ function WorkshopPage() {
 
   return (
     <div>
-      <PageHeader title="工坊设置" onBack={() => navigate({ to: "/" })} />
+      <PageHeader title={`${businessLabel}设置`} onBack={() => navigate({ to: "/" })} />
       <div className="p-4">
         <Form
           initialValues={{
@@ -46,6 +50,8 @@ function WorkshopPage() {
             desc: workshop?.desc || "",
             address: workshop?.address || "",
             image: workshop?.image || "",
+            pieceUnit: workshop?.pieceUnit || "打",
+            businessLabel: workshop?.businessLabel || "工坊",
           }}
           onFinish={handleSubmit}
           footer={
@@ -54,17 +60,23 @@ function WorkshopPage() {
             </Button>
           }
         >
-          <Form.Item name="name" label="工坊名称" rules={[{ required: true, message: "请输入工坊名称" }]}>
-            <Input placeholder="请输入工坊名称" clearable />
+          <Form.Item name="name" label={`${businessLabel}名称`} rules={[{ required: true, message: `请输入${businessLabel}名称` }]}>
+            <Input placeholder={`请输入${businessLabel}名称`} clearable />
           </Form.Item>
-          <Form.Item name="address" label="工坊地址">
-            <Input placeholder="请输入工坊地址" clearable />
+          <Form.Item name="address" label={`${businessLabel}地址`}>
+            <Input placeholder={`请输入${businessLabel}地址`} clearable />
           </Form.Item>
-          <Form.Item name="desc" label="工坊简介">
-            <TextArea placeholder="请输入工坊简介" rows={3} />
+          <Form.Item name="desc" label={`${businessLabel}简介`}>
+            <TextArea placeholder={`请输入${businessLabel}简介`} rows={3} />
           </Form.Item>
-          <Form.Item name="image" label="工坊图片">
+          <Form.Item name="image" label={`${businessLabel}图片`}>
             <ImageUploader maxCount={1} />
+          </Form.Item>
+          <Form.Item name="pieceUnit" label="计件单位">
+            <Input placeholder="如：打、件、双" clearable />
+          </Form.Item>
+          <Form.Item name="businessLabel" label="场所名称">
+            <Input placeholder="如：工坊、工厂、店铺" clearable />
           </Form.Item>
         </Form>
       </div>

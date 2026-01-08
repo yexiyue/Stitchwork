@@ -15,3 +15,4 @@ export * from "./use-toggle-filter";
 export * from "./use-infinite-list";
 export * from "./use-biometric";
 export * from "./use-biometric-timeout";
+export * from "./use-workshop-settings";

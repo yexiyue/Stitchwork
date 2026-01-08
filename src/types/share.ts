@@ -43,6 +43,7 @@ export interface PublicShareResponse {
   workshopDesc?: string;
   workshopAddress?: string;
   workshopImage?: string;
+  pieceUnit: string;
   bossPhone?: string;
   avatar?: string;
   processes: PublicProcessInfo[];

@@ -11,6 +11,8 @@ export interface Workshop {
   desc?: string;
   address?: string;
   image?: string;
+  pieceUnit: string;
+  businessLabel: string;
 }
 
 export interface LoginUser {
@@ -68,6 +70,8 @@ export interface CreateWorkshopRequest {
   desc?: string;
   address?: string;
   image?: string;
+  pieceUnit?: string;
+  businessLabel?: string;
 }
 
 export interface UpdateWorkshopRequest {
@@ -75,6 +79,8 @@ export interface UpdateWorkshopRequest {
   desc?: string;
   address?: string;
   image?: string;
+  pieceUnit?: string;
+  businessLabel?: string;
 }
 
 export interface Staff {

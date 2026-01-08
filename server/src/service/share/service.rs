@@ -170,6 +170,7 @@ pub async fn get_public(db: &DbConn, token: &str) -> Result<PublicShareResponse>
         workshop_desc: ws.as_ref().and_then(|w| w.desc.clone()),
         workshop_address: ws.as_ref().and_then(|w| w.address.clone()),
         workshop_image: ws.as_ref().and_then(|w| w.image.clone()),
+        piece_unit: ws.as_ref().map(|w| w.piece_unit.clone()).unwrap_or_else(|| "打".to_string()),
         boss_phone: Some(boss.phone),
         avatar: boss.avatar,
         processes,

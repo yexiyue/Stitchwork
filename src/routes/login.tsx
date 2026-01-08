@@ -118,7 +118,7 @@ function LoginPage() {
           >
             <div className="flex items-center justify-center gap-2">
               <ScanLine size={20} />
-              <span>扫描邀请码加入工坊</span>
+              <span>扫码注册</span>
             </div>
           </Button>
         </div>

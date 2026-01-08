@@ -11,7 +11,7 @@ import {
   TextArea,
 } from "antd-mobile";
 import { ChevronLeft } from "lucide-react";
-import { useShares, useUpdateShare, useProcesses, useOrders } from "@/hooks";
+import { useShares, useUpdateShare, useProcesses, useOrders, useWorkshopSettings } from "@/hooks";
 import type { UpdateShareRequest, Process, Order } from "@/types";
 import { useState, useMemo, useEffect } from "react";
 import { OssImage } from "@/components";
@@ -23,6 +23,7 @@ export const Route = createFileRoute("/_auth/_boss/shares/$id")({
 function EditSharePage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
+  const { pieceUnit } = useWorkshopSettings();
   const { data: shares, isLoading: sharesLoading } = useShares();
   const updateMutation = useUpdateShare();
   const { data: processData, isLoading: processLoading } = useProcesses({
@@ -247,7 +248,7 @@ function EditSharePage() {
                           onChange={() => handleToggleProcess(process.id)}
                         />
                       }
-                      description={`¥${process.piecePrice}/件`}
+                      description={`¥${process.piecePrice}/${pieceUnit}`}
                       onClick={() => handleToggleProcess(process.id)}
                       arrow={false}
                     >

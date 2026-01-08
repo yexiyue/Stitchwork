@@ -15,6 +15,7 @@ import { pieceRecordApi, orderApi } from "@/api";
 import { OssImage, RelativeTime } from "@/components";
 import { RECORD_STATUS_MAP } from "@/constants";
 import { useState } from "react";
+import { useWorkshopSettings } from "@/hooks";
 
 export const Route = createFileRoute("/_auth/_boss/records/$id")({
   component: RecordDetailPage,
@@ -24,6 +25,7 @@ function RecordDetailPage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { pieceUnit } = useWorkshopSettings();
   const [editPopupVisible, setEditPopupVisible] = useState(false);
   const [editQuantity, setEditQuantity] = useState("");
 
@@ -224,7 +226,7 @@ function RecordDetailPage() {
             <div>
               <div className="text-2xl font-bold text-blue-600">
                 {record.quantity}{" "}
-                <span className="text-base font-normal">件</span>
+                <span className="text-base font-normal">{pieceUnit}</span>
               </div>
               <div className="text-lg text-green-600 mt-1">
                 ¥{record.amount}

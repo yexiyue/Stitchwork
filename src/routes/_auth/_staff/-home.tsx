@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { homeApi, statsApi } from "@/api";
 import { useAuthStore } from "@/stores/auth";
 import { MiniChart, RelativeTime, Chart, OssImage } from "@/components";
+import { useWorkshopSettings } from "@/hooks";
 import type { StaffOverview, Activity } from "@/types";
 import type { EChartsOption } from "echarts";
 import dayjs from "dayjs";
@@ -13,6 +14,7 @@ import { useMemo } from "react";
 export function StaffHome() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const { pieceUnit } = useWorkshopSettings();
 
   const { data: overview } = useQuery({
     queryKey: ["home-overview"],
@@ -52,7 +54,7 @@ export function StaffHome() {
   const orderBarOption: EChartsOption = useMemo(() => {
     const data = byOrder.slice(0, 5);
     return {
-      tooltip: { trigger: "axis", formatter: "{b}: {c}件" },
+      tooltip: { trigger: "axis", formatter: `{b}: {c}${pieceUnit}` },
       grid: { left: 10, right: 10, bottom: 10, top: 10, containLabel: true },
       xAxis: {
         type: "category",
@@ -71,7 +73,7 @@ export function StaffHome() {
         },
       ],
     };
-  }, [byOrder]);
+  }, [byOrder, pieceUnit]);
 
   return (
     <div className="p-4 pb-20">
@@ -111,7 +113,7 @@ export function StaffHome() {
           <div className="text-xl font-bold text-blue-600 mt-1">
             {staff?.monthQuantity ?? 0}
           </div>
-          <div className="text-xs text-gray-400">件</div>
+          <div className="text-xs text-gray-400">{pieceUnit}</div>
         </Card>
         <Card className="p-3!">
           <div className="text-xs text-gray-500">本月收入</div>
@@ -215,7 +217,7 @@ export function StaffHome() {
                     </div>
                     <div className="flex items-center justify-between text-xs text-gray-400 mt-1.5">
                       <span>
-                        {act.processName} · {act.quantity}件
+                        {act.processName} · {act.quantity}{pieceUnit}
                       </span>
                       <RelativeTime date={act.createdAt} />
                     </div>

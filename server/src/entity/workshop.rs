@@ -13,6 +13,10 @@ pub struct Model {
     pub desc: Option<String>,
     pub address: Option<String>,
     pub image: Option<String>,
+    #[sea_orm(default_value = "打")]
+    pub piece_unit: String,
+    #[sea_orm(default_value = "工坊")]
+    pub business_label: String,
     pub created_at: DateTimeUtc,
 
     #[serde(skip)]

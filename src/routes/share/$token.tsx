@@ -84,7 +84,7 @@ function SharePage() {
             className="absolute inset-0 w-full h-full object-cover"
           />
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-600" />
+          <div className="absolute inset-0 bg-linear-to-r from-blue-500 to-blue-600" />
         )}
         <div className="absolute inset-0 bg-black/40" />
 
@@ -223,7 +223,7 @@ function SharePage() {
                               {process.description || ""}
                             </div>
                             <div className="text-xs text-blue-600 shrink-0">
-                              剩余{process.remainingQuantity}件
+                              剩余{process.remainingQuantity}{data.pieceUnit}
                             </div>
                           </div>
                         </div>

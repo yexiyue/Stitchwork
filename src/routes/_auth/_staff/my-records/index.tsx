@@ -8,7 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRef } from "react";
 import type { DropdownRef } from "antd-mobile/es/components/dropdown";
 import dayjs from "dayjs";
-import { useInfiniteList, useToggleFilter } from "@/hooks";
+import { useInfiniteList, useToggleFilter, useWorkshopSettings } from "@/hooks";
 import { RECORD_STATUS_OPTIONS_NO_ALL } from "@/constants";
 
 export const Route = createFileRoute("/_auth/_staff/my-records/")({
@@ -18,6 +18,7 @@ export const Route = createFileRoute("/_auth/_staff/my-records/")({
 function StaffRecordsPage() {
   const navigate = useNavigate();
   const dropdownRef = useRef<DropdownRef>(null);
+  const { pieceUnit } = useWorkshopSettings();
 
   // 状态筛选
   const statusFilter = useToggleFilter<string>();
@@ -67,7 +68,7 @@ function StaffRecordsPage() {
                 <div className="text-2xl font-bold">
                   {myStats.totalQuantity}
                 </div>
-                <div className="text-xs opacity-80">件</div>
+                <div className="text-xs opacity-80">{pieceUnit}</div>
               </div>
               <div className="w-px bg-white/30" />
               <div className="text-center">

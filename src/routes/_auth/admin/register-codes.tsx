@@ -1,28 +1,28 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { List, Dialog, SwipeAction, Toast, Button } from "antd-mobile";
 import { Plus, Copy, QrCode } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import type { RegisterCode } from "@/types";
 import { adminApi } from "@/api";
-import { RelativeTime } from "@/components";
+import { RelativeTime, VirtualList } from "@/components";
 import { QRCodeSVG } from "qrcode.react";
+import { useInfiniteList } from "@/hooks";
 
 export const Route = createFileRoute("/_auth/admin/register-codes")({
   component: RegisterCodesPage,
 });
 
 function RegisterCodesPage() {
-  const queryClient = useQueryClient();
-
-  const { data: codes = [], isLoading } = useQuery({
-    queryKey: ["admin", "register-codes"],
-    queryFn: adminApi.listRegisterCodes,
-  });
+  const { list, isFetching, hasMore, loadMore, refresh, invalidate } =
+    useInfiniteList<RegisterCode>(
+      ["admin", "register-codes"],
+      adminApi.listRegisterCodes
+    );
 
   const createMutation = useMutation({
     mutationFn: adminApi.createRegisterCode,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "register-codes"] });
+      invalidate();
       Toast.show({ content: "创建成功" });
     },
   });
@@ -30,7 +30,7 @@ function RegisterCodesPage() {
   const disableMutation = useMutation({
     mutationFn: adminApi.disableRegisterCode,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "register-codes"] });
+      invalidate();
       Toast.show({ content: "已禁用" });
     },
   });
@@ -141,73 +141,75 @@ function RegisterCodesPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto">
-        {isLoading ? (
-          <div className="p-4 text-center text-gray-400">加载中...</div>
-        ) : codes.length === 0 ? (
-          <div className="p-4 text-center text-gray-400">暂无注册码</div>
-        ) : (
-          <List>
-            {codes.map((code) => (
-              <SwipeAction
-                key={code.id}
-                rightActions={
-                  code.isActive && !code.usedBy
-                    ? [
-                        {
-                          key: "disable",
-                          text: "禁用",
-                          color: "danger",
-                          onClick: () => handleDisable(code),
-                        },
-                      ]
-                    : []
+      <div className="flex flex-1 overflow-hidden">
+        <VirtualList
+          data={list}
+          loading={isFetching}
+          hasMore={hasMore}
+          onLoadMore={loadMore}
+          onRefresh={refresh}
+          keyExtractor={(code) => code.id}
+          emptyText="暂无注册码"
+          estimateSize={72}
+          renderItem={(code) => (
+            <SwipeAction
+              rightActions={
+                code.isActive && !code.usedBy
+                  ? [
+                      {
+                        key: "disable",
+                        text: "禁用",
+                        color: "danger",
+                        onClick: () => handleDisable(code),
+                      },
+                    ]
+                  : []
+              }
+            >
+              <List.Item
+                className="border-b border-gray-100"
+                description={
+                  code.usedBy
+                    ? `使用者: ${code.usedByUsername || "未知"}`
+                    : undefined
                 }
-              >
-                <List.Item
-                  description={
-                    code.usedBy
-                      ? `使用者: ${code.usedByUsername || "未知"}`
-                      : undefined
-                  }
-                  extra={
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs ${getStatusColor(code)}`}>
-                        {getStatusText(code)}
-                      </span>
-                      {!code.usedBy && code.isActive && (
-                        <>
-                          <QrCode
-                            size={16}
-                            className="text-blue-500"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              showCodeQR(code.code);
-                            }}
-                          />
-                          <Copy
-                            size={16}
-                            className="text-gray-400"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCopy(code.code);
-                            }}
-                          />
-                        </>
-                      )}
-                    </div>
-                  }
-                  arrow={false}
-                >
-                  <div className="font-mono">{code.code}</div>
-                  <div className="text-xs text-gray-400">
-                    <RelativeTime date={code.createdAt} />
+                extra={
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs ${getStatusColor(code)}`}>
+                      {getStatusText(code)}
+                    </span>
+                    {!code.usedBy && code.isActive && (
+                      <>
+                        <QrCode
+                          size={16}
+                          className="text-blue-500"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            showCodeQR(code.code);
+                          }}
+                        />
+                        <Copy
+                          size={16}
+                          className="text-gray-400"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCopy(code.code);
+                          }}
+                        />
+                      </>
+                    )}
                   </div>
-                </List.Item>
-              </SwipeAction>
-            ))}
-          </List>
-        )}
+                }
+                arrow={false}
+              >
+                <div className="font-mono">{code.code}</div>
+                <div className="text-xs text-gray-400">
+                  <RelativeTime date={code.createdAt} />
+                </div>
+              </List.Item>
+            </SwipeAction>
+          )}
+        />
       </div>
     </div>
   );

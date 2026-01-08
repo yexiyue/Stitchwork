@@ -9,6 +9,8 @@ pub struct WorkshopResponse {
     pub desc: Option<String>,
     pub address: Option<String>,
     pub image: Option<String>,
+    pub piece_unit: String,
+    pub business_label: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -18,6 +20,8 @@ pub struct CreateWorkshopRequest {
     pub desc: Option<String>,
     pub address: Option<String>,
     pub image: Option<String>,
+    pub piece_unit: Option<String>,
+    pub business_label: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -27,6 +31,8 @@ pub struct UpdateWorkshopRequest {
     pub desc: Option<String>,
     pub address: Option<String>,
     pub image: Option<String>,
+    pub piece_unit: Option<String>,
+    pub business_label: Option<String>,
 }
 
 #[derive(Debug, Serialize)]

@@ -31,6 +31,8 @@ pub fn to_response(ws: &workshop::ModelEx) -> WorkshopResponse {
         desc: ws.desc.clone(),
         address: ws.address.clone(),
         image: ws.image.clone(),
+        piece_unit: ws.piece_unit.clone(),
+        business_label: ws.business_label.clone(),
     }
 }
 
@@ -63,6 +65,8 @@ pub async fn create_workshop(
         .set_desc(req.desc)
         .set_address(req.address)
         .set_image(req.image)
+        .set_piece_unit(req.piece_unit.unwrap_or_else(|| "打".to_string()))
+        .set_business_label(req.business_label.unwrap_or_else(|| "工坊".to_string()))
         .set_created_at(chrono::Utc::now())
         .insert(db)
         .await?;
@@ -89,6 +93,12 @@ pub async fn update_workshop(
     }
     if let Some(v) = req.image {
         active.image = Set(Some(v));
+    }
+    if let Some(v) = req.piece_unit {
+        active.piece_unit = Set(v);
+    }
+    if let Some(v) = req.business_label {
+        active.business_label = Set(v);
     }
 
     let ws = active.update(db).await?;

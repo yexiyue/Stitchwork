@@ -20,3 +20,29 @@ export interface UserListItem {
   isSuperAdmin: boolean;
   createdAt: string;
 }
+
+export interface AdminStats {
+  // 用户统计
+  totalUsers: number;
+  bossCount: number;
+  staffCount: number;
+  todayNewUsers: number;
+  weekNewUsers: number;
+  monthNewUsers: number;
+
+  // 工坊统计
+  totalWorkshops: number;
+  activeWorkshops: number;
+
+  // 注册码统计
+  totalCodes: number;
+  usedCodes: number;
+  availableCodes: number;
+  disabledCodes: number;
+
+  // 平台活跃度
+  todayOrders: number;
+  monthOrders: number;
+  todayRecords: number;
+  monthRecords: number;
+}

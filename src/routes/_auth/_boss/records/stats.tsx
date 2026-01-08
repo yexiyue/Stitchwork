@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { statsApi } from "@/api";
 import { useState, useMemo } from "react";
 import { Chart, StatsCard, StatsGrid, DateRangeButton } from "@/components";
-import { useDateRange } from "@/hooks";
+import { useDateRange, useWorkshopSettings } from "@/hooks";
 import type { EChartsOption } from "echarts";
 
 export const Route = createFileRoute("/_auth/_boss/records/stats")({
@@ -17,6 +17,7 @@ type Dimension = "quantity" | "amount";
 function StatsPage() {
   const navigate = useNavigate();
   const [dimension, setDimension] = useState<Dimension>("quantity");
+  const { pieceUnit } = useWorkshopSettings();
 
   // 日期范围
   const {
@@ -99,7 +100,7 @@ function StatsPage() {
         trigger: "axis",
         formatter: (params: unknown) => {
           const p = (params as { name: string; value: number }[])[0];
-          return dimension === "amount" ? `${p.name}: ¥${p.value}` : `${p.name}: ${p.value}件`;
+          return dimension === "amount" ? `${p.name}: ¥${p.value}` : `${p.name}: ${p.value}${pieceUnit}`;
         },
       },
       grid: { left: 10, right: 20, bottom: 40, top: 20, containLabel: true },
@@ -114,7 +115,7 @@ function StatsPage() {
         itemStyle: { color: dimension === "quantity" ? "#3b82f6" : "#22c55e" },
       }],
     };
-  }, [dailyStats, dimension]);
+  }, [dailyStats, dimension, pieceUnit]);
 
   const isLoading = workersLoading || dailyLoading;
 

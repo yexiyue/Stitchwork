@@ -29,6 +29,7 @@ pub struct PublicShareResponse {
     pub workshop_desc: Option<String>,
     pub workshop_address: Option<String>,
     pub workshop_image: Option<String>,
+    pub piece_unit: String,
     pub boss_phone: Option<String>,
     pub avatar: Option<String>,
     pub processes: Vec<PublicProcessInfo>,

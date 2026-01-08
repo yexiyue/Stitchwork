@@ -1,12 +1,17 @@
+use chrono::{Datelike, Utc};
 use rand::Rng;
-use sea_orm::{ActiveModelTrait, ColumnTrait, DbConn, EntityTrait, QueryFilter, QueryOrder, Set};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, DbConn, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
+    QuerySelect, Set,
+};
 use std::collections::HashMap;
 use uuid::Uuid;
 
-use crate::entity::{register_code, user};
+use crate::common::ListData;
+use crate::entity::{order, piece_record, register_code, user, workshop};
 use crate::error::{AppError, Result};
 
-use super::dto::{RegisterCodeResponse, UserListItem};
+use super::dto::{AdminQueryParams, AdminStats, RegisterCodeResponse, UserListItem};
 
 const CODE_CHARSET: &[u8] = b"ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const CODE_LENGTH: usize = 8;
@@ -20,6 +25,116 @@ fn generate_code() -> String {
         })
         .collect();
     format!("B-{}", random_part)
+}
+
+pub async fn get_stats(db: &DbConn) -> Result<AdminStats> {
+    let now = Utc::now();
+    let today_start = now
+        .date_naive()
+        .and_hms_opt(0, 0, 0)
+        .unwrap()
+        .and_utc();
+    let week_start = now
+        .date_naive()
+        .week(chrono::Weekday::Mon)
+        .first_day()
+        .and_hms_opt(0, 0, 0)
+        .unwrap()
+        .and_utc();
+    let month_start = now
+        .date_naive()
+        .with_day(1)
+        .unwrap()
+        .and_hms_opt(0, 0, 0)
+        .unwrap()
+        .and_utc();
+
+    // User stats
+    let total_users = user::Entity::find().count(db).await? as i64;
+    let boss_count = user::Entity::find()
+        .filter(user::Column::Role.eq("Boss"))
+        .count(db)
+        .await? as i64;
+    let staff_count = user::Entity::find()
+        .filter(user::Column::Role.eq("Staff"))
+        .count(db)
+        .await? as i64;
+    let today_new_users = user::Entity::find()
+        .filter(user::Column::CreatedAt.gte(today_start))
+        .count(db)
+        .await? as i64;
+    let week_new_users = user::Entity::find()
+        .filter(user::Column::CreatedAt.gte(week_start))
+        .count(db)
+        .await? as i64;
+    let month_new_users = user::Entity::find()
+        .filter(user::Column::CreatedAt.gte(month_start))
+        .count(db)
+        .await? as i64;
+
+    // Workshop stats
+    let total_workshops = workshop::Entity::find().count(db).await? as i64;
+    // Active workshops: workshops that have orders
+    let active_workshops = order::Entity::find()
+        .select_only()
+        .column(order::Column::BossId)
+        .distinct()
+        .count(db)
+        .await? as i64;
+
+    // Register code stats
+    let total_codes = register_code::Entity::find().count(db).await? as i64;
+    let used_codes = register_code::Entity::find()
+        .filter(register_code::Column::UsedBy.is_not_null())
+        .count(db)
+        .await? as i64;
+    let disabled_codes = register_code::Entity::find()
+        .filter(register_code::Column::IsActive.eq(false))
+        .filter(register_code::Column::UsedBy.is_null())
+        .count(db)
+        .await? as i64;
+    let available_codes = register_code::Entity::find()
+        .filter(register_code::Column::IsActive.eq(true))
+        .filter(register_code::Column::UsedBy.is_null())
+        .count(db)
+        .await? as i64;
+
+    // Platform activity
+    let today_orders = order::Entity::find()
+        .filter(order::Column::ReceivedAt.gte(today_start))
+        .count(db)
+        .await? as i64;
+    let month_orders = order::Entity::find()
+        .filter(order::Column::ReceivedAt.gte(month_start))
+        .count(db)
+        .await? as i64;
+    let today_records = piece_record::Entity::find()
+        .filter(piece_record::Column::RecordedAt.gte(today_start))
+        .count(db)
+        .await? as i64;
+    let month_records = piece_record::Entity::find()
+        .filter(piece_record::Column::RecordedAt.gte(month_start))
+        .count(db)
+        .await? as i64;
+
+    Ok(AdminStats {
+        total_users,
+        boss_count,
+        staff_count,
+        today_new_users,
+        week_new_users,
+        month_new_users,
+        total_workshops,
+        active_workshops,
+        total_codes,
+        used_codes,
+        available_codes,
+        disabled_codes,
+        today_orders,
+        month_orders,
+        today_records,
+        month_records,
+    })
 }
 
 pub async fn create_register_code(db: &DbConn) -> Result<RegisterCodeResponse> {
@@ -47,11 +162,16 @@ pub async fn create_register_code(db: &DbConn) -> Result<RegisterCodeResponse> {
     })
 }
 
-pub async fn list_register_codes(db: &DbConn) -> Result<Vec<RegisterCodeResponse>> {
-    let codes = register_code::Entity::find()
+pub async fn list_register_codes(
+    db: &DbConn,
+    params: AdminQueryParams,
+) -> Result<ListData<RegisterCodeResponse>> {
+    let paginator = register_code::Entity::find()
         .order_by_desc(register_code::Column::CreatedAt)
-        .all(db)
-        .await?;
+        .paginate(db, params.page_size);
+
+    let total = paginator.num_items().await?;
+    let codes = paginator.fetch_page(params.page - 1).await?;
 
     // Collect used_by ids to batch fetch usernames
     let user_ids: Vec<Uuid> = codes.iter().filter_map(|c| c.used_by).collect();
@@ -68,7 +188,7 @@ pub async fn list_register_codes(db: &DbConn) -> Result<Vec<RegisterCodeResponse
         HashMap::new()
     };
 
-    Ok(codes
+    let list = codes
         .into_iter()
         .map(|c| RegisterCodeResponse {
             id: c.id,
@@ -79,7 +199,9 @@ pub async fn list_register_codes(db: &DbConn) -> Result<Vec<RegisterCodeResponse
             created_at: c.created_at,
             used_by_username: c.used_by.and_then(|id| users_map.get(&id).cloned()),
         })
-        .collect())
+        .collect();
+
+    Ok(ListData { list, total })
 }
 
 pub async fn disable_register_code(db: &DbConn, id: Uuid) -> Result<()> {
@@ -95,13 +217,15 @@ pub async fn disable_register_code(db: &DbConn, id: Uuid) -> Result<()> {
     Ok(())
 }
 
-pub async fn list_users(db: &DbConn) -> Result<Vec<UserListItem>> {
-    let users = user::Entity::find()
+pub async fn list_users(db: &DbConn, params: AdminQueryParams) -> Result<ListData<UserListItem>> {
+    let paginator = user::Entity::find()
         .order_by_desc(user::Column::CreatedAt)
-        .all(db)
-        .await?;
+        .paginate(db, params.page_size);
 
-    Ok(users
+    let total = paginator.num_items().await?;
+    let users = paginator.fetch_page(params.page - 1).await?;
+
+    let list = users
         .into_iter()
         .map(|u| UserListItem {
             id: u.id,
@@ -113,5 +237,7 @@ pub async fn list_users(db: &DbConn) -> Result<Vec<UserListItem>> {
             is_super_admin: u.is_super_admin,
             created_at: u.created_at,
         })
-        .collect())
+        .collect();
+
+    Ok(ListData { list, total })
 }

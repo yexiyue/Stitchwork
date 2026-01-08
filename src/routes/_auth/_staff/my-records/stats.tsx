@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { statsApi } from "@/api";
 import { useMemo } from "react";
 import { Chart, DateRangeButton } from "@/components";
-import { useDateRange } from "@/hooks";
+import { useDateRange, useWorkshopSettings } from "@/hooks";
 import type { EChartsOption } from "echarts";
 
 export const Route = createFileRoute("/_auth/_staff/my-records/stats")({
@@ -14,6 +14,7 @@ export const Route = createFileRoute("/_auth/_staff/my-records/stats")({
 
 function StaffStatsPage() {
   const navigate = useNavigate();
+  const { pieceUnit } = useWorkshopSettings();
 
   // 日期范围
   const {
@@ -57,7 +58,7 @@ function StaffStatsPage() {
         trigger: "axis",
         formatter: (params: unknown) => {
           const p = (params as { name: string; value: number }[])[0];
-          return `${p.name}: ${p.value}件`;
+          return `${p.name}: ${p.value}${pieceUnit}`;
         },
       },
       grid: { left: 10, right: 20, bottom: 40, top: 20, containLabel: true },
@@ -72,7 +73,7 @@ function StaffStatsPage() {
         itemStyle: { color: "#3b82f6" },
       }],
     };
-  }, [dailyStats]);
+  }, [dailyStats, pieceUnit]);
 
   // 按订单柱状图
   const orderBarOption: EChartsOption = useMemo(() => {
@@ -138,7 +139,7 @@ function StaffStatsPage() {
           <div className="flex justify-around">
             <div className="text-center">
               <div className="text-2xl font-bold">{totalQuantity}</div>
-              <div className="text-xs opacity-80">件</div>
+              <div className="text-xs opacity-80">{pieceUnit}</div>
             </div>
             <div className="w-px bg-white/30" />
             <div className="text-center">

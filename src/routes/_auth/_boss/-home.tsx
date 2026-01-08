@@ -11,6 +11,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { homeApi, statsApi } from "@/api";
 import { useAuthStore } from "@/stores/auth";
+import { useWorkshopSettings } from "@/hooks";
 import { MiniChart, RelativeTime, Chart, Image, OssImage } from "@/components";
 import type { BossOverview, Activity } from "@/types";
 import type { EChartsOption } from "echarts";
@@ -20,6 +21,7 @@ import { useMemo } from "react";
 export function BossHome() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const { pieceUnit } = useWorkshopSettings();
 
   const { data: overview } = useQuery({
     queryKey: ["home-overview"],
@@ -256,7 +258,7 @@ export function BossHome() {
                   {i + 1}
                 </span>
                 <span className="flex-1 truncate">{w.userName}</span>
-                <span className="text-gray-500">{w.totalQuantity}件</span>
+                <span className="text-gray-500">{w.totalQuantity}{pieceUnit}</span>
                 <span className="text-green-600 font-medium">
                   ¥{parseFloat(w.totalAmount).toFixed(0)}
                 </span>
@@ -305,7 +307,7 @@ export function BossHome() {
                 />
                 <div className="flex items-center justify-between text-xs text-gray-400 mt-0.5">
                   <span>
-                    {order.completedQuantity}/{order.totalQuantity}件
+                    {order.completedQuantity}/{order.totalQuantity}{pieceUnit}
                   </span>
                   <span>{(order.progress * 100).toFixed(0)}%</span>
                 </div>
@@ -390,7 +392,7 @@ export function BossHome() {
                     </div>
                     <div className="flex items-center justify-between text-xs text-gray-400 mt-1">
                       <span>
-                        {act.processName} · {act.quantity}件
+                        {act.processName} · {act.quantity}{pieceUnit}
                       </span>
                       <RelativeTime date={act.createdAt} />
                     </div>
