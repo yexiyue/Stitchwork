@@ -9,10 +9,11 @@ interface MiniChartProps {
 }
 
 export function MiniChart({ data, color = "#3b82f6", height = 40 }: MiniChartProps) {
+  const maxValue = Math.max(...data, 1); // 确保至少有 1 的范围
   const option: EChartsOption = {
-    grid: { left: 0, right: 0, top: 0, bottom: 0 },
+    grid: { left: 0, right: 0, top: 5, bottom: 5 },
     xAxis: { type: "category", show: false, data: data.map((_, i) => i) },
-    yAxis: { type: "value", show: false },
+    yAxis: { type: "value", show: false, min: 0, max: maxValue },
     series: [
       {
         type: "line",

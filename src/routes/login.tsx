@@ -25,7 +25,10 @@ function LoginPage() {
   // 扫码前先请求相机权限
   const handleScanClick = async () => {
     if (!isTauri()) {
-      Toast.show({ content: "请在 App 中使用扫码功能", icon: "fail" });
+      Toast.show({
+        content: "请在 App 中使用扫码功能",
+        icon: "fail",
+      });
       return;
     }
 

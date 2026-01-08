@@ -52,8 +52,10 @@ function RegisterCodesPage() {
               Toast.show({ content: "已复制" });
             }}
           >
-            <Copy size={16} className="mr-1" />
-            复制
+            <div className="flex items-center justify-center">
+              <Copy size={16} className="mr-1" />
+              复制
+            </div>
           </Button>
         </div>
       ),
@@ -79,8 +81,10 @@ function RegisterCodesPage() {
                 Toast.show({ content: "已复制" });
               }}
             >
-              <Copy size={16} className="mr-1" />
-              复制
+              <div className="flex items-center justify-center">
+                <Copy size={16} className="mr-1" />
+                复制
+              </div>
             </Button>
           </div>
         ),

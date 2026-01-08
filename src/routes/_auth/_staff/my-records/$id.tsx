@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { pieceRecordApi, orderApi, processApi } from "@/api";
 import type { PieceRecordStatus, RecordedBy } from "@/types";
 import dayjs from "dayjs";
-import { OssImage } from "@/components";
+import { Image } from "@/components";
 
 export const Route = createFileRoute("/_auth/_staff/my-records/$id")({
   component: StaffRecordDetailPage,
@@ -50,7 +50,10 @@ function StaffRecordDetailPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col h-full">
-        <NavBar onBack={() => navigate({ to: "/my-records" })} backIcon={<ChevronLeft size={24} />}>
+        <NavBar
+          onBack={() => navigate({ to: "/my-records" })}
+          backIcon={<ChevronLeft size={24} />}
+        >
           计件详情
         </NavBar>
         <div className="flex-1 flex items-center justify-center">
@@ -63,7 +66,10 @@ function StaffRecordDetailPage() {
   if (!record) {
     return (
       <div className="flex flex-col h-full">
-        <NavBar onBack={() => navigate({ to: "/my-records" })} backIcon={<ChevronLeft size={24} />}>
+        <NavBar
+          onBack={() => navigate({ to: "/my-records" })}
+          backIcon={<ChevronLeft size={24} />}
+        >
           计件详情
         </NavBar>
         <div className="flex-1 flex items-center justify-center text-gray-500">
@@ -92,7 +98,7 @@ function StaffRecordDetailPage() {
             {images.map((img, index) => (
               <Swiper.Item key={index}>
                 <div className="h-56 bg-gray-200">
-                  <OssImage
+                  <Image
                     src={img}
                     alt={`订单图片 ${index + 1}`}
                     className="w-full h-full object-contain"

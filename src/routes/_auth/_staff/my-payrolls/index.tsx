@@ -1,13 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Dropdown } from "antd-mobile";
-import { ImageIcon, Calendar } from "lucide-react";
+import { Dropdown, NavBar } from "antd-mobile";
+import { ImageIcon, Calendar, ChevronLeft } from "lucide-react";
 import type { Payroll } from "@/types";
 import {
   RelativeTime,
   VirtualList,
   DateRangeButton,
-  OssImage,
   BiometricGuard,
+  Image,
 } from "@/components";
 import { payrollApi } from "@/api";
 import { useRef } from "react";
@@ -55,30 +55,37 @@ function MyPayrollsPage() {
       onCancel={() => navigate({ to: "/" })}
     >
       <div className="flex flex-col h-full overflow-hidden">
+        <NavBar
+          onBack={() => navigate({ to: "/profile" })}
+          backIcon={<ChevronLeft size={24} />}
+          right={
+            <div className="flex justify-end">
+              <Dropdown ref={dropdownRef}>
+                <Dropdown.Item
+                  key="date"
+                  title={
+                    <Calendar
+                      size={16}
+                      className={
+                        hasDateFilter ? "text-blue-500" : "text-gray-500"
+                      }
+                    />
+                  }
+                  onClick={() => setCalendarVisible(true)}
+                />
+              </Dropdown>
+            </div>
+          }
+        >
+          工资记录
+        </NavBar>
+
         {/* 顶部统计卡片 */}
         <div className="p-4 pb-2">
-          <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-4 mb-3 text-white">
+          <div className="bg-linear-to-r from-green-500 to-green-600 rounded-lg p-4 text-white">
             <div className="text-sm opacity-80 mb-1">累计收入</div>
             <div className="text-3xl font-bold">¥{totalAmount.toFixed(2)}</div>
             <div className="text-xs opacity-70 mt-1">共 {list.length} 笔</div>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl">工资记录</h1>
-            <Dropdown ref={dropdownRef}>
-              <Dropdown.Item
-                key="date"
-                title={
-                  <Calendar
-                    size={16}
-                    className={
-                      hasDateFilter ? "text-blue-500" : "text-gray-500"
-                    }
-                  />
-                }
-                onClick={() => setCalendarVisible(true)}
-              />
-            </Dropdown>
           </div>
         </div>
 
@@ -93,7 +100,7 @@ function MyPayrollsPage() {
             keyExtractor={(r) => r.id}
             emptyText="暂无工资记录"
             searchEmpty={!!hasDateFilter && !list.length}
-            estimateSize={88}
+            estimateSize={94}
             renderItem={(payroll) => (
               <div
                 className="bg-white p-3 mb-2 mx-2 rounded-lg shadow-sm flex gap-3 cursor-pointer active:bg-gray-50"
@@ -106,7 +113,7 @@ function MyPayrollsPage() {
               >
                 <div className="shrink-0 h-16 aspect-square rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
                   {payroll.paymentImage ? (
-                    <OssImage
+                    <Image
                       src={payroll.paymentImage}
                       width="100%"
                       height="100%"

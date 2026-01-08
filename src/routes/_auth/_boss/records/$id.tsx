@@ -12,7 +12,7 @@ import {
 import { ImageIcon, Edit2, Trash2, ChevronLeft } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { pieceRecordApi, orderApi } from "@/api";
-import { OssImage, RelativeTime } from "@/components";
+import { Image, RelativeTime } from "@/components";
 import { RECORD_STATUS_MAP } from "@/constants";
 import { useState } from "react";
 import { useWorkshopSettings } from "@/hooks";
@@ -178,7 +178,7 @@ function RecordDetailPage() {
               {images.map((img, idx) => (
                 <Swiper.Item key={idx}>
                   <div className="h-64 flex items-center justify-center bg-gray-100">
-                    <OssImage src={img} fit="contain" height="100%" />
+                    <Image src={img} fit="contain" height="100%" />
                   </div>
                 </Swiper.Item>
               ))}

@@ -5,7 +5,7 @@ use serde::Deserialize;
 use std::sync::Arc;
 use uuid::Uuid;
 
-use super::dto::{CreatePayrollDto, UpdatePayrollDto};
+use super::dto::{CreatePayrollDto, PayrollDetailResponse, UpdatePayrollDto};
 use crate::common::{ApiResponse, ListData, QueryParams};
 use crate::entity::payroll::Model;
 use crate::entity::user::Role;
@@ -75,7 +75,7 @@ async fn get_one(
     PayrollPath { id }: PayrollPath,
     State(state): State<Arc<AppState>>,
     Extension(claims): Extension<Claims>,
-) -> Result<ApiResponse<Model>> {
+) -> Result<ApiResponse<PayrollDetailResponse>> {
     let user_id = if claims.role == Role::Staff {
         Some(claims.sub)
     } else {

@@ -1,9 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { NavBar } from "antd-mobile";
+import { NavBar, CapsuleTabs } from "antd-mobile";
 import { ChevronLeft } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { statsApi } from "@/api";
-import { useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Chart, DateRangeButton } from "@/components";
 import { useDateRange, useWorkshopSettings } from "@/hooks";
 import type { EChartsOption } from "echarts";
@@ -12,8 +12,11 @@ export const Route = createFileRoute("/_auth/_staff/my-records/stats")({
   component: StaffStatsPage,
 });
 
+type Dimension = "quantity" | "amount";
+
 function StaffStatsPage() {
   const navigate = useNavigate();
+  const [dimension, setDimension] = useState<Dimension>("quantity");
   const { pieceUnit } = useWorkshopSettings();
 
   // 日期范围
@@ -52,13 +55,15 @@ function StaffStatsPage() {
   // 折线图
   const lineOption: EChartsOption = useMemo(() => {
     const dates = dailyStats.map((d) => d.date.slice(5));
-    const quantities = dailyStats.map((d) => d.totalQuantity);
+    const values = dailyStats.map((d) =>
+      dimension === "quantity" ? d.totalQuantity : parseFloat(d.totalAmount)
+    );
     return {
       tooltip: {
         trigger: "axis",
         formatter: (params: unknown) => {
           const p = (params as { name: string; value: number }[])[0];
-          return `${p.name}: ${p.value}${pieceUnit}`;
+          return dimension === "amount" ? `${p.name}: ¥${p.value}` : `${p.name}: ${p.value}${pieceUnit}`;
         },
       },
       grid: { left: 10, right: 20, bottom: 40, top: 20, containLabel: true },
@@ -67,20 +72,29 @@ function StaffStatsPage() {
       dataZoom: [{ type: "inside", start: 0, end: 100 }],
       series: [{
         type: "line",
-        data: quantities,
+        data: values,
         smooth: true,
         areaStyle: { opacity: 0.3 },
-        itemStyle: { color: "#3b82f6" },
+        itemStyle: { color: dimension === "quantity" ? "#3b82f6" : "#22c55e" },
       }],
     };
-  }, [dailyStats, pieceUnit]);
+  }, [dailyStats, dimension, pieceUnit]);
 
   // 按订单柱状图
   const orderBarOption: EChartsOption = useMemo(() => {
     const names = orderStats.map((g) => g.name || "未知");
-    const values = orderStats.map((g) => g.totalQuantity);
+    const values = orderStats.map((g) =>
+      dimension === "quantity" ? g.totalQuantity : parseFloat(g.totalAmount)
+    );
     return {
-      tooltip: { trigger: "axis", axisPointer: { type: "shadow" } },
+      tooltip: {
+        trigger: "axis",
+        axisPointer: { type: "shadow" },
+        formatter: (params: unknown) => {
+          const p = (params as { name: string; value: number }[])[0];
+          return dimension === "amount" ? `${p.name}: ¥${p.value}` : `${p.name}: ${p.value}${pieceUnit}`;
+        },
+      },
       grid: { left: 10, right: 20, bottom: 40, top: 20, containLabel: true },
       xAxis: { type: "category", data: names, axisLabel: { rotate: 45, fontSize: 10 } },
       yAxis: { type: "value" },
@@ -89,18 +103,27 @@ function StaffStatsPage() {
         type: "bar",
         data: values,
         barMaxWidth: 40,
-        itemStyle: { color: "#3b82f6" },
-        label: { show: true, position: "top", fontSize: 10 },
+        itemStyle: { color: dimension === "quantity" ? "#3b82f6" : "#22c55e" },
+        label: { show: true, position: "top", fontSize: 10, formatter: dimension === "amount" ? "¥{c}" : `{c}${pieceUnit}` },
       }],
     };
-  }, [orderStats]);
+  }, [orderStats, dimension, pieceUnit]);
 
   // 按工序柱状图
   const processBarOption: EChartsOption = useMemo(() => {
     const names = processStats.map((g) => g.name || "未知");
-    const values = processStats.map((g) => g.totalQuantity);
+    const values = processStats.map((g) =>
+      dimension === "quantity" ? g.totalQuantity : parseFloat(g.totalAmount)
+    );
     return {
-      tooltip: { trigger: "axis", axisPointer: { type: "shadow" } },
+      tooltip: {
+        trigger: "axis",
+        axisPointer: { type: "shadow" },
+        formatter: (params: unknown) => {
+          const p = (params as { name: string; value: number }[])[0];
+          return dimension === "amount" ? `${p.name}: ¥${p.value}` : `${p.name}: ${p.value}${pieceUnit}`;
+        },
+      },
       grid: { left: 10, right: 20, bottom: 40, top: 20, containLabel: true },
       xAxis: { type: "category", data: names, axisLabel: { rotate: 45, fontSize: 10 } },
       yAxis: { type: "value" },
@@ -109,11 +132,11 @@ function StaffStatsPage() {
         type: "bar",
         data: values,
         barMaxWidth: 40,
-        itemStyle: { color: "#22c55e" },
-        label: { show: true, position: "top", fontSize: 10 },
+        itemStyle: { color: dimension === "quantity" ? "#22c55e" : "#f59e0b" },
+        label: { show: true, position: "top", fontSize: 10, formatter: dimension === "amount" ? "¥{c}" : `{c}${pieceUnit}` },
       }],
     };
-  }, [processStats]);
+  }, [processStats, dimension, pieceUnit]);
 
   const isLoading = dailyLoading || orderLoading || processLoading;
 
@@ -155,7 +178,13 @@ function StaffStatsPage() {
           <>
             {/* 折线图 - 每日趋势 */}
             <div className="bg-white mx-4 mb-2 p-4 rounded-lg">
-              <div className="text-sm font-medium text-gray-600 mb-2">每日趋势</div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm font-medium text-gray-600">每日趋势</div>
+                <CapsuleTabs activeKey={dimension} onChange={(key) => setDimension(key as Dimension)} className="text-sm">
+                  <CapsuleTabs.Tab title="数量" key="quantity" />
+                  <CapsuleTabs.Tab title="金额" key="amount" />
+                </CapsuleTabs>
+              </div>
               {dailyStats.length === 0 ? (
                 <div className="text-center py-8 text-gray-400 text-sm">暂无数据</div>
               ) : (

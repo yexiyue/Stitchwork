@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Dropdown, Button } from "antd-mobile";
 import { ChevronRight, Filter, Plus, BarChart3, ImageIcon } from "lucide-react";
 import type { PieceRecord } from "@/types";
-import { RelativeTime, VirtualList, StatusTag, OssImage } from "@/components";
+import { RelativeTime, VirtualList, StatusTag, Image } from "@/components";
 import { pieceRecordApi, statsApi } from "@/api";
 import { useQuery } from "@tanstack/react-query";
 import { useRef } from "react";
@@ -147,7 +147,7 @@ function StaffRecordsPage() {
             >
               <div className="shrink-0 h-16 aspect-square rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
                 {record.orderImage ? (
-                  <OssImage
+                  <Image
                     src={record.orderImage}
                     width="100%"
                     height="100%"

@@ -1,13 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Dropdown } from "antd-mobile";
-import { Plus, ImageIcon, Calendar, Users } from "lucide-react";
+import { Dropdown, NavBar } from "antd-mobile";
+import { Plus, ImageIcon, Calendar, Users, ChevronLeft } from "lucide-react";
 import type { Payroll, Staff } from "@/types";
 import {
   RelativeTime,
   VirtualList,
   DateRangeButton,
-  OssImage,
   BiometricGuard,
+  Image,
 } from "@/components";
 import { payrollApi } from "@/api";
 import { useRef } from "react";
@@ -78,19 +78,21 @@ function PayrollPage() {
       onCancel={() => navigate({ to: "/" })}
     >
       <div className="flex flex-col h-full overflow-hidden">
-        {/* 顶部栏 */}
-        <div className="p-4 pb-2">
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl">工资管理</h1>
-            <div className="flex items-center gap-3">
+        <NavBar
+          onBack={() => navigate({ to: "/profile" })}
+          backIcon={<ChevronLeft size={24} />}
+          right={
+            <div className="flex justify-end">
               <Plus
                 size={20}
                 className="text-blue-500"
                 onClick={() => navigate({ to: "/payroll/new" })}
               />
             </div>
-          </div>
-        </div>
+          }
+        >
+          工资管理
+        </NavBar>
 
         {/* 筛选栏 */}
         <div className="pb-2 flex items-center justify-end pr-2">
@@ -170,7 +172,7 @@ function PayrollPage() {
               >
                 <div className="shrink-0 h-16 aspect-square rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
                   {payroll.paymentImage ? (
-                    <OssImage
+                    <Image
                       src={payroll.paymentImage}
                       width="100%"
                       height="100%"

@@ -1,7 +1,7 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { List, Card, SpinLoading } from "antd-mobile";
-import { Key, Users, Building2, FileCheck } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { Card, SpinLoading, PullToRefresh } from "antd-mobile";
+import { Users, Building2, Key, FileCheck } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { adminApi } from "@/api";
 import { Chart } from "@/components/charts";
 import type { EChartsOption } from "echarts";
@@ -11,16 +11,20 @@ export const Route = createFileRoute("/_auth/admin/")({
 });
 
 function AdminIndexPage() {
-  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ["admin", "stats"],
     queryFn: adminApi.getStats,
   });
 
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["admin", "stats"] });
+  };
+
   // 注册码使用情况饼图
   const codeChartOption: EChartsOption = {
-    tooltip: { trigger: "item" },
+    tooltip: { trigger: "item", formatter: "{b}: {c}个 ({d}%)" },
     legend: {
       orient: "horizontal",
       bottom: 0,
@@ -56,12 +60,13 @@ function AdminIndexPage() {
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      <div className="p-4 pb-2">
-        <h1 className="text-xl font-bold">管理后台</h1>
-      </div>
+    <PullToRefresh onRefresh={handleRefresh}>
+      <div className="flex flex-col h-full overflow-hidden">
+        <div className="p-4 pb-2">
+          <h1 className="text-xl font-bold">管理后台</h1>
+        </div>
 
-      <div className="flex-1 overflow-auto px-4 pb-4">
+        <div className="flex-1 overflow-auto px-4 pb-4">
         {/* 统计卡片 */}
         <div className="grid grid-cols-2 gap-3 mb-4">
           <Card className="rounded-xl!">
@@ -150,33 +155,13 @@ function AdminIndexPage() {
           </div>
         </Card>
 
-        {/* 注册码使用情况图表 */}
-        <Card className="rounded-xl! mb-4">
-          <div className="text-sm font-medium mb-2">注册码使用情况</div>
-          <Chart option={codeChartOption} height={180} />
-        </Card>
-
-        {/* 快捷入口 */}
-        <Card className="rounded-xl!">
-          <div className="text-sm font-medium mb-2">快捷入口</div>
-          <List className="-mx-3 -mb-3">
-            <List.Item
-              prefix={<Key size={18} className="text-purple-500" />}
-              onClick={() => navigate({ to: "/admin/register-codes" })}
-              arrow
-            >
-              注册码管理
-            </List.Item>
-            <List.Item
-              prefix={<Users size={18} className="text-blue-500" />}
-              onClick={() => navigate({ to: "/admin/users" })}
-              arrow
-            >
-              用户管理
-            </List.Item>
-          </List>
-        </Card>
+          {/* 注册码使用情况图表 */}
+          <Card className="rounded-xl!">
+            <div className="text-sm font-medium mb-2">注册码使用情况</div>
+            <Chart option={codeChartOption} height={180} />
+          </Card>
+        </div>
       </div>
-    </div>
+    </PullToRefresh>
   );
 }

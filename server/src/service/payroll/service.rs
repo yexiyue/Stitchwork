@@ -3,12 +3,15 @@ use sea_orm::{
     ActiveModelTrait, ColumnTrait, DbConn, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
     Set, TransactionTrait,
 };
+use std::collections::HashMap;
 use uuid::Uuid;
 
-use super::dto::{CreatePayrollDto, UpdatePayrollDto};
+use super::dto::{
+    CreatePayrollDto, PayrollDetailResponse, PayrollRecordResponse, UpdatePayrollDto,
+};
 use crate::common::{ListData, QueryParams};
 use crate::entity::payroll::{self, Column, Model};
-use crate::entity::{payroll_record, piece_record};
+use crate::entity::{order, payroll_record, piece_record, process};
 use crate::error::{AppError, Result};
 
 pub async fn list(
@@ -115,15 +118,32 @@ pub async fn create(db: &DbConn, dto: CreatePayrollDto, boss_id: Uuid) -> Result
     Ok(payroll)
 }
 
-pub async fn get_one(db: &DbConn, id: Uuid, user_id: Option<Uuid>) -> Result<Model> {
+pub async fn get_one(
+    db: &DbConn,
+    id: Uuid,
+    user_id: Option<Uuid>,
+) -> Result<PayrollDetailResponse> {
     let mut query = payroll::Entity::find_by_id(id);
     if let Some(uid) = user_id {
         query = query.filter(Column::UserId.eq(uid));
     }
-    query
+    let payroll = query
         .one(db)
         .await?
-        .ok_or_else(|| AppError::NotFound(format!("Payroll {} not found", id)))
+        .ok_or_else(|| AppError::NotFound(format!("Payroll {} not found", id)))?;
+
+    let records = get_records_internal(db, id).await?;
+
+    Ok(PayrollDetailResponse {
+        id: payroll.id,
+        user_id: payroll.user_id,
+        boss_id: payroll.boss_id,
+        amount: payroll.amount,
+        payment_image: payroll.payment_image,
+        note: payroll.note,
+        paid_at: payroll.paid_at,
+        records,
+    })
 }
 
 pub async fn update(db: &DbConn, id: Uuid, dto: UpdatePayrollDto) -> Result<Model> {
@@ -151,4 +171,55 @@ pub async fn delete(db: &DbConn, id: Uuid) -> Result<()> {
         return Err(AppError::NotFound(format!("Payroll {} not found", id)));
     }
     Ok(())
+}
+
+async fn get_records_internal(db: &DbConn, payroll_id: Uuid) -> Result<Vec<PayrollRecordResponse>> {
+    let pr_records = payroll_record::Entity::find()
+        .filter(payroll_record::Column::PayrollId.eq(payroll_id))
+        .all(db)
+        .await?;
+
+    let piece_ids: Vec<Uuid> = pr_records.iter().map(|r| r.piece_record_id).collect();
+
+    let records = piece_record::Entity::find()
+        .filter(piece_record::Column::Id.is_in(piece_ids))
+        .all(db)
+        .await?;
+
+    let process_ids: Vec<Uuid> = records.iter().map(|r| r.process_id).collect();
+    let processes: HashMap<Uuid, process::Model> = process::Entity::find()
+        .filter(process::Column::Id.is_in(process_ids))
+        .all(db)
+        .await?
+        .into_iter()
+        .map(|p| (p.id, p))
+        .collect();
+
+    let order_ids: Vec<Uuid> = processes.values().map(|p| p.order_id).collect();
+    let orders: HashMap<Uuid, order::Model> = order::Entity::find()
+        .filter(order::Column::Id.is_in(order_ids))
+        .all(db)
+        .await?
+        .into_iter()
+        .map(|o| (o.id, o))
+        .collect();
+
+    Ok(records
+        .into_iter()
+        .map(|r| {
+            let proc = processes.get(&r.process_id);
+            let ord = proc.and_then(|p| orders.get(&p.order_id));
+
+            PayrollRecordResponse {
+                id: r.id,
+                quantity: r.quantity,
+                amount: r.amount,
+                recorded_at: r.recorded_at,
+                process_name: proc.map(|p| p.name.clone()),
+                order_name: ord.map(|o| o.product_name.clone()),
+                order_images: ord.and_then(|o| o.images.clone()),
+                piece_price: proc.map(|p| p.piece_price),
+            }
+        })
+        .collect())
 }

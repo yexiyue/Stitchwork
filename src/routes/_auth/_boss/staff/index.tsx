@@ -6,11 +6,13 @@ import {
   SearchBar,
   SwipeAction,
   NavBar,
+  Button,
 } from "antd-mobile";
-import { Search, UserPlus, X, ChevronLeft } from "lucide-react";
+import { Search, UserPlus, X, ChevronLeft, Copy } from "lucide-react";
 import { Avatar, VirtualList, RelativeTime } from "@/components";
 import { authApi } from "@/api";
 import { useState } from "react";
+import { copyToClipboard } from "@/utils/clipboard";
 import { QRCodeSVG } from "qrcode.react";
 import { useInfiniteList, useDebouncedSearch } from "@/hooks";
 import { motion, AnimatePresence } from "motion/react";
@@ -47,8 +49,21 @@ function StaffPage() {
         content: (
           <div className="flex flex-col items-center py-4">
             <QRCodeSVG value={url} size={180} />
-            <p className="mt-3 text-sm text-gray-500">邀请码: {data.code}</p>
-            <p className="text-xs text-gray-400">
+            <p className="mt-3 text-lg font-mono font-bold">{data.code}</p>
+            <Button
+              size="small"
+              className="mt-2"
+              onClick={() => {
+                copyToClipboard(data.code);
+                Toast.show({ content: "已复制" });
+              }}
+            >
+              <div className="flex items-center justify-center">
+                <Copy size={16} className="mr-1" />
+                复制
+              </div>
+            </Button>
+            <p className="mt-2 text-xs text-gray-400">
               有效期至: {new Date(data.expiresAt).toLocaleString()}
             </p>
           </div>

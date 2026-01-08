@@ -35,7 +35,7 @@ pub async fn order_stats(db: &DbConn, order_id: Uuid, boss_id: Uuid) -> Result<O
         .column(piece_record::Column::ProcessId)
         .column_as(piece_record::Column::Quantity.sum(), "sum")
         .filter(piece_record::Column::ProcessId.is_in(process_ids))
-        .filter(piece_record::Column::Status.eq(PieceRecordStatus::Approved))
+        .filter(piece_record::Column::Status.is_in([PieceRecordStatus::Approved, PieceRecordStatus::Settled]))
         .group_by(piece_record::Column::ProcessId)
         .into_tuple()
         .all(db)
@@ -121,7 +121,7 @@ pub async fn worker_production(
 ) -> Result<WorkerProductionList> {
     let query = piece_record::Entity::find()
         .filter(piece_record::Column::BossId.eq(boss_id))
-        .filter(piece_record::Column::Status.eq(PieceRecordStatus::Approved));
+        .filter(piece_record::Column::Status.is_in([PieceRecordStatus::Approved, PieceRecordStatus::Settled]));
 
     let query = apply_date_filter(
         query,
@@ -180,7 +180,7 @@ pub async fn daily_stats(
     use std::collections::BTreeMap;
 
     let mut query = piece_record::Entity::find()
-        .filter(piece_record::Column::Status.eq(PieceRecordStatus::Approved));
+        .filter(piece_record::Column::Status.is_in([PieceRecordStatus::Approved, PieceRecordStatus::Settled]));
 
     // For boss, filter by boss_id; for staff, filter by user_id
     if let Some(bid) = boss_id {
@@ -230,7 +230,7 @@ pub async fn stats_by_order(
     use std::collections::HashMap;
 
     let mut query = piece_record::Entity::find()
-        .filter(piece_record::Column::Status.eq(PieceRecordStatus::Approved));
+        .filter(piece_record::Column::Status.is_in([PieceRecordStatus::Approved, PieceRecordStatus::Settled]));
 
     if let Some(bid) = boss_id {
         query = query.filter(piece_record::Column::BossId.eq(bid));
@@ -308,7 +308,7 @@ pub async fn stats_by_process(
     use std::collections::HashMap;
 
     let mut query = piece_record::Entity::find()
-        .filter(piece_record::Column::Status.eq(PieceRecordStatus::Approved));
+        .filter(piece_record::Column::Status.is_in([PieceRecordStatus::Approved, PieceRecordStatus::Settled]));
 
     if let Some(bid) = boss_id {
         query = query.filter(piece_record::Column::BossId.eq(bid));
@@ -546,7 +546,7 @@ pub async fn order_progress(
         .column(piece_record::Column::ProcessId)
         .column_as(piece_record::Column::Quantity.sum(), "sum")
         .filter(piece_record::Column::ProcessId.is_in(all_process_ids))
-        .filter(piece_record::Column::Status.eq(PieceRecordStatus::Approved))
+        .filter(piece_record::Column::Status.is_in([PieceRecordStatus::Approved, PieceRecordStatus::Settled]))
         .group_by(piece_record::Column::ProcessId)
         .into_tuple()
         .all(db)

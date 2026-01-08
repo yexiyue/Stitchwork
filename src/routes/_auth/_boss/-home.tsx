@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { Card, Badge, ProgressBar } from "antd-mobile";
+import { Card, Badge, ProgressBar, PullToRefresh } from "antd-mobile";
 import {
   FileEdit,
   Store,
@@ -8,7 +8,7 @@ import {
   TrendingUp,
   ImageIcon,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { homeApi, statsApi } from "@/api";
 import { useAuthStore } from "@/stores/auth";
 import { useWorkshopSettings } from "@/hooks";
@@ -20,8 +20,19 @@ import { useMemo } from "react";
 
 export function BossHome() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const { pieceUnit } = useWorkshopSettings();
+
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["home-overview"] });
+    await queryClient.invalidateQueries({ queryKey: ["home-activities"] });
+    await queryClient.invalidateQueries({ queryKey: ["daily-stats-mini"] });
+    await queryClient.invalidateQueries({ queryKey: ["home-order-overview"] });
+    await queryClient.invalidateQueries({ queryKey: ["home-customer-contribution"] });
+    await queryClient.invalidateQueries({ queryKey: ["home-worker-production"] });
+    await queryClient.invalidateQueries({ queryKey: ["home-order-progress"] });
+  };
 
   const { data: overview } = useQuery({
     queryKey: ["home-overview"],
@@ -101,7 +112,7 @@ export function BossHome() {
     ].filter((d) => d.value > 0);
 
     return {
-      tooltip: { trigger: "item", formatter: "{b}: {c} ({d}%)" },
+      tooltip: { trigger: "item", formatter: "{b}: {c}单 ({d}%)" },
       legend: { show: false },
       series: [
         {
@@ -140,7 +151,8 @@ export function BossHome() {
   }, [customers]);
 
   return (
-    <div className="p-3 pb-20 space-y-3">
+    <PullToRefresh onRefresh={handleRefresh}>
+      <div className="p-3 pb-20 space-y-3">
       {user?.workshop ? (
         <div
           className="p-4 bg-gray-50 rounded-lg"
@@ -403,6 +415,7 @@ export function BossHome() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </PullToRefresh>
   );
 }

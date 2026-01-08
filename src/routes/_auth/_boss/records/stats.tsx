@@ -53,7 +53,14 @@ function StatsPage() {
       dimension === "quantity" ? w.totalQuantity : parseFloat(w.totalAmount)
     );
     return {
-      tooltip: { trigger: "axis", axisPointer: { type: "shadow" } },
+      tooltip: {
+        trigger: "axis",
+        axisPointer: { type: "shadow" },
+        formatter: (params: unknown) => {
+          const p = (params as { name: string; value: number }[])[0];
+          return dimension === "amount" ? `${p.name}: ¥${p.value}` : `${p.name}: ${p.value}${pieceUnit}`;
+        },
+      },
       grid: { left: 10, right: 20, bottom: 40, top: 20, containLabel: true },
       xAxis: { type: "category", data: names, axisLabel: { rotate: 45, fontSize: 10 } },
       yAxis: { type: "value" },
@@ -63,10 +70,10 @@ function StatsPage() {
         data: values,
         barMaxWidth: 40,
         itemStyle: { color: dimension === "quantity" ? "#3b82f6" : "#22c55e" },
-        label: { show: true, position: "top", fontSize: 10, formatter: dimension === "amount" ? "¥{c}" : "{c}" },
+        label: { show: true, position: "top", fontSize: 10, formatter: dimension === "amount" ? "¥{c}" : `{c}${pieceUnit}` },
       }],
     };
-  }, [workers, dimension]);
+  }, [workers, dimension, pieceUnit]);
 
   // 饼图
   const pieOption: EChartsOption = useMemo(() => {
@@ -75,7 +82,7 @@ function StatsPage() {
       value: dimension === "quantity" ? w.totalQuantity : parseFloat(w.totalAmount),
     }));
     return {
-      tooltip: { trigger: "item", formatter: dimension === "amount" ? "{b}: ¥{c} ({d}%)" : "{b}: {c} ({d}%)" },
+      tooltip: { trigger: "item", formatter: dimension === "amount" ? `{b}: ¥{c} ({d}%)` : `{b}: {c}${pieceUnit} ({d}%)` },
       legend: { show: false },
       series: [{
         type: "pie",
@@ -87,7 +94,7 @@ function StatsPage() {
         data,
       }],
     };
-  }, [workers, dimension]);
+  }, [workers, dimension, pieceUnit]);
 
   // 折线图
   const lineOption: EChartsOption = useMemo(() => {

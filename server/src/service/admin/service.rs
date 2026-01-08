@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 use crate::common::ListData;
-use crate::entity::{order, piece_record, register_code, user, workshop};
+use crate::entity::{order, piece_record, register_code, user, user::Role, workshop};
 use crate::error::{AppError, Result};
 
 use super::dto::{AdminQueryParams, AdminStats, RegisterCodeResponse, UserListItem};
@@ -52,11 +52,11 @@ pub async fn get_stats(db: &DbConn) -> Result<AdminStats> {
     // User stats
     let total_users = user::Entity::find().count(db).await? as i64;
     let boss_count = user::Entity::find()
-        .filter(user::Column::Role.eq("Boss"))
+        .filter(user::Column::Role.eq(Role::Boss))
         .count(db)
         .await? as i64;
     let staff_count = user::Entity::find()
-        .filter(user::Column::Role.eq("Staff"))
+        .filter(user::Column::Role.eq(Role::Staff))
         .count(db)
         .await? as i64;
     let today_new_users = user::Entity::find()
