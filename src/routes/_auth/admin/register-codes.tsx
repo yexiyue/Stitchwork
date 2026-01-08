@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { List, Dialog, SwipeAction, Toast, Button } from "antd-mobile";
-import { Plus, Copy, QrCode } from "lucide-react";
+import { Dialog, SwipeAction, Toast, Button, Tag } from "antd-mobile";
+import { Plus, Copy } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import type { RegisterCode } from "@/types";
 import { adminApi } from "@/api";
@@ -121,16 +121,35 @@ function RegisterCodesPage() {
     Toast.show({ content: "已复制" });
   };
 
-  const getStatusText = (code: RegisterCode) => {
-    if (code.usedBy) return "已使用";
-    if (!code.isActive) return "已禁用";
-    return "可用";
+  const showUserInfo = (code: RegisterCode) => {
+    Dialog.alert({
+      title: "使用者信息",
+      content: (
+        <div className="py-2 space-y-2">
+          <div className="flex justify-between">
+            <span className="text-gray-500">注册码</span>
+            <span className="font-mono">{code.code}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-500">使用者</span>
+            <span>{code.usedByUsername || "未知"}</span>
+          </div>
+          {code.usedAt && (
+            <div className="flex justify-between">
+              <span className="text-gray-500">使用时间</span>
+              <span><RelativeTime date={code.usedAt} /></span>
+            </div>
+          )}
+        </div>
+      ),
+      confirmText: "关闭",
+    });
   };
 
-  const getStatusColor = (code: RegisterCode) => {
-    if (code.usedBy) return "text-gray-400";
-    if (!code.isActive) return "text-red-500";
-    return "text-green-600";
+  const getStatusTag = (code: RegisterCode) => {
+    if (code.usedBy) return { color: "default" as const, text: "已使用" };
+    if (!code.isActive) return { color: "danger" as const, text: "已禁用" };
+    return { color: "success" as const, text: "可用" };
   };
 
   return (
@@ -155,65 +174,64 @@ function RegisterCodesPage() {
           onRefresh={refresh}
           keyExtractor={(code) => code.id}
           emptyText="暂无注册码"
-          estimateSize={72}
-          renderItem={(code) => (
-            <SwipeAction
-              rightActions={
-                code.isActive && !code.usedBy
-                  ? [
-                      {
-                        key: "disable",
-                        text: "禁用",
-                        color: "danger",
-                        onClick: () => handleDisable(code),
-                      },
-                    ]
-                  : []
-              }
-            >
-              <List.Item
-                className="border-b border-gray-100"
-                description={
-                  code.usedBy
-                    ? `使用者: ${code.usedByUsername || "未知"}`
-                    : undefined
+          estimateSize={80}
+          renderItem={(code) => {
+            const status = getStatusTag(code);
+            const isClickable = !code.usedBy && code.isActive;
+            return (
+              <SwipeAction
+                rightActions={
+                  isClickable
+                    ? [
+                        {
+                          key: "disable",
+                          text: "禁用",
+                          color: "danger",
+                          onClick: () => handleDisable(code),
+                        },
+                      ]
+                    : []
                 }
-                extra={
-                  <div className="flex items-center gap-2">
-                    <span className={`text-xs ${getStatusColor(code)}`}>
-                      {getStatusText(code)}
-                    </span>
-                    {!code.usedBy && code.isActive && (
-                      <>
-                        <QrCode
-                          size={16}
-                          className="text-blue-500"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            showCodeQR(code.code);
-                          }}
-                        />
-                        <Copy
-                          size={16}
-                          className="text-gray-400"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCopy(code.code);
-                          }}
-                        />
-                      </>
-                    )}
-                  </div>
-                }
-                arrow={false}
               >
-                <div className="font-mono">{code.code}</div>
-                <div className="text-xs text-gray-400">
-                  <RelativeTime date={code.createdAt} />
+                <div
+                  className="bg-white p-3 mb-2 mx-2 rounded-lg shadow-sm cursor-pointer active:bg-gray-50"
+                  onClick={() => {
+                    if (code.usedBy) {
+                      showUserInfo(code);
+                    } else if (code.isActive) {
+                      showCodeQR(code.code);
+                    }
+                  }}
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="font-mono text-base font-medium">{code.code}</div>
+                    <Tag color={status.color} fill="outline" style={{ "--border-radius": "4px" }}>
+                      {status.text}
+                    </Tag>
+                  </div>
+                  <div className="flex justify-between items-end mt-2">
+                    <div className="text-xs text-gray-400">
+                      <RelativeTime date={code.createdAt} />
+                    </div>
+                    {code.usedBy ? (
+                      <div className="text-xs text-gray-500">
+                        使用者: {code.usedByUsername || "未知"}
+                      </div>
+                    ) : isClickable ? (
+                      <Copy
+                        size={16}
+                        className="text-blue-500"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCopy(code.code);
+                        }}
+                      />
+                    ) : null}
+                  </div>
                 </div>
-              </List.Item>
-            </SwipeAction>
-          )}
+              </SwipeAction>
+            );
+          }}
         />
       </div>
     </div>
