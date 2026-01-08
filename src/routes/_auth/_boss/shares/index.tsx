@@ -1,19 +1,18 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   List,
-  Dialog,
   SwipeAction,
+  Dialog,
   Toast,
   NavBar,
   Switch,
   Popup,
   Button,
 } from "antd-mobile";
-import { Plus, ChevronLeft, Link2, QrCode, Copy, ExternalLink } from "lucide-react";
+import { Plus, ChevronLeft, Link2, ExternalLink } from "lucide-react";
 import { useShares, useUpdateShare, useDeleteShare } from "@/hooks";
 import type { Share } from "@/types";
 import { RelativeTime } from "@/components";
-import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 
@@ -23,7 +22,6 @@ export const Route = createFileRoute("/_auth/_boss/shares/")({
 
 function SharesPage() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const { data: shares, isLoading } = useShares();
   const updateMutation = useUpdateShare();
   const deleteMutation = useDeleteShare();
@@ -72,7 +70,6 @@ function SharesPage() {
         try {
           await deleteMutation.mutateAsync(share.id);
           Toast.show({ content: "删除成功" });
-          queryClient.invalidateQueries({ queryKey: ["shares"] });
         } catch (e) {
           Dialog.alert({
             content: e instanceof Error ? e.message : "删除失败",
@@ -93,11 +90,13 @@ function SharesPage() {
         onBack={() => navigate({ to: "/" })}
         backIcon={<ChevronLeft size={24} />}
         right={
-          <Plus
-            size={20}
-            className="text-blue-500"
-            onClick={() => navigate({ to: "/shares/new" })}
-          />
+          <div className="flex w-full justify-end">
+            <Plus
+              size={20}
+              className="text-blue-500"
+              onClick={() => navigate({ to: "/shares/new" })}
+            />
+          </div>
         }
       >
         招工分享
@@ -141,6 +140,7 @@ function SharesPage() {
                 ]}
               >
                 <List.Item
+                  onClick={() => handleShowQR(share)}
                   description={
                     <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
                       <span>{share.processIds.length} 个工序</span>
@@ -149,7 +149,10 @@ function SharesPage() {
                     </div>
                   }
                   extra={
-                    <div className="flex items-center gap-2">
+                    <div
+                      className="flex items-center gap-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <Switch
                         checked={share.isActive}
                         onChange={() => handleToggleActive(share)}
@@ -161,7 +164,9 @@ function SharesPage() {
                 >
                   <div className="flex items-center gap-2">
                     <span
-                      className={share.isActive ? "" : "text-gray-400 line-through"}
+                      className={
+                        share.isActive ? "" : "text-gray-400 line-through"
+                      }
                     >
                       {share.title}
                     </span>
@@ -175,45 +180,6 @@ function SharesPage() {
               </SwipeAction>
             ))}
           </List>
-        )}
-
-        {/* 操作栏 */}
-        {shares && shares.length > 0 && (
-          <div className="p-4">
-            <div className="text-sm text-gray-500 mb-2">快捷操作</div>
-            <div className="grid grid-cols-3 gap-2">
-              {shares
-                .filter((s) => s.isActive)
-                .slice(0, 3)
-                .map((share) => (
-                  <div
-                    key={share.id}
-                    className="bg-white rounded-lg p-3 text-center"
-                  >
-                    <div className="text-sm font-medium truncate mb-2">
-                      {share.title}
-                    </div>
-                    <div className="flex justify-center gap-4">
-                      <Copy
-                        size={18}
-                        className="text-gray-500 active:text-blue-500"
-                        onClick={() => handleCopyLink(share)}
-                      />
-                      <QrCode
-                        size={18}
-                        className="text-gray-500 active:text-blue-500"
-                        onClick={() => handleShowQR(share)}
-                      />
-                      <ExternalLink
-                        size={18}
-                        className="text-gray-500 active:text-blue-500"
-                        onClick={() => handlePreview(share)}
-                      />
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </div>
         )}
       </div>
 
@@ -231,10 +197,7 @@ function SharesPage() {
             </div>
             <p className="text-sm text-gray-500 mb-4">扫码查看招工信息</p>
             <div className="flex gap-3">
-              <Button
-                block
-                onClick={() => handleCopyLink(selectedShare)}
-              >
+              <Button block onClick={() => handleCopyLink(selectedShare)}>
                 <div className="flex items-center justify-center gap-2">
                   <Link2 size={16} />
                   复制链接

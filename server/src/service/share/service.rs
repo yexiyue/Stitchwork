@@ -14,6 +14,7 @@ pub async fn create(db: &DbConn, boss_id: Uuid, req: CreateShareRequest) -> Resu
         id: Set(Uuid::new_v4()),
         boss_id: Set(boss_id),
         title: Set(req.title),
+        description: Set(req.description),
         token: Set(token),
         order_ids: Set(serde_json::to_value(&req.order_ids).unwrap()),
         process_ids: Set(serde_json::to_value(&req.process_ids).unwrap()),
@@ -48,6 +49,9 @@ pub async fn update(
     let mut active: share::ActiveModel = share.into();
     if let Some(v) = req.title {
         active.title = Set(v);
+    }
+    if let Some(v) = req.description {
+        active.description = Set(Some(v));
     }
     if let Some(v) = req.order_ids {
         active.order_ids = Set(serde_json::to_value(&v).unwrap());
@@ -101,14 +105,19 @@ pub async fn get_public(db: &DbConn, token: &str) -> Result<PublicShareResponse>
             .all(db)
             .await?;
 
-        // 获取关联订单信息（产品名和数量）
+        // 获取关联订单信息（产品名、数量、图片）
         let related_order_ids: Vec<Uuid> = procs.iter().map(|p| p.order_id).collect();
-        let related_orders: std::collections::HashMap<Uuid, (String, i32)> = order::Entity::find()
+        let related_orders: std::collections::HashMap<Uuid, (String, i32, Vec<String>)> = order::Entity::find()
             .filter(order::Column::Id.is_in(related_order_ids))
             .all(db)
             .await?
             .into_iter()
-            .map(|o| (o.id, (o.product_name, o.quantity)))
+            .map(|o| {
+                let images: Vec<String> = o.images
+                    .and_then(|v| serde_json::from_value(v).ok())
+                    .unwrap_or_default();
+                (o.id, (o.product_name, o.quantity, images))
+            })
             .collect();
 
         // 计算每个工序的已完成数量（Approved + Settled）
@@ -132,10 +141,10 @@ pub async fn get_public(db: &DbConn, token: &str) -> Result<PublicShareResponse>
         procs
             .into_iter()
             .map(|p| {
-                let (product_name, order_quantity) = related_orders
+                let (product_name, order_quantity, images) = related_orders
                     .get(&p.order_id)
                     .cloned()
-                    .unwrap_or_else(|| (String::new(), 0));
+                    .unwrap_or_else(|| (String::new(), 0, vec![]));
                 let completed = completed_map.get(&p.id).copied().unwrap_or(0);
                 let remaining = std::cmp::Ord::max(order_quantity - completed, 0);
 
@@ -145,6 +154,7 @@ pub async fn get_public(db: &DbConn, token: &str) -> Result<PublicShareResponse>
                     description: p.description,
                     piece_price: p.piece_price,
                     order_product_name: product_name,
+                    order_images: images,
                     remaining_quantity: remaining,
                 }
             })
@@ -155,8 +165,11 @@ pub async fn get_public(db: &DbConn, token: &str) -> Result<PublicShareResponse>
 
     Ok(PublicShareResponse {
         title: share.title,
+        description: share.description,
         workshop_name: ws.as_ref().map(|w| w.name.clone()),
+        workshop_desc: ws.as_ref().and_then(|w| w.desc.clone()),
         workshop_address: ws.as_ref().and_then(|w| w.address.clone()),
+        workshop_image: ws.as_ref().and_then(|w| w.image.clone()),
         boss_phone: Some(boss.phone),
         avatar: boss.avatar,
         processes,

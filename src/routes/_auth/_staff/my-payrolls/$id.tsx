@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { NavBar, ImageViewer } from "antd-mobile";
 import { ChevronLeft, ImageIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { payrollApi } from "@/api";
+import { payrollApi, getFileUrl } from "@/api";
 import { OssImage, RelativeTime, BiometricGuard } from "@/components";
 import { useState } from "react";
 
@@ -112,7 +112,7 @@ function MyPayrollDetailPage() {
         {/* 图片查看器 */}
         {payroll.paymentImage && (
           <ImageViewer
-            image={payroll.paymentImage}
+            image={getFileUrl(payroll.paymentImage)}
             visible={imageViewerVisible}
             onClose={() => setImageViewerVisible(false)}
           />

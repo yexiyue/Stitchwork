@@ -40,6 +40,15 @@ jobs:
         env:
           VITE_API_URL: ""
 
+      - name: Clean old files
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ env.ECS_HOST }}
+          username: ${{ env.ECS_USER }}
+          key: ${{ secrets.ECS_SSH_KEY }}
+          script: |
+            rm -rf /opt/stitchwork/dist/*
+
       - name: Deploy to ECS
         uses: appleboy/scp-action@v0.1.7
         with:

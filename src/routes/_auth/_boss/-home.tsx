@@ -1,10 +1,17 @@
 import { useNavigate } from "@tanstack/react-router";
 import { Card, Badge, ProgressBar } from "antd-mobile";
-import { FileEdit, Store, Package, Users, TrendingUp, ImageIcon } from "lucide-react";
+import {
+  FileEdit,
+  Store,
+  Package,
+  Users,
+  TrendingUp,
+  ImageIcon,
+} from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { homeApi, statsApi } from "@/api";
 import { useAuthStore } from "@/stores/auth";
-import { MiniChart, RelativeTime, Chart, OssImage } from "@/components";
+import { MiniChart, RelativeTime, Chart, Image, OssImage } from "@/components";
 import type { BossOverview, Activity } from "@/types";
 import type { EChartsOption } from "echarts";
 import dayjs from "dayjs";
@@ -350,7 +357,7 @@ export function BossHome() {
                 <div className="flex items-center gap-3">
                   <div className="shrink-0 w-10 h-10 rounded overflow-hidden bg-gray-100 flex items-center justify-center">
                     {act.orderImage ? (
-                      <OssImage
+                      <Image
                         src={act.orderImage}
                         width="100%"
                         height="100%"

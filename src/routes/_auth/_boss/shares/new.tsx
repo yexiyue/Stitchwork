@@ -8,11 +8,13 @@ import {
   Toast,
   Checkbox,
   List,
+  TextArea,
 } from "antd-mobile";
 import { ChevronLeft } from "lucide-react";
 import { useCreateShare, useProcesses, useOrders } from "@/hooks";
-import type { CreateShareRequest, Process } from "@/types";
+import type { CreateShareRequest, Process, Order } from "@/types";
 import { useState, useMemo } from "react";
+import { OssImage } from "@/components";
 
 export const Route = createFileRoute("/_auth/_boss/shares/new")({
   component: NewSharePage,
@@ -27,13 +29,15 @@ function NewSharePage() {
   const { data: orderData } = useOrders({ pageSize: 1000 });
 
   const [selectedProcessIds, setSelectedProcessIds] = useState<string[]>([]);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
 
   const processes = processData?.list ?? [];
   const orders = orderData?.list ?? [];
 
-  // 构建订单ID到产品名的映射
+  // 构建订单ID到订单的映射
   const orderMap = useMemo(
-    () => Object.fromEntries(orders.map((o) => [o.id, o.productName])),
+    () => Object.fromEntries(orders.map((o) => [o.id, o])) as Record<string, Order>,
     [orders]
   );
 
@@ -41,12 +45,13 @@ function NewSharePage() {
   const groupedProcesses = useMemo(() => {
     return processes.reduce(
       (acc, p) => {
-        const key = orderMap[p.orderId] || "未分类";
-        if (!acc[key]) acc[key] = [];
-        acc[key].push(p);
+        const order = orderMap[p.orderId];
+        const key = order?.productName || "未分类";
+        if (!acc[key]) acc[key] = { order, processes: [] };
+        acc[key].processes.push(p);
         return acc;
       },
-      {} as Record<string, Process[]>
+      {} as Record<string, { order?: Order; processes: Process[] }>
     );
   }, [processes, orderMap]);
 
@@ -57,7 +62,7 @@ function NewSharePage() {
   };
 
   const handleSelectAll = (productName: string) => {
-    const processIds = groupedProcesses[productName].map((p) => p.id);
+    const processIds = groupedProcesses[productName].processes.map((p) => p.id);
     const allSelected = processIds.every((id) =>
       selectedProcessIds.includes(id)
     );
@@ -73,14 +78,19 @@ function NewSharePage() {
     }
   };
 
-  const handleSubmit = async (values: { title: string }) => {
+  const handleSubmit = async () => {
+    if (!title.trim()) {
+      Toast.show({ content: "请输入标题" });
+      return;
+    }
     if (selectedProcessIds.length === 0) {
       Toast.show({ content: "请至少选择一个工序" });
       return;
     }
 
     const data: CreateShareRequest = {
-      title: values.title,
+      title: title.trim(),
+      description: description.trim() || undefined,
       orderIds: [],
       processIds: selectedProcessIds,
     };
@@ -102,30 +112,37 @@ function NewSharePage() {
       <NavBar
         onBack={() => navigate({ to: "/shares" })}
         backIcon={<ChevronLeft size={24} />}
+        right={
+          <Button
+            size="small"
+            color="primary"
+            loading={createMutation.isPending}
+            onClick={handleSubmit}
+          >
+            创建
+          </Button>
+        }
       >
         新建招工分享
       </NavBar>
 
       <div className="flex-1 overflow-auto">
-        <Form
-          onFinish={handleSubmit}
-          footer={
-            <Button
-              block
-              type="submit"
-              color="primary"
-              loading={createMutation.isPending}
-            >
-              创建分享
-            </Button>
-          }
-        >
-          <Form.Item
-            name="title"
-            label="分享标题"
-            rules={[{ required: true, message: "请输入标题" }]}
-          >
-            <Input placeholder="如：招工啦" clearable />
+        <Form>
+          <Form.Item label="分享标题">
+            <Input
+              placeholder="如：招工啦"
+              clearable
+              value={title}
+              onChange={setTitle}
+            />
+          </Form.Item>
+          <Form.Item label="详情说明">
+            <TextArea
+              placeholder="可选，如：长期招工，待遇优厚"
+              rows={2}
+              value={description}
+              onChange={setDescription}
+            />
           </Form.Item>
         </Form>
 
@@ -145,7 +162,7 @@ function NewSharePage() {
             暂无工序，请先在订单中添加工序
           </div>
         ) : (
-          Object.entries(groupedProcesses).map(([productName, procs]) => {
+          Object.entries(groupedProcesses).map(([productName, { order, processes: procs }]) => {
             const allSelected = procs.every((p) =>
               selectedProcessIds.includes(p.id)
             );
@@ -157,16 +174,24 @@ function NewSharePage() {
               <div key={productName} className="mb-2">
                 <List
                   header={
-                    <div
-                      className="flex items-center gap-2 cursor-pointer"
-                      onClick={() => handleSelectAll(productName)}
-                    >
-                      <Checkbox
-                        checked={allSelected}
-                        indeterminate={someSelected && !allSelected}
-                        onChange={() => handleSelectAll(productName)}
-                      />
-                      <span>{productName}</span>
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="flex items-center gap-2 cursor-pointer flex-1"
+                        onClick={() => handleSelectAll(productName)}
+                      >
+                        <Checkbox
+                          checked={allSelected}
+                          indeterminate={someSelected && !allSelected}
+                          onChange={() => handleSelectAll(productName)}
+                        />
+                        <span>{productName}</span>
+                      </div>
+                      {order?.images?.[0] && (
+                        <OssImage
+                          src={order.images[0]}
+                          className="w-10 h-10 rounded object-cover"
+                        />
+                      )}
                     </div>
                   }
                 >

@@ -10,6 +10,7 @@ pub struct Model {
     pub id: Uuid,
     pub boss_id: Uuid,
     pub title: String,
+    pub description: Option<String>,
     #[sea_orm(unique)]
     pub token: String,
     #[sea_orm(column_type = "JsonBinary")]

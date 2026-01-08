@@ -13,12 +13,13 @@ const CODE_LENGTH: usize = 8;
 
 fn generate_code() -> String {
     let mut rng = rand::rng();
-    (0..CODE_LENGTH)
+    let random_part: String = (0..CODE_LENGTH)
         .map(|_| {
             let idx = rng.random_range(0..CODE_CHARSET.len());
             CODE_CHARSET[idx] as char
         })
-        .collect()
+        .collect();
+    format!("B-{}", random_part)
 }
 
 pub async fn create_register_code(db: &DbConn) -> Result<RegisterCodeResponse> {

@@ -8,11 +8,13 @@ import {
   Toast,
   Checkbox,
   List,
+  TextArea,
 } from "antd-mobile";
 import { ChevronLeft } from "lucide-react";
 import { useShares, useUpdateShare, useProcesses, useOrders } from "@/hooks";
-import type { UpdateShareRequest, Process } from "@/types";
+import type { UpdateShareRequest, Process, Order } from "@/types";
 import { useState, useMemo, useEffect } from "react";
+import { OssImage } from "@/components";
 
 export const Route = createFileRoute("/_auth/_boss/shares/$id")({
   component: EditSharePage,
@@ -31,21 +33,23 @@ function EditSharePage() {
   const share = shares?.find((s) => s.id === id);
   const [selectedProcessIds, setSelectedProcessIds] = useState<string[]>([]);
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
 
   // 初始化选中的工序
   useEffect(() => {
     if (share) {
       setSelectedProcessIds(share.processIds);
       setTitle(share.title);
+      setDescription(share.description || "");
     }
   }, [share]);
 
   const processes = processData?.list ?? [];
   const orders = orderData?.list ?? [];
 
-  // 构建订单ID到产品名的映射
+  // 构建订单ID到订单的映射
   const orderMap = useMemo(
-    () => Object.fromEntries(orders.map((o) => [o.id, o.productName])),
+    () => Object.fromEntries(orders.map((o) => [o.id, o])) as Record<string, Order>,
     [orders]
   );
 
@@ -53,12 +57,13 @@ function EditSharePage() {
   const groupedProcesses = useMemo(() => {
     return processes.reduce(
       (acc, p) => {
-        const key = orderMap[p.orderId] || "未分类";
-        if (!acc[key]) acc[key] = [];
-        acc[key].push(p);
+        const order = orderMap[p.orderId];
+        const key = order?.productName || "未分类";
+        if (!acc[key]) acc[key] = { order, processes: [] };
+        acc[key].processes.push(p);
         return acc;
       },
-      {} as Record<string, Process[]>
+      {} as Record<string, { order?: Order; processes: Process[] }>
     );
   }, [processes, orderMap]);
 
@@ -71,7 +76,7 @@ function EditSharePage() {
   };
 
   const handleSelectAll = (productName: string) => {
-    const processIds = groupedProcesses[productName].map((p) => p.id);
+    const processIds = groupedProcesses[productName].processes.map((p) => p.id);
     const allSelected = processIds.every((pid) =>
       selectedProcessIds.includes(pid)
     );
@@ -99,6 +104,7 @@ function EditSharePage() {
 
     const data: UpdateShareRequest = {
       title: title.trim(),
+      description: description.trim() || undefined,
       processIds: selectedProcessIds,
     };
 
@@ -149,29 +155,36 @@ function EditSharePage() {
       <NavBar
         onBack={() => navigate({ to: "/shares" })}
         backIcon={<ChevronLeft size={24} />}
+        right={
+          <Button
+            size="small"
+            color="primary"
+            loading={updateMutation.isPending}
+            onClick={handleSubmit}
+          >
+            保存
+          </Button>
+        }
       >
         编辑分享
       </NavBar>
 
       <div className="flex-1 overflow-auto">
-        <Form
-          footer={
-            <Button
-              block
-              color="primary"
-              loading={updateMutation.isPending}
-              onClick={handleSubmit}
-            >
-              保存
-            </Button>
-          }
-        >
+        <Form>
           <Form.Item label="分享标题">
             <Input
               value={title}
               onChange={setTitle}
               placeholder="如：招工啦"
               clearable
+            />
+          </Form.Item>
+          <Form.Item label="详情说明">
+            <TextArea
+              placeholder="可选，如：长期招工，待遇优厚"
+              rows={2}
+              value={description}
+              onChange={setDescription}
             />
           </Form.Item>
         </Form>
@@ -192,7 +205,7 @@ function EditSharePage() {
             暂无工序，请先在订单中添加工序
           </div>
         ) : (
-          Object.entries(groupedProcesses).map(([productName, procs]) => {
+          Object.entries(groupedProcesses).map(([productName, { order, processes: procs }]) => {
             const allSelected = procs.every((p) =>
               selectedProcessIds.includes(p.id)
             );
@@ -204,16 +217,24 @@ function EditSharePage() {
               <div key={productName} className="mb-2">
                 <List
                   header={
-                    <div
-                      className="flex items-center gap-2 cursor-pointer"
-                      onClick={() => handleSelectAll(productName)}
-                    >
-                      <Checkbox
-                        checked={allSelected}
-                        indeterminate={someSelected && !allSelected}
-                        onChange={() => handleSelectAll(productName)}
-                      />
-                      <span>{productName}</span>
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="flex items-center gap-2 cursor-pointer flex-1"
+                        onClick={() => handleSelectAll(productName)}
+                      >
+                        <Checkbox
+                          checked={allSelected}
+                          indeterminate={someSelected && !allSelected}
+                          onChange={() => handleSelectAll(productName)}
+                        />
+                        <span>{productName}</span>
+                      </div>
+                      {order?.images?.[0] && (
+                        <OssImage
+                          src={order.images[0]}
+                          className="w-10 h-10 rounded object-cover"
+                        />
+                      )}
                     </div>
                   }
                 >

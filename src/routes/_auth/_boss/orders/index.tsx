@@ -10,7 +10,7 @@ import {
 import { Plus, ImageOff, Calendar, Filter, Users, BarChart3 } from "lucide-react";
 import { useDeleteOrder, useCustomers, useInfiniteList, useDebouncedSearch, useToggleFilter, useDateRange } from "@/hooks";
 import type { Order } from "@/types";
-import { RelativeTime, VirtualList, StatusTag, DateRangeButton, OssImage } from "@/components";
+import { RelativeTime, VirtualList, StatusTag, DateRangeButton, Image, getOssUrls } from "@/components";
 import { orderApi } from "@/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
@@ -256,7 +256,7 @@ function OrdersPage() {
                 }
               >
                 {order.images?.length ? (
-                  <OssImage
+                  <Image
                     src={order.images[0]}
                     width={72}
                     height={72}
@@ -264,7 +264,7 @@ function OrdersPage() {
                     className="rounded shrink-0"
                     onClick={(e) => {
                       e.stopPropagation();
-                      ImageViewer.Multi.show({ images: order.images! });
+                      ImageViewer.Multi.show({ images: getOssUrls(order.images!) });
                     }}
                   />
                 ) : (

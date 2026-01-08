@@ -24,7 +24,7 @@ import {
   useDeleteProcess,
 } from "@/hooks";
 import type { Process, CreateProcessDto, UpdateProcessDto } from "@/types";
-import { OssImage, RelativeTime } from "@/components";
+import { Image, RelativeTime, getOssUrls } from "@/components";
 import { ORDER_STATUS_MAP } from "@/constants";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -168,7 +168,7 @@ function OrderDetailPage() {
           {order.images?.length ? (
             <div className="flex gap-2 overflow-x-auto">
               {order.images.map((url, i) => (
-                <OssImage
+                <Image
                   key={i}
                   src={url}
                   width={80}
@@ -177,7 +177,7 @@ function OrderDetailPage() {
                   className="rounded shrink-0"
                   onClick={() =>
                     ImageViewer.Multi.show({
-                      images: order.images!,
+                      images: getOssUrls(order.images!),
                       defaultIndex: i,
                     })
                   }

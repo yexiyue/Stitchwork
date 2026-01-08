@@ -104,7 +104,7 @@ function LoginPage() {
           <span className="text-gray-500">没有账号？</span>
           <a
             className="text-blue-500 ml-1"
-            onClick={() => navigate({ to: "/register" })}
+            onClick={() => navigate({ to: "/register", search: { code: "" } })}
           >
             立即注册
           </a>

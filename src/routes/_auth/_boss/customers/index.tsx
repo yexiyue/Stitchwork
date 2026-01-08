@@ -182,7 +182,7 @@ function CustomersPage() {
             keyExtractor={(c) => c.id}
             emptyText="暂无客户"
             searchEmpty={!!debouncedSearch && !list.length}
-            estimateSize={72}
+            estimateSize={54}
             renderItem={(customer) => (
               <SwipeAction
                 rightActions={[
@@ -205,6 +205,7 @@ function CustomersPage() {
                 ]}
               >
                 <List.Item
+                  className="border-b border-gray-100"
                   prefix={
                     <div className="flex h-full items-center mr-2">
                       <Avatar name={customer.name} size="md" />
@@ -219,7 +220,7 @@ function CustomersPage() {
                   onClick={() => showCustomerDetail(customer)}
                   arrow={false}
                 >
-                  {customer.name}
+                  <span className="text-base">{customer.name}</span>
                 </List.Item>
               </SwipeAction>
             )}

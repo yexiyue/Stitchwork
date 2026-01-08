@@ -30,13 +30,14 @@ function handleDeepLink(urls: string[]) {
   for (const urlStr of urls) {
     try {
       const url = new URL(urlStr);
-      // 处理 stitchwork://register-staff?code=xxx
-      // custom scheme 的 pathname 可能是 "register-staff" 或 "/register-staff"
+      // 处理 stitchwork://register?code=xxx
+      // custom scheme 的 pathname 可能是 "register" 或 "/register"
       const path = url.pathname.replace(/^\//, ""); // 移除前导斜杠
-      if (path === "register-staff") {
+      if (path === "register" || path === "register-staff") {
+        // 兼容旧的 register-staff deep link
         const code = url.searchParams.get("code");
         if (code) {
-          router.navigate({ to: "/register-staff", search: { code } });
+          router.navigate({ to: "/register", search: { code } });
           return;
         }
       }

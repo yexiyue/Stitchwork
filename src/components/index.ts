@@ -6,7 +6,7 @@ export { useAvatarCropper } from "./AvatarCropper";
 export { PageHeader } from "./PageHeader";
 export { Chart, MiniChart } from "./charts";
 export { OrderPicker } from "./OrderPicker";
-export { OssImage, getOssUrl, getOssUrls } from "./OssImage";
+export { OssImage, getOssUrl, getOssUrls, Image } from "./OssImage";
 
 // 新增共享组件
 export { StatsCard } from "./StatsCard";

@@ -2,8 +2,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { NavBar, ImageViewer } from "antd-mobile";
 import { ChevronLeft, ImageIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { payrollApi } from "@/api";
-import { OssImage, RelativeTime, BiometricGuard } from "@/components";
+import { payrollApi, getFileUrl } from "@/api";
+import { Image, RelativeTime, BiometricGuard } from "@/components";
 import { useStaffList } from "@/hooks";
 import type { Staff } from "@/types";
 import { useState } from "react";
@@ -104,7 +104,7 @@ function PayrollDetailPage() {
                 className="h-40 w-40 rounded-lg overflow-hidden cursor-pointer"
                 onClick={() => setImageViewerVisible(true)}
               >
-                <OssImage
+                <Image
                   src={payroll.paymentImage}
                   width="100%"
                   height="100%"
@@ -130,7 +130,7 @@ function PayrollDetailPage() {
         {/* 图片查看器 */}
         {payroll.paymentImage && (
           <ImageViewer
-            image={payroll.paymentImage}
+            image={getFileUrl(payroll.paymentImage)}
             visible={imageViewerVisible}
             onClose={() => setImageViewerVisible(false)}
           />

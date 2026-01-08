@@ -5,6 +5,7 @@ use uuid::Uuid;
 #[serde(rename_all = "camelCase")]
 pub struct CreateShareRequest {
     pub title: String,
+    pub description: Option<String>,
     pub order_ids: Vec<Uuid>,
     pub process_ids: Vec<Uuid>,
 }
@@ -13,6 +14,7 @@ pub struct CreateShareRequest {
 #[serde(rename_all = "camelCase")]
 pub struct UpdateShareRequest {
     pub title: Option<String>,
+    pub description: Option<String>,
     pub order_ids: Option<Vec<Uuid>>,
     pub process_ids: Option<Vec<Uuid>>,
     pub is_active: Option<bool>,
@@ -22,8 +24,11 @@ pub struct UpdateShareRequest {
 #[serde(rename_all = "camelCase")]
 pub struct PublicShareResponse {
     pub title: String,
+    pub description: Option<String>,
     pub workshop_name: Option<String>,
+    pub workshop_desc: Option<String>,
     pub workshop_address: Option<String>,
+    pub workshop_image: Option<String>,
     pub boss_phone: Option<String>,
     pub avatar: Option<String>,
     pub processes: Vec<PublicProcessInfo>,
@@ -37,5 +42,6 @@ pub struct PublicProcessInfo {
     pub description: Option<String>,
     pub piece_price: rust_decimal::Decimal,
     pub order_product_name: String,
+    pub order_images: Vec<String>,
     pub remaining_quantity: i32,
 }

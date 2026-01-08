@@ -1,17 +1,17 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { List, Dialog, SwipeAction, Toast, NavBar, Button } from "antd-mobile";
-import { Plus, ChevronLeft, Copy } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
+import { List, Dialog, SwipeAction, Toast, Button } from "antd-mobile";
+import { Plus, Copy, QrCode } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { RegisterCode } from "@/types";
 import { adminApi } from "@/api";
 import { RelativeTime } from "@/components";
+import { QRCodeSVG } from "qrcode.react";
 
 export const Route = createFileRoute("/_auth/admin/register-codes")({
   component: RegisterCodesPage,
 });
 
 function RegisterCodesPage() {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const { data: codes = [], isLoading } = useQuery({
@@ -35,18 +35,44 @@ function RegisterCodesPage() {
     },
   });
 
+  const showCodeQR = (code: string) => {
+    const url = `stitchwork://register?code=${code}`;
+    Dialog.alert({
+      title: "注册码二维码",
+      content: (
+        <div className="flex flex-col items-center py-4">
+          <QRCodeSVG value={url} size={180} />
+          <p className="mt-3 text-lg font-mono font-bold">{code}</p>
+          <Button
+            size="small"
+            className="mt-2"
+            onClick={() => {
+              navigator.clipboard.writeText(code);
+              Toast.show({ content: "已复制" });
+            }}
+          >
+            <Copy size={16} className="mr-1" />
+            复制
+          </Button>
+        </div>
+      ),
+      confirmText: "关闭",
+    });
+  };
+
   const handleCreate = async () => {
     try {
       const result = await createMutation.mutateAsync();
+      const url = `stitchwork://register?code=${result.code}`;
       Dialog.alert({
         title: "注册码已创建",
         content: (
-          <div className="text-center">
-            <div className="text-2xl font-mono font-bold my-4">
-              {result.code}
-            </div>
+          <div className="flex flex-col items-center py-4">
+            <QRCodeSVG value={url} size={180} />
+            <p className="mt-3 text-lg font-mono font-bold">{result.code}</p>
             <Button
               size="small"
+              className="mt-2"
               onClick={() => {
                 navigator.clipboard.writeText(result.code);
                 Toast.show({ content: "已复制" });
@@ -104,19 +130,16 @@ function RegisterCodesPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <NavBar
-        onBack={() => navigate({ to: "/profile" })}
-        backIcon={<ChevronLeft size={24} />}
-        right={
+      <div className="p-4 pb-2">
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl">注册码管理</h1>
           <Plus
             size={20}
             className="text-blue-500"
             onClick={handleCreate}
           />
-        }
-      >
-        注册码管理
-      </NavBar>
+        </div>
+      </div>
 
       <div className="flex-1 overflow-auto">
         {isLoading ? (
@@ -153,14 +176,24 @@ function RegisterCodesPage() {
                         {getStatusText(code)}
                       </span>
                       {!code.usedBy && code.isActive && (
-                        <Copy
-                          size={16}
-                          className="text-gray-400"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCopy(code.code);
-                          }}
-                        />
+                        <>
+                          <QrCode
+                            size={16}
+                            className="text-blue-500"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              showCodeQR(code.code);
+                            }}
+                          />
+                          <Copy
+                            size={16}
+                            className="text-gray-400"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCopy(code.code);
+                            }}
+                          />
+                        </>
                       )}
                     </div>
                   }

@@ -19,10 +19,11 @@ function ScanPage() {
     try {
       const url = new URL(content);
       const path = url.pathname.replace(/^\//, "") || url.host;
-      if (path === "register-staff") {
+      // 兼容 register 和旧的 register-staff 路径
+      if (path === "register" || path === "register-staff") {
         const code = url.searchParams.get("code");
         if (code) {
-          navigate({ to: "/register-staff", search: { code } });
+          navigate({ to: "/register", search: { code } });
           return true;
         }
       }

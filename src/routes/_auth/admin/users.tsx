@@ -1,6 +1,5 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { List, NavBar, Tag } from "antd-mobile";
-import { ChevronLeft } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
+import { List, Tag } from "antd-mobile";
 import { useQuery } from "@tanstack/react-query";
 import type { UserListItem } from "@/types";
 import { adminApi } from "@/api";
@@ -11,8 +10,6 @@ export const Route = createFileRoute("/_auth/admin/users")({
 });
 
 function UsersPage() {
-  const navigate = useNavigate();
-
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["admin", "users"],
     queryFn: adminApi.listUsers,
@@ -30,12 +27,9 @@ function UsersPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <NavBar
-        onBack={() => navigate({ to: "/profile" })}
-        backIcon={<ChevronLeft size={24} />}
-      >
-        用户管理
-      </NavBar>
+      <div className="p-4 pb-2">
+        <h1 className="text-xl">用户管理</h1>
+      </div>
 
       <div className="flex-1 overflow-auto">
         {isLoading ? (

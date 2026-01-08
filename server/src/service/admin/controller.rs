@@ -1,12 +1,13 @@
 use axum::{
     extract::{Path, State},
     routing::{delete, get, post},
-    Extension, Json, Router,
+    Extension, Router,
 };
 use sea_orm::EntityTrait;
 use std::sync::Arc;
 use uuid::Uuid;
 
+use crate::common::ApiResponse;
 use crate::entity::user;
 use crate::error::{AppError, Result};
 use crate::service::auth::Claims;
@@ -31,37 +32,38 @@ async fn require_super_admin(db: &sea_orm::DbConn, user_id: Uuid) -> Result<()> 
 async fn create_register_code(
     Extension(claims): Extension<Claims>,
     State(state): State<Arc<AppState>>,
-) -> Result<Json<RegisterCodeResponse>> {
+) -> Result<ApiResponse<RegisterCodeResponse>> {
     require_super_admin(&state.db, claims.sub).await?;
     let result = service::create_register_code(&state.db).await?;
-    Ok(Json(result))
+    Ok(ApiResponse::ok(result))
 }
 
 async fn list_register_codes(
     Extension(claims): Extension<Claims>,
     State(state): State<Arc<AppState>>,
-) -> Result<Json<Vec<RegisterCodeResponse>>> {
+) -> Result<ApiResponse<Vec<RegisterCodeResponse>>> {
     require_super_admin(&state.db, claims.sub).await?;
     let result = service::list_register_codes(&state.db).await?;
-    Ok(Json(result))
+    Ok(ApiResponse::ok(result))
 }
 
 async fn disable_register_code(
     Extension(claims): Extension<Claims>,
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
-) -> Result<()> {
+) -> Result<ApiResponse<()>> {
     require_super_admin(&state.db, claims.sub).await?;
-    service::disable_register_code(&state.db, id).await
+    service::disable_register_code(&state.db, id).await?;
+    Ok(ApiResponse::ok(()))
 }
 
 async fn list_users(
     Extension(claims): Extension<Claims>,
     State(state): State<Arc<AppState>>,
-) -> Result<Json<Vec<UserListItem>>> {
+) -> Result<ApiResponse<Vec<UserListItem>>> {
     require_super_admin(&state.db, claims.sub).await?;
     let result = service::list_users(&state.db).await?;
-    Ok(Json(result))
+    Ok(ApiResponse::ok(result))
 }
 
 pub fn router() -> Router<Arc<AppState>> {

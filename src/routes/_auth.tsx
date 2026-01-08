@@ -54,25 +54,33 @@ function AuthLayout() {
     "/staff": "/profile",
     "/workshop": "/profile",
     "/payroll": "/profile",
+    "/shares": "/profile",
   };
   const mappedPath = Object.entries(subPageMap).find(([prefix]) =>
     location.pathname.startsWith(prefix)
   )?.[1];
 
-  const activeKey = tabs.find((t) =>
-    t.key === location.pathname ||
-    t.key === mappedPath ||
-    (t.key !== "/" && location.pathname.startsWith(t.key))
-  )?.key || "/";
+  // 优先精确匹配，再做前缀匹配（按路径长度降序，避免 /admin 先于 /admin/register-codes 匹配）
+  const activeKey =
+    tabs.find((t) => t.key === location.pathname || t.key === mappedPath)?.key ||
+    [...tabs]
+      .sort((a, b) => b.key.length - a.key.length)
+      .find((t) => t.key !== "/" && location.pathname.startsWith(t.key))?.key ||
+    "/";
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex-1 overflow-auto">
         <Outlet />
       </div>
-      <TabBar activeKey={activeKey} onChange={(key) => navigate({ to: key })}>
+      <TabBar activeKey={activeKey}>
         {tabs.map((tab) => (
-          <TabBar.Item key={tab.key} icon={tab.icon} title={tab.title} />
+          <TabBar.Item
+            key={tab.key}
+            icon={tab.icon}
+            title={tab.title}
+            onClick={() => navigate({ to: tab.key })}
+          />
         ))}
       </TabBar>
     </div>

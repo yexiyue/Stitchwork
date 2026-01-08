@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ScanRouteImport } from './routes/scan'
-import { Route as RegisterStaffRouteImport } from './routes/register-staff'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthRouteImport } from './routes/_auth'
@@ -54,11 +53,6 @@ import { Route as AuthBossOrdersIdEditRouteImport } from './routes/_auth/_boss/o
 const ScanRoute = ScanRouteImport.update({
   id: '/scan',
   path: '/scan',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RegisterStaffRoute = RegisterStaffRouteImport.update({
-  id: '/register-staff',
-  path: '/register-staff',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RegisterRoute = RegisterRouteImport.update({
@@ -258,7 +252,6 @@ const AuthBossOrdersIdEditRoute = AuthBossOrdersIdEditRouteImport.update({
 export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/register-staff': typeof RegisterStaffRoute
   '/scan': typeof ScanRoute
   '/admin': typeof AuthAdminRouteWithChildren
   '/profile': typeof AuthProfileRoute
@@ -298,7 +291,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/register-staff': typeof RegisterStaffRoute
   '/scan': typeof ScanRoute
   '/profile': typeof AuthProfileRoute
   '/share/$token': typeof ShareTokenRoute
@@ -339,7 +331,6 @@ export interface FileRoutesById {
   '/_auth': typeof AuthRouteWithChildren
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/register-staff': typeof RegisterStaffRoute
   '/scan': typeof ScanRoute
   '/_auth/_boss': typeof AuthBossRouteWithChildren
   '/_auth/_staff': typeof AuthStaffRouteWithChildren
@@ -383,7 +374,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/login'
     | '/register'
-    | '/register-staff'
     | '/scan'
     | '/admin'
     | '/profile'
@@ -423,7 +413,6 @@ export interface FileRouteTypes {
   to:
     | '/login'
     | '/register'
-    | '/register-staff'
     | '/scan'
     | '/profile'
     | '/share/$token'
@@ -463,7 +452,6 @@ export interface FileRouteTypes {
     | '/_auth'
     | '/login'
     | '/register'
-    | '/register-staff'
     | '/scan'
     | '/_auth/_boss'
     | '/_auth/_staff'
@@ -507,7 +495,6 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRouteWithChildren
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
-  RegisterStaffRoute: typeof RegisterStaffRoute
   ScanRoute: typeof ScanRoute
   ShareTokenRoute: typeof ShareTokenRoute
 }
@@ -519,13 +506,6 @@ declare module '@tanstack/react-router' {
       path: '/scan'
       fullPath: '/scan'
       preLoaderRoute: typeof ScanRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/register-staff': {
-      id: '/register-staff'
-      path: '/register-staff'
-      fullPath: '/register-staff'
-      preLoaderRoute: typeof RegisterStaffRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/register': {
@@ -916,7 +896,6 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRouteWithChildren,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
-  RegisterStaffRoute: RegisterStaffRoute,
   ScanRoute: ScanRoute,
   ShareTokenRoute: ShareTokenRoute,
 }
