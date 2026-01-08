@@ -28,6 +28,8 @@ pnpm tauri android build  # Build Android APK/AAB
 cd server && cargo run    # API server on port 3000
 cd server && cargo build  # Build server
 cd server && cargo check  # Fast type checking
+cd server && cargo test   # Run tests
+cd server && cargo clippy # Lint Rust code
 ```
 
 ## Architecture
@@ -43,6 +45,7 @@ StitchWork/
 │   └── types/              # TypeScript types
 ├── src-tauri/              # Tauri mobile wrapper (Android)
 │   └── src/
+│       ├── lib.rs          # App entry, plugin setup, command registration
 │       ├── sse.rs          # SSE client for realtime notifications
 │       └── image.rs        # Image compression + blake3 dedup
 └── server/                 # Axum backend
@@ -74,6 +77,8 @@ StitchWork/
 - **biometric**: Fingerprint/face authentication (Android/iOS only)
 - **store**: Persistent key-value storage
 - **opener**: Open external URLs
+
+**Custom Commands** (registered in `lib.rs`): `connect_sse`, `disconnect_sse` (SSE connection management), `upload_image` (image compression + blake3 dedup upload)
 
 **SSE Client** (`src-tauri/src/sse.rs`): Rust-native SSE client for realtime notifications. Uses `Authorization: Bearer <token>` header. Runs in background, maintains connection when app is backgrounded, sends local notifications and emits events to frontend.
 
@@ -168,6 +173,7 @@ S3_ENDPOINT=  # e.g., https://oss-cn-hangzhou.aliyuncs.com
   - `tauri-notification.md` - Tauri notification plugin setup
   - `jwt-auth.md` - JWT authentication implementation
   - `entity-refactor-employment.md` - Entity relationship refactoring notes
+  - `pingora-proxy.md` - Pingora reverse proxy tutorial (Cloudflare's Rust proxy)
 
 **Diagrams**: Use Mermaid format (`\`\`\`mermaid`) for all diagrams in documentation.
 

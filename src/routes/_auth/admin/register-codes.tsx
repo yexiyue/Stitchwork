@@ -7,6 +7,7 @@ import { adminApi } from "@/api";
 import { RelativeTime, VirtualList } from "@/components";
 import { QRCodeSVG } from "qrcode.react";
 import { useInfiniteList } from "@/hooks";
+import { copyToClipboard } from "@/utils/clipboard";
 
 export const Route = createFileRoute("/_auth/admin/register-codes")({
   component: RegisterCodesPage,
@@ -47,7 +48,7 @@ function RegisterCodesPage() {
             size="small"
             className="mt-2"
             onClick={() => {
-              navigator.clipboard.writeText(code);
+              copyToClipboard(code);
               Toast.show({ content: "已复制" });
             }}
           >
@@ -74,7 +75,7 @@ function RegisterCodesPage() {
               size="small"
               className="mt-2"
               onClick={() => {
-                navigator.clipboard.writeText(result.code);
+                copyToClipboard(result.code);
                 Toast.show({ content: "已复制" });
               }}
             >
@@ -112,7 +113,7 @@ function RegisterCodesPage() {
   };
 
   const handleCopy = (code: string) => {
-    navigator.clipboard.writeText(code);
+    copyToClipboard(code);
     Toast.show({ content: "已复制" });
   };
 

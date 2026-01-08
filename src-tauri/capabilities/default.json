@@ -11,6 +11,9 @@
     "deep-link:default",
     "notification:default",
     "store:default",
-    "os:default"
+    "os:default",
+    "clipboard-manager:allow-clear",
+    "clipboard-manager:allow-write-text",
+    "clipboard-manager:allow-read-text"
   ]
 }

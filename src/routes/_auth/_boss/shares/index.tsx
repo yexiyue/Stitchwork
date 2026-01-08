@@ -15,6 +15,7 @@ import type { Share } from "@/types";
 import { RelativeTime } from "@/components";
 import { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
+import { copyToClipboard } from "@/utils/clipboard";
 
 export const Route = createFileRoute("/_auth/_boss/shares/")({
   component: SharesPage,
@@ -36,12 +37,8 @@ function SharesPage() {
 
   const handleCopyLink = async (share: Share) => {
     const url = getShareUrl(share.token);
-    try {
-      await navigator.clipboard.writeText(url);
-      Toast.show({ content: "链接已复制" });
-    } catch {
-      Toast.show({ content: "复制失败" });
-    }
+    const success = await copyToClipboard(url);
+    Toast.show({ content: success ? "链接已复制" : "复制失败" });
   };
 
   const handleShowQR = (share: Share) => {
