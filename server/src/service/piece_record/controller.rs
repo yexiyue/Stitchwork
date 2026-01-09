@@ -2,6 +2,7 @@ use axum::extract::State;
 use axum_extra::extract::Query;
 use axum::{Extension, Router};
 use axum_extra::routing::{RouterExt, TypedPath};
+use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use serde::Deserialize;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -10,12 +11,26 @@ use super::dto::{BatchApproveDto, CreatePieceRecordDto, PieceRecordResponse, Upd
 use crate::common::{ApiResponse, ListData, QueryParams};
 use crate::entity::piece_record::Model;
 use crate::entity::user::Role;
+use crate::entity::workshop;
 use crate::error::{AppJson, Result};
 use crate::service::auth::Claims;
 use crate::service::notification::Notification;
 use crate::AppState;
 
 use super::service;
+use sea_orm::DbConn;
+
+/// 获取工坊的计件单位
+async fn get_piece_unit(db: &DbConn, boss_id: Uuid) -> String {
+    workshop::Entity::find()
+        .filter(workshop::Column::OwnerId.eq(boss_id))
+        .one(db)
+        .await
+        .ok()
+        .flatten()
+        .map(|w| w.piece_unit)
+        .unwrap_or_else(|| "件".to_string())
+}
 
 #[derive(TypedPath)]
 #[typed_path("/piece-records")]
@@ -82,12 +97,14 @@ async fn create(
     // 员工提交计件时通知老板
     if claims.role == Role::Staff {
         let response = service::get_one(&state.db, record.id, &claims).await?;
+        let unit = get_piece_unit(&state.db, record.boss_id).await;
         state.notifier.send(
             record.boss_id,
             Notification::RecordSubmitted {
                 user_name: response.user_name.unwrap_or_default(),
                 process_name: response.process_name.unwrap_or_default(),
                 quantity: record.quantity,
+                unit,
             },
         );
     }
@@ -139,11 +156,13 @@ async fn approve(
     let record = service::approve(&state.db, id, claims.sub).await?;
 
     // 通知员工审批通过
+    let unit = get_piece_unit(&state.db, record.boss_id).await;
     state.notifier.send(
         record.user_id,
         Notification::RecordApproved {
             process_name: response.process_name.unwrap_or_default(),
             quantity: record.quantity,
+            unit,
             amount: record.amount.to_string(),
         },
     );
@@ -163,11 +182,13 @@ async fn reject(
     let record = service::reject(&state.db, id, claims.sub).await?;
 
     // 通知员工审批拒绝
+    let unit = get_piece_unit(&state.db, record.boss_id).await;
     state.notifier.send(
         record.user_id,
         Notification::RecordRejected {
             process_name: response.process_name.unwrap_or_default(),
             quantity: record.quantity,
+            unit,
         },
     );
 
@@ -188,12 +209,14 @@ async fn batch_approve(
     let count = service::batch_approve(&state.db, dto.ids, claims.sub).await?;
 
     // 发送通知给每个员工
+    let unit = get_piece_unit(&state.db, claims.sub).await;
     for record in pending_records {
         state.notifier.send(
             record.user_id,
             Notification::RecordApproved {
                 process_name: record.process_name.unwrap_or_default(),
                 quantity: record.quantity,
+                unit: unit.clone(),
                 amount: record.amount.to_string(),
             },
         );
@@ -216,12 +239,14 @@ async fn batch_reject(
     let count = service::batch_reject(&state.db, dto.ids, claims.sub).await?;
 
     // 发送通知给每个员工
+    let unit = get_piece_unit(&state.db, claims.sub).await;
     for record in pending_records {
         state.notifier.send(
             record.user_id,
             Notification::RecordRejected {
                 process_name: record.process_name.unwrap_or_default(),
                 quantity: record.quantity,
+                unit: unit.clone(),
             },
         );
     }

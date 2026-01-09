@@ -1,7 +1,6 @@
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-mod image;
 mod sse;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -25,7 +24,6 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             sse::connect_sse,
             sse::disconnect_sse,
-            image::upload_image,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

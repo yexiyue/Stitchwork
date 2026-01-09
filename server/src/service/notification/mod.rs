@@ -17,17 +17,20 @@ pub enum Notification {
         user_name: String,
         process_name: String,
         quantity: i32,
+        unit: String,
     },
     /// 老板审批通过 → 通知员工
     RecordApproved {
         process_name: String,
         quantity: i32,
+        unit: String,
         amount: String,
     },
     /// 老板审批拒绝 → 通知员工
     RecordRejected {
         process_name: String,
         quantity: i32,
+        unit: String,
     },
     /// 工资发放 → 通知员工
     PayrollReceived { amount: String },
@@ -42,8 +45,8 @@ impl Notification {
         match self {
             Self::RecordSubmitted { .. } => "新计件待审核",
             Self::RecordApproved { .. } => "计件已通过",
-            Self::RecordRejected { .. } => "计件被拒绝",
-            Self::PayrollReceived { .. } => "收到工资",
+            Self::RecordRejected { .. } => "计件被驳回",
+            Self::PayrollReceived { .. } => "工资已发放",
             Self::UserRegistered { .. } => "新用户注册",
             Self::StaffJoined { .. } => "新员工加入",
         }
@@ -55,19 +58,22 @@ impl Notification {
                 user_name,
                 process_name,
                 quantity,
-            } => format!("{}提交了{}计件 {}件", user_name, process_name, quantity),
+                unit,
+            } => format!("{} 提交了「{}」{}{}", user_name, process_name, quantity, unit),
             Self::RecordApproved {
                 process_name,
                 quantity,
+                unit,
                 amount,
-            } => format!("{}工序 {}件 ¥{}", process_name, quantity, amount),
+            } => format!("「{}」{}{} 已通过，计 ¥{}", process_name, quantity, unit, amount),
             Self::RecordRejected {
                 process_name,
                 quantity,
-            } => format!("{}工序 {}件", process_name, quantity),
-            Self::PayrollReceived { amount } => format!("¥{}", amount),
+                unit,
+            } => format!("「{}」{}{} 未通过审核", process_name, quantity, unit),
+            Self::PayrollReceived { amount } => format!("您收到一笔工资 ¥{}", amount),
             Self::UserRegistered { username, phone } => format!("{} ({})", username, phone),
-            Self::StaffJoined { username, phone } => format!("{} ({}) 加入了工坊", username, phone),
+            Self::StaffJoined { username, phone } => format!("{} ({}) 已加入工坊", username, phone),
         }
     }
 }

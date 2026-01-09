@@ -15,15 +15,18 @@ pub enum Notification {
         user_name: String,
         process_name: String,
         quantity: i32,
+        unit: String,
     },
     RecordApproved {
         process_name: String,
         quantity: i32,
+        unit: String,
         amount: String,
     },
     RecordRejected {
         process_name: String,
         quantity: i32,
+        unit: String,
     },
     PayrollReceived {
         amount: String,
