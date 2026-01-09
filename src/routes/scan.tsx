@@ -2,7 +2,12 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { Toast } from "antd-mobile";
 import { X, Image } from "lucide-react";
-import { scan, Format, cancel } from "@tauri-apps/plugin-barcode-scanner";
+import {
+  scan,
+  Format,
+  cancel,
+  requestPermissions,
+} from "@tauri-apps/plugin-barcode-scanner";
 import jsQR from "jsqr";
 
 export const Route = createFileRoute("/scan")({
@@ -43,7 +48,7 @@ function ScanPage() {
       scanning.current = true;
 
       try {
-        // 权限已在登录页面检查，直接开始扫描
+        await requestPermissions();
         const result = await scan({ formats: [Format.QRCode], windowed: true });
 
         // 恢复背景

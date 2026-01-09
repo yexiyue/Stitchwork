@@ -98,7 +98,6 @@ export function useNotify() {
           isPermissionGranted,
           requestPermission,
           createChannel,
-          channels,
           Importance,
         } = await import("@tauri-apps/plugin-notification");
 
@@ -113,14 +112,16 @@ export function useNotify() {
         let channelId: string | undefined;
         const os = platform();
         if (os === "android") {
-          const existingChannels = await channels();
-          if (!existingChannels.some((c) => c.id === CHANNEL_ID)) {
+          try {
+            // 直接创建，已存在会自动忽略
             await createChannel({
               id: CHANNEL_ID,
               name: "重要通知",
               importance: Importance.High,
               vibration: true,
             });
+          } catch {
+            // 渠道已存在或创建失败，忽略
           }
           channelId = CHANNEL_ID;
         }

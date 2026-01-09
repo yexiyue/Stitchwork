@@ -13,8 +13,9 @@ interface AuthState {
   updateUser: (updates: Partial<LoginUser>) => void;
 }
 
+// 懒初始化，避免顶层 await 阻塞应用启动
 const storage = new TauriStoreState("auth-store.json");
-await storage.init();
+export const storageReady = storage.init();
 
 export const useAuthStore = create<AuthState>()(
   persist(

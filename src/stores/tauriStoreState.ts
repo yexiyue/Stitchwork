@@ -12,25 +12,46 @@ type TauriStore = {
 export class TauriStoreState implements StateStorage {
   private store: TauriStore | null = null;
   private prefix: string;
+  private initPromise: Promise<void> | null = null;
 
   constructor(public storeName: string) {
     // 用于 localStorage 的 key 前缀
     this.prefix = storeName.replace(".json", "");
   }
 
-  async init() {
+  init() {
+    if (!this.initPromise) {
+      this.initPromise = this.doInit();
+    }
+    return this.initPromise;
+  }
+
+  private async doInit() {
     if (isTauri()) {
       try {
         const { load } = await import("@tauri-apps/plugin-store");
-        this.store = await load(this.storeName);
-      } catch {
+        // 加超时避免卡死
+        this.store = await Promise.race([
+          load(this.storeName),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("Store load timeout")), 3000)
+          ),
+        ]);
+      } catch (e) {
         // Tauri store 加载失败，回退到 localStorage
-        console.warn("Tauri store not available, using localStorage");
+        console.warn("Tauri store not available, using localStorage:", e);
       }
     }
   }
 
+  private async ensureInit() {
+    if (this.initPromise) {
+      await this.initPromise;
+    }
+  }
+
   async getItem(name: string) {
+    await this.ensureInit();
     if (this.store) {
       return (await this.store.get<string>(name)) || null;
     }
@@ -39,6 +60,7 @@ export class TauriStoreState implements StateStorage {
   }
 
   async setItem(name: string, value: string) {
+    await this.ensureInit();
     if (this.store) {
       await this.store.set(name, value);
       await this.store.save();
@@ -49,6 +71,7 @@ export class TauriStoreState implements StateStorage {
   }
 
   async removeItem(name: string) {
+    await this.ensureInit();
     if (this.store) {
       await this.store.delete(name);
       await this.store.save();
