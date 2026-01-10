@@ -39,13 +39,19 @@ jsonwebtoken = "9"
 argon2 = "0.5"
 strum = { version = "0.26", features = ["derive"] }
 aws-sdk-s3 = "1.119.0"
-aws-config = { version = "1", features = ["behavior-version-latest"] }
+aws-config = { version = "1", default-features = false, features = [
+    "behavior-version-latest",
+    "rustls",
+] }
 dashmap = "6"
 async-stream = "0.3"
 futures = "0.3"
 tokio-stream = "0.1"
 rand = "0.9"
-rig-core = { version = "0.28.0", features = ["derive"] }
+rig-core = { version = "0.28.0", default-features = false, features = [
+    "derive",
+    "reqwest-rustls",
+] }
 entity = { version = "0.1.0", path = "../entity" }
 schemars = { version = "1.2.0", features = [
     "rust_decimal1",
