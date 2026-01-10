@@ -15,11 +15,11 @@ name = "stitchwork_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [profile.release]
-lto = true           # 链接时优化，大幅减小体积
-codegen-units = 1    # 单线程编译，更好的优化
-opt-level = "z"      # 最大程度优化体积
-strip = true         # 移除符号表
-panic = "abort"      # 不生成 panic 展开代码
+lto = true        # 链接时优化，大幅减小体积
+codegen-units = 1 # 单线程编译，更好的优化
+opt-level = "z"   # 最大程度优化体积
+strip = true      # 移除符号表
+panic = "abort"   # 不生成 panic 展开代码
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

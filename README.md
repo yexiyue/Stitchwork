@@ -138,6 +138,10 @@ flowchart LR
     F --> G[出货/工资发放]
 ```
 
+## Downloads
+
+[Android APK](https://api.upgrade.toolsetlink.com/v1/apk/download?apkKey=u4UvOpu9Hquwowl5t9sr5Q)
+
 ## License
 
 Copyright © 2026. All Rights Reserved.

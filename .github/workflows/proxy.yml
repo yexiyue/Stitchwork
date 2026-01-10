@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - "proxy/**"
+      - "crates/proxy/**"
   workflow_dispatch:
 
 env:
