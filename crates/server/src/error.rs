@@ -29,7 +29,7 @@ pub enum AppError {
     Internal(String),
 
     #[error(transparent)]
-    Error(anyhow::Error),
+    Error(#[from] anyhow::Error),
 }
 
 impl IntoResponse for AppError {

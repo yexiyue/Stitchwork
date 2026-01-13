@@ -4,6 +4,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
+pub mod chat;
 pub mod common;
 pub mod error;
 pub mod mcp;
@@ -11,8 +12,11 @@ pub mod s3;
 pub mod service;
 pub mod traits;
 
+pub use rig::providers::openai;
 pub use s3::S3Client;
 pub use service::notification::{Notification, Notifier, SharedNotifier};
+
+use crate::chat::session_manager::SessionManager;
 
 /// 邀请码存储: code -> (workshop_id, expires_at)
 pub type InviteCodes = RwLock<HashMap<String, (Uuid, i64)>>;
@@ -23,6 +27,9 @@ pub struct AppState {
     pub invite_codes: Arc<InviteCodes>,
     pub s3: Option<S3Client>,
     pub notifier: SharedNotifier,
+    pub rig_client: Arc<openai::Client<reqwest::Client>>,
+    pub session_manager: SessionManager,
+    // pub knowledge_base: chat::knowledge_base::KnowledgeBase,
 }
 
 /// 初始化超级管理员（如果不存在）

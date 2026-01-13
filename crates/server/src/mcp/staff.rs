@@ -1,4 +1,14 @@
-use crate::error::AppError;
+use super::deserialize_empty_string_as_none;
+use crate::common::QueryParams;
+use crate::service::{
+    payroll::service as payroll_service,
+    piece_record::{dto::PieceRecordResponse, service as piece_record_service},
+    stats::{dto::WorkerStatsParams, service as stats_service},
+};
+use crate::{error::AppError, service::auth::Claims};
+use entity::order::OrderStatus;
+use entity::piece_record::PieceRecordStatus;
+use entity::{order, piece_record, process, user, workshop};
 use rmcp::{
     handler::server::{tool::ToolRouter, wrapper::Parameters},
     model::{Implementation, ProtocolVersion, ServerCapabilities, ServerInfo},
@@ -10,28 +20,19 @@ use sea_orm::{ColumnTrait, DbConn, EntityTrait, QueryFilter, QueryOrder, QuerySe
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::AuthClaims;
-
-use crate::common::QueryParams;
-use crate::service::{
-    payroll::service as payroll_service,
-    piece_record::{dto::PieceRecordResponse, service as piece_record_service},
-    stats::{dto::WorkerStatsParams, service as stats_service},
-};
-use entity::order::OrderStatus;
-use entity::piece_record::PieceRecordStatus;
-use entity::{order, piece_record, process, user, workshop};
-
 // ============ 工具参数定义 ============
 
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct GetMyRecordsParams {
-    #[schemars(description = "按状态筛选: pending,approved,rejected")]
+    #[schemars(description = "按状态筛选: pending,approved,rejected。不指定则返回所有状态")]
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub status: Option<String>,
-    #[schemars(description = "开始日期，格式 YYYY-MM-DD")]
+    #[schemars(description = "开始日期，格式 YYYY-MM-DD。不指定则不限制")]
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub start_date: Option<String>,
-    #[schemars(description = "结束日期，格式 YYYY-MM-DD")]
+    #[schemars(description = "结束日期，格式 YYYY-MM-DD。不指定则不限制")]
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub end_date: Option<String>,
     #[schemars(description = "页码，从1开始，默认1")]
     pub page: Option<u64>,
@@ -42,18 +43,22 @@ pub struct GetMyRecordsParams {
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct GetMyEarningsParams {
-    #[schemars(description = "开始日期，格式 YYYY-MM-DD")]
+    #[schemars(description = "开始日期，格式 YYYY-MM-DD。不指定则统计全部")]
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub start_date: Option<String>,
-    #[schemars(description = "结束日期，格式 YYYY-MM-DD")]
+    #[schemars(description = "结束日期，格式 YYYY-MM-DD。不指定则统计全部")]
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub end_date: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct GetMyPayrollsParams {
-    #[schemars(description = "开始日期，格式 YYYY-MM-DD")]
+    #[schemars(description = "开始日期，格式 YYYY-MM-DD。不指定则不限制")]
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub start_date: Option<String>,
-    #[schemars(description = "结束日期，格式 YYYY-MM-DD")]
+    #[schemars(description = "结束日期，格式 YYYY-MM-DD。不指定则不限制")]
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub end_date: Option<String>,
     #[schemars(description = "页码，从1开始，默认1")]
     pub page: Option<u64>,
@@ -109,14 +114,16 @@ pub struct AvailableTasksResponse {
 
 pub struct StaffMcp {
     db: DbConn,
+    claims: Claims,
     pub tool_router: ToolRouter<StaffMcp>,
 }
 
 #[tool_router]
 impl StaffMcp {
-    pub fn new(db: DbConn) -> Self {
+    pub fn new(db: DbConn, claims: Claims) -> Self {
         Self {
             db,
+            claims,
             tool_router: Self::tool_router(),
         }
     }
@@ -126,7 +133,6 @@ impl StaffMcp {
     pub async fn get_my_records(
         &self,
         Parameters(params): Parameters<GetMyRecordsParams>,
-        AuthClaims(claims): AuthClaims,
     ) -> Result<Json<MyRecordsResponse>, ErrorData> {
         let query_params = QueryParams {
             page: params.page.unwrap_or(1),
@@ -139,7 +145,7 @@ impl StaffMcp {
             ..Default::default()
         };
 
-        let result = piece_record_service::list(&self.db, query_params, &claims).await?;
+        let result = piece_record_service::list(&self.db, query_params, &self.claims).await?;
         Ok(Json(MyRecordsResponse {
             list: result.list,
             total: result.total,
@@ -151,7 +157,6 @@ impl StaffMcp {
     pub async fn get_my_earnings(
         &self,
         Parameters(params): Parameters<GetMyEarningsParams>,
-        AuthClaims(claims): AuthClaims,
     ) -> Result<Json<MyEarningsSummary>, ErrorData> {
         let stats_params = WorkerStatsParams {
             start_date: params.start_date.clone(),
@@ -160,7 +165,7 @@ impl StaffMcp {
 
         // 获取每日统计
         let daily_result =
-            stats_service::daily_stats(&self.db, None, Some(claims.sub), stats_params).await?;
+            stats_service::daily_stats(&self.db, None, Some(self.claims.sub), stats_params).await?;
 
         // 计算总计
         let mut total_quantity: i64 = 0;
@@ -172,7 +177,7 @@ impl StaffMcp {
 
         // 查询待审批的记录
         let pending_records = piece_record::Entity::find()
-            .filter(piece_record::Column::UserId.eq(claims.sub))
+            .filter(piece_record::Column::UserId.eq(self.claims.sub))
             .filter(piece_record::Column::Status.eq(PieceRecordStatus::Pending))
             .all(&self.db)
             .await
@@ -195,7 +200,6 @@ impl StaffMcp {
     pub async fn get_my_payrolls(
         &self,
         Parameters(params): Parameters<GetMyPayrollsParams>,
-        AuthClaims(claims): AuthClaims,
     ) -> Result<Json<PayrollListResponse>, ErrorData> {
         let query_params = QueryParams {
             page: params.page.unwrap_or(1),
@@ -205,7 +209,8 @@ impl StaffMcp {
             ..Default::default()
         };
 
-        let result = payroll_service::list(&self.db, query_params, Some(claims.sub), None).await?;
+        let result =
+            payroll_service::list(&self.db, query_params, Some(self.claims.sub), None).await?;
         Ok(Json(PayrollListResponse {
             list: result.list,
             total: result.total,
@@ -214,14 +219,11 @@ impl StaffMcp {
 
     /// 查看可接工序
     #[tool(description = "查看工坊内进行中订单的可接工序列表")]
-    pub async fn get_available_tasks(
-        &self,
-        AuthClaims(claims): AuthClaims,
-    ) -> Result<Json<AvailableTasksResponse>, ErrorData> {
+    pub async fn get_available_tasks(&self) -> Result<Json<AvailableTasksResponse>, ErrorData> {
         use std::collections::HashMap;
 
         // 获取员工所属工坊
-        let staff = user::Entity::find_by_id(claims.sub)
+        let staff = user::Entity::find_by_id(self.claims.sub)
             .one(&self.db)
             .await
             .map_err(|e| crate::error::AppError::Database(e.into()))?

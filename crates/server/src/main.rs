@@ -1,14 +1,24 @@
 use axum::{routing::get, Router};
+use reqwest::Proxy;
+use rig::{client::EmbeddingsClient, completion::request, providers::openai};
 use sea_orm::Database;
 use std::collections::HashMap;
 use std::sync::Arc;
-use stitchwork_server::{init_super_admin, s3::S3Config, service, AppState, Notifier, S3Client};
+use stitchwork_server::{
+    chat::{knowledge_base::KnowledgeBase, session_manager::SessionManager},
+    init_super_admin,
+    s3::S3Config,
+    service, AppState, Notifier, S3Client,
+};
 use tokio::sync::RwLock;
 use tower_http::cors::{Any, CorsLayer};
+use tracing::level_filters::LevelFilter;
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt::init();
+    tracing_subscriber::fmt::fmt()
+        .with_max_level(LevelFilter::INFO)
+        .init();
     dotenvy::dotenv().ok();
 
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
@@ -35,11 +45,31 @@ async fn main() {
         tracing::info!("S3 client initialized");
     }
 
+    // let client = reqwest::ClientBuilder::new()
+    //     .user_agent("Apifox/1.0.0")
+    //     .proxy(Proxy::all("http://127.0.0.1:8899").unwrap()) // all 代理 HTTP 和 HTTPS
+    //     .danger_accept_invalid_certs(true)
+    //     .build()
+    //     .unwrap();
+
+    let rig_client = openai::Client::<reqwest::Client>::builder()
+        // .http_client(client)
+        .base_url("https://www.packyapi.com/v1")
+        .api_key("sk-H2nbepB0YiatnZg8YrMDvqCKC1fxY0LNRNOP9JPfJ31dcutt")
+        .build()
+        .unwrap();
+
+    // let embedding_model = rig_client.embedding_model(openai::TEXT_EMBEDDING_3_SMALL);
+
+    // let knowledge_base = KnowledgeBase::new("./docs", embedding_model).await.unwrap();
+
     let state = Arc::new(AppState {
         db: db.clone(),
         invite_codes: Arc::new(RwLock::new(HashMap::new())),
         s3,
         notifier: Arc::new(Notifier::new()),
+        rig_client: Arc::new(rig_client),
+        session_manager: SessionManager::default(), // knowledge_base,
     });
 
     let cors = CorsLayer::new()
@@ -51,7 +81,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/health", get(|| async { "OK" }))
-        .merge(service::routes(db))
+        .merge(service::routes())
         .layer(cors)
         .with_state(state);
 

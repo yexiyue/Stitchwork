@@ -1,17 +1,4 @@
-use crate::error::AppError;
-use rmcp::{
-    handler::server::{tool::ToolRouter, wrapper::Parameters},
-    model::{ErrorData, Implementation, ProtocolVersion, ServerCapabilities, ServerInfo},
-    tool, tool_handler, tool_router, Json, ServerHandler,
-};
-use schemars::JsonSchema;
-use sea_orm::DbConn;
-use serde::Deserialize;
-use uuid::Uuid;
-
-use super::AuthClaims;
-
-// 复用 server 的 DTO 和 service
+use super::deserialize_empty_string_as_none;
 use crate::common::QueryParams;
 use crate::service::{
     home::{dto::BossOverview, service as home_service},
@@ -22,23 +9,36 @@ use crate::service::{
         service as stats_service,
     },
 };
+use crate::{error::AppError, service::auth::Claims};
+use rmcp::{
+    handler::server::{tool::ToolRouter, wrapper::Parameters},
+    model::{ErrorData, Implementation, ProtocolVersion, ServerCapabilities, ServerInfo},
+    tool, tool_handler, tool_router, Json, ServerHandler,
+};
+use schemars::JsonSchema;
+use sea_orm::DbConn;
+use serde::Deserialize;
+use tracing::instrument;
+use uuid::Uuid;
 
 // ============ 工具参数定义 ============
 
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct QueryOrdersParams {
-    #[schemars(description = "按客户ID筛选")]
-    pub customer_id: Option<Uuid>,
     #[schemars(
-        description = "按状态筛选，多个状态用逗号分隔: pending,processing,completed,delivered,cancelled"
+        description = "按状态筛选，多个状态用逗号分隔: pending,processing,completed,delivered,cancelled。不指定则返回所有状态"
     )]
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub status: Option<String>,
-    #[schemars(description = "搜索关键词（产品名称）")]
+    #[schemars(description = "搜索关键词（产品名称或客户名称）。不指定则不筛选")]
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub search: Option<String>,
-    #[schemars(description = "开始日期，格式 YYYY-MM-DD")]
+    #[schemars(description = "开始日期，格式 YYYY-MM-DD。不指定则不限制开始时间")]
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub start_date: Option<String>,
-    #[schemars(description = "结束日期，格式 YYYY-MM-DD")]
+    #[schemars(description = "结束日期，格式 YYYY-MM-DD。不指定则不限制结束时间")]
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub end_date: Option<String>,
     #[schemars(description = "页码，从1开始，默认1")]
     pub page: Option<u64>,
@@ -49,11 +49,16 @@ pub struct QueryOrdersParams {
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct QueryPieceRecordsParams {
-    #[schemars(description = "按状态筛选，多个状态用逗号分隔: pending,approved,rejected")]
+    #[schemars(
+        description = "按状态筛选，多个状态用逗号分隔: pending,approved,rejected。不指定则返回所有状态"
+    )]
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub status: Option<String>,
-    #[schemars(description = "开始日期，格式 YYYY-MM-DD")]
+    #[schemars(description = "开始日期，格式 YYYY-MM-DD。不指定则不限制")]
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub start_date: Option<String>,
-    #[schemars(description = "结束日期，格式 YYYY-MM-DD")]
+    #[schemars(description = "结束日期，格式 YYYY-MM-DD。不指定则不限制")]
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub end_date: Option<String>,
     #[schemars(description = "页码，从1开始，默认1")]
     pub page: Option<u64>,
@@ -64,26 +69,31 @@ pub struct QueryPieceRecordsParams {
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct GetWorkerStatsParams {
-    #[schemars(description = "开始日期，格式 YYYY-MM-DD")]
+    #[schemars(description = "开始日期，格式 YYYY-MM-DD。不指定则统计全部")]
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub start_date: Option<String>,
-    #[schemars(description = "结束日期，格式 YYYY-MM-DD")]
+    #[schemars(description = "结束日期，格式 YYYY-MM-DD。不指定则统计全部")]
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub end_date: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct GetOrderProgressParams {
-    #[schemars(description = "开始日期，格式 YYYY-MM-DD")]
+    #[schemars(description = "开始日期，格式 YYYY-MM-DD。不指定则显示全部")]
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub start_date: Option<String>,
-    #[schemars(description = "结束日期，格式 YYYY-MM-DD")]
+    #[schemars(description = "结束日期，格式 YYYY-MM-DD。不指定则显示全部")]
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub end_date: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct GetUnpaidSummaryParams {
-    #[schemars(description = "员工ID，不传则查询所有员工")]
-    pub user_id: Option<Uuid>,
+    #[schemars(description = "员工姓名关键词，不传则查询所有员工")]
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
+    pub user_name: Option<String>,
 }
 
 // ============ 响应类型 ============
@@ -121,24 +131,26 @@ pub struct UnpaidSummaryResponse {
 
 pub struct BossMcp {
     db: DbConn,
+    claims: Claims,
     pub tool_router: ToolRouter<BossMcp>,
 }
 
 #[tool_router]
 impl BossMcp {
-    pub fn new(db: DbConn) -> Self {
+    pub fn new(db: DbConn, claims: Claims) -> Self {
         Self {
             db,
+            claims,
             tool_router: Self::tool_router(),
         }
     }
 
     /// 查询订单列表
-    #[tool(description = "查询订单列表，支持按客户、状态、日期范围筛选")]
+    #[tool(description = "查询订单列表，支持按状态、日期范围、关键词筛选")]
+    #[instrument(skip(self))]
     pub async fn query_orders(
         &self,
         Parameters(params): Parameters<QueryOrdersParams>,
-        AuthClaims(claims): AuthClaims,
     ) -> Result<Json<OrderListResponse>, ErrorData> {
         let query_params = QueryParams {
             page: params.page.unwrap_or(1),
@@ -151,11 +163,9 @@ impl BossMcp {
             end_date: params.end_date,
             ..Default::default()
         };
-        let filter = OrderQueryParams {
-            customer_id: params.customer_id,
-        };
+        let filter = OrderQueryParams { customer_id: None };
 
-        let result = order_service::list(&self.db, query_params, filter, &claims).await?;
+        let result = order_service::list(&self.db, query_params, filter, &self.claims).await?;
         Ok(Json(OrderListResponse {
             list: result.list,
             total: result.total,
@@ -167,7 +177,6 @@ impl BossMcp {
     pub async fn query_piece_records(
         &self,
         Parameters(params): Parameters<QueryPieceRecordsParams>,
-        AuthClaims(claims): AuthClaims,
     ) -> Result<Json<PieceRecordListResponse>, ErrorData> {
         let query_params = QueryParams {
             page: params.page.unwrap_or(1),
@@ -180,7 +189,7 @@ impl BossMcp {
             ..Default::default()
         };
 
-        let result = piece_record_service::list(&self.db, query_params, &claims).await?;
+        let result = piece_record_service::list(&self.db, query_params, &self.claims).await?;
         Ok(Json(PieceRecordListResponse {
             list: result.list,
             total: result.total,
@@ -192,24 +201,21 @@ impl BossMcp {
     pub async fn get_worker_stats(
         &self,
         Parameters(params): Parameters<GetWorkerStatsParams>,
-        AuthClaims(claims): AuthClaims,
     ) -> Result<Json<WorkerProductionList>, ErrorData> {
         let stats_params = WorkerStatsParams {
             start_date: params.start_date,
             end_date: params.end_date,
         };
 
-        let result = stats_service::worker_production(&self.db, claims.sub, stats_params).await?;
+        let result =
+            stats_service::worker_production(&self.db, self.claims.sub, stats_params).await?;
         Ok(Json(result))
     }
 
     /// 获取首页概览数据
     #[tool(description = "获取老板首页概览数据，包括待审批数、进行中订单数、今日/本月产量和金额")]
-    pub async fn get_overview(
-        &self,
-        AuthClaims(claims): AuthClaims,
-    ) -> Result<Json<BossOverview>, ErrorData> {
-        let result = home_service::boss_overview(&self.db, claims.sub).await?;
+    pub async fn get_overview(&self) -> Result<Json<BossOverview>, ErrorData> {
+        let result = home_service::boss_overview(&self.db, self.claims.sub).await?;
         Ok(Json(result))
     }
 
@@ -218,14 +224,13 @@ impl BossMcp {
     pub async fn get_order_progress(
         &self,
         Parameters(params): Parameters<GetOrderProgressParams>,
-        AuthClaims(claims): AuthClaims,
     ) -> Result<Json<OrderProgressList>, ErrorData> {
         let stats_params = OrderStatsParams {
             start_date: params.start_date,
             end_date: params.end_date,
         };
 
-        let result = stats_service::order_progress(&self.db, claims.sub, stats_params).await?;
+        let result = stats_service::order_progress(&self.db, self.claims.sub, stats_params).await?;
         Ok(Json(result))
     }
 
@@ -234,19 +239,14 @@ impl BossMcp {
     pub async fn get_unpaid_summary(
         &self,
         Parameters(params): Parameters<GetUnpaidSummaryParams>,
-        AuthClaims(claims): AuthClaims,
     ) -> Result<Json<UnpaidSummaryResponse>, ErrorData> {
         use entity::piece_record::{self, PieceRecordStatus};
         use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
         use std::collections::HashMap;
 
-        let mut query = piece_record::Entity::find()
-            .filter(piece_record::Column::BossId.eq(claims.sub))
+        let query = piece_record::Entity::find()
+            .filter(piece_record::Column::BossId.eq(self.claims.sub))
             .filter(piece_record::Column::Status.eq(PieceRecordStatus::Approved));
-
-        if let Some(uid) = params.user_id {
-            query = query.filter(piece_record::Column::UserId.eq(uid));
-        }
 
         let records = query.all(&self.db).await.map_err(AppError::from)?;
 
@@ -271,19 +271,31 @@ impl BossMcp {
             .map(|u| (u.id, u))
             .collect();
 
+        // 按名称筛选
+        let name_filter = params.user_name.map(|n| n.to_lowercase());
+
         let list = user_stats
             .into_iter()
-            .map(|(user_id, (qty, amt))| {
-                let name = users
-                    .get(&user_id)
-                    .map(|u| u.display_name.clone().unwrap_or_else(|| u.username.clone()))
-                    .unwrap_or_default();
-                UnpaidSummaryItem {
+            .filter_map(|(user_id, (qty, amt))| {
+                let user = users.get(&user_id)?;
+                let name = user
+                    .display_name
+                    .clone()
+                    .unwrap_or_else(|| user.username.clone());
+
+                // 如果有名称筛选，检查是否匹配
+                if let Some(ref filter) = name_filter {
+                    if !name.to_lowercase().contains(filter) {
+                        return None;
+                    }
+                }
+
+                Some(UnpaidSummaryItem {
                     user_id,
                     user_name: name,
                     total_quantity: qty,
                     total_amount: amt,
-                }
+                })
             })
             .collect();
         Ok(Json(UnpaidSummaryResponse { list }))
