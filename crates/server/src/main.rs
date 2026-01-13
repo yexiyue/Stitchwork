@@ -1,5 +1,4 @@
 use axum::{routing::get, Router};
-use reqwest::Proxy;
 use rig::{client::EmbeddingsClient, completion::request, providers::openai};
 use sea_orm::Database;
 use std::collections::HashMap;
@@ -45,14 +44,8 @@ async fn main() {
         tracing::info!("S3 client initialized");
     }
 
-    // let client = reqwest::ClientBuilder::new()
-    //     .user_agent("Apifox/1.0.0")
-    //     .proxy(Proxy::all("http://127.0.0.1:8899").unwrap()) // all 代理 HTTP 和 HTTPS
-    //     .danger_accept_invalid_certs(true)
-    //     .build()
-    //     .unwrap();
 
-    let rig_client = openai::Client::<reqwest::Client>::builder()
+    let rig_client = openai::Client::builder()
         // .http_client(client)
         .base_url("https://www.packyapi.com/v1")
         .api_key("sk-H2nbepB0YiatnZg8YrMDvqCKC1fxY0LNRNOP9JPfJ31dcutt")

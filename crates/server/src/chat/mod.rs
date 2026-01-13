@@ -32,7 +32,7 @@ pub struct ChatSession {
 impl ChatSession {
     pub async fn new(
         db: &DbConn,
-        client: &openai::Client<reqwest::Client>,
+        client: &openai::Client,
         claims: Claims,
         // index: InMemoryVectorIndex<openai::EmbeddingModel, String>,
     ) -> Result<Self> {

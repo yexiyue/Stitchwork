@@ -27,7 +27,7 @@ pub struct AppState {
     pub invite_codes: Arc<InviteCodes>,
     pub s3: Option<S3Client>,
     pub notifier: SharedNotifier,
-    pub rig_client: Arc<openai::Client<reqwest::Client>>,
+    pub rig_client: Arc<openai::Client>,
     pub session_manager: SessionManager,
     // pub knowledge_base: chat::knowledge_base::KnowledgeBase,
 }

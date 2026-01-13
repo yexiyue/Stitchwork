@@ -64,5 +64,4 @@ rmcp = { version = "0.12.0", features = [
     "schemars",
 ] }
 anyhow = "1.0.100"
-reqwest = { version = "0.12.24", features = ["json", "multipart", "stream"] }
 moka = { version = "0.12.12", features = ["future"] }
