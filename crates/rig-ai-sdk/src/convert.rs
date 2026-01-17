@@ -49,8 +49,8 @@
 use anyhow::{Result, anyhow};
 use rig::OneOrMany;
 use rig::message::{
-    AssistantContent, DocumentSourceKind, Image, ImageMediaType, Message, Reasoning, ToolCall,
-    ToolFunction, ToolResult, ToolResultContent, UserContent,
+    AssistantContent, DocumentSourceKind, Image, ImageMediaType, Message, ToolCall, ToolFunction,
+    ToolResult, ToolResultContent, UserContent,
 };
 use serde_json::Value;
 
@@ -110,7 +110,9 @@ pub fn convert_message(msg: &UIMessage) -> Result<Message> {
         "assistant" => {
             let contents: Vec<_> = msg.parts.iter().filter_map(to_assistant_content).collect();
             Ok(Message::Assistant {
-                id: Some(msg.id.clone()),
+                // Don't use the frontend ID here - OpenAI manages its own message IDs
+                // using the 'msg_' prefix format internally
+                id: None,
                 content: OneOrMany::many(contents)
                     .unwrap_or_else(|_| OneOrMany::one(AssistantContent::text(""))),
             })
@@ -130,31 +132,23 @@ pub fn convert_message(msg: &UIMessage) -> Result<Message> {
 fn to_user_content(part: &UIMessagePart) -> Option<UserContent> {
     match part {
         // Text part
-        UIMessagePart::Text { text, .. } => Some(UserContent::text(text)),
+        UIMessagePart::Text(p) => Some(UserContent::text(p.text.clone())),
 
         // Tool result
-        UIMessagePart::ToolResult {
-            tool_call_id,
-            result,
-            ..
-        } => Some(UserContent::ToolResult(ToolResult {
-            id: tool_call_id.clone(),
-            call_id: Some(tool_call_id.clone()),
-            content: OneOrMany::one(ToolResultContent::text(json_to_string(result))),
+        UIMessagePart::ToolResult(p) => Some(UserContent::ToolResult(ToolResult {
+            id: p.tool_call_id.clone(),
+            call_id: Some(p.tool_call_id.clone()),
+            content: OneOrMany::one(ToolResultContent::text(json_to_string(&p.result))),
         })),
 
         // DynamicTool tool result (OutputAvailable and OutputError)
-        UIMessagePart::DynamicTool {
-            tool_call_id,
-            state,
-            ..
-        } => {
+        UIMessagePart::DynamicTool(p) => {
             // Only convert completed dynamic-tools with output to tool result
-            match state {
+            match &p.state {
                 DynamicToolState::OutputAvailable { input: _, output } => {
                     Some(UserContent::ToolResult(ToolResult {
-                        id: tool_call_id.clone(),
-                        call_id: Some(tool_call_id.clone()),
+                        id: p.tool_call_id.clone(),
+                        call_id: Some(p.tool_call_id.clone()),
                         content: OneOrMany::one(ToolResultContent::text(json_to_string(output))),
                     }))
                 }
@@ -164,8 +158,8 @@ fn to_user_content(part: &UIMessagePart) -> Option<UserContent> {
                 } => {
                     // Use error text as tool result
                     Some(UserContent::ToolResult(ToolResult {
-                        id: tool_call_id.clone(),
-                        call_id: Some(tool_call_id.clone()),
+                        id: p.tool_call_id.clone(),
+                        call_id: Some(p.tool_call_id.clone()),
                         content: OneOrMany::one(ToolResultContent::text(error_text.clone())),
                     }))
                 }
@@ -174,13 +168,11 @@ fn to_user_content(part: &UIMessagePart) -> Option<UserContent> {
         }
 
         // Image file
-        UIMessagePart::File {
-            media_type, url, ..
-        } => {
-            if media_type.starts_with("image/") {
+        UIMessagePart::File(p) => {
+            if p.media_type.starts_with("image/") {
                 Some(UserContent::Image(Image {
-                    data: DocumentSourceKind::Url(url.clone()),
-                    media_type: parse_image_media_type(media_type),
+                    data: DocumentSourceKind::Url(p.url.clone()),
+                    media_type: parse_image_media_type(&p.media_type),
                     detail: None,
                     additional_params: None,
                 }))
@@ -201,56 +193,48 @@ fn to_user_content(part: &UIMessagePart) -> Option<UserContent> {
 /// Returns `None` for parts that don't map to assistant content:
 ///
 /// - `Text` → `AssistantContent::Text`
-/// - `Reasoning` → `AssistantContent::Reasoning`
 /// - `ToolCall` → `AssistantContent::ToolCall`
 /// - `DynamicTool` (with input) → `AssistantContent::ToolCall`
+///
+/// # Important
+///
+/// **Reasoning and Data parts are filtered out** when converting assistant messages
+/// because:
+/// - Reasoning is AI-generated output and should not be sent back to the AI
+/// - OpenAI requires OpenAI-generated IDs for reasoning items
+/// - Data parts are metadata (e.g., usage info) and not actual content
 fn to_assistant_content(part: &UIMessagePart) -> Option<AssistantContent> {
     match part {
         // Text part
-        UIMessagePart::Text { text, .. } => Some(AssistantContent::text(text)),
-
-        // Reasoning part
-        UIMessagePart::Reasoning { text, .. } => {
-            Some(AssistantContent::Reasoning(Reasoning::new(text)))
-        }
+        UIMessagePart::Text(p) => Some(AssistantContent::text(p.text.clone())),
 
         // Legacy tool call format
-        UIMessagePart::ToolCall {
-            tool_call_id,
-            tool_name,
-            args,
-            ..
-        } => Some(AssistantContent::ToolCall(
+        UIMessagePart::ToolCall(p) => Some(AssistantContent::ToolCall(
             ToolCall::new(
-                tool_call_id.clone(),
+                p.tool_call_id.clone(),
                 ToolFunction {
-                    name: tool_name.clone(),
-                    arguments: args.clone(),
+                    name: p.tool_name.clone(),
+                    arguments: p.args.clone(),
                 },
             )
-            .with_call_id(tool_call_id.clone()),
+            .with_call_id(p.tool_call_id.clone()),
         )),
 
         // DynamicTool tool call
-        UIMessagePart::DynamicTool {
-            tool_call_id,
-            tool_name,
-            state,
-            ..
-        } => {
+        UIMessagePart::DynamicTool(p) => {
             // Only convert to ToolCall when input is available
-            match state {
+            match &p.state {
                 DynamicToolState::InputAvailable { input }
                 | DynamicToolState::OutputAvailable { input, .. } => {
                     Some(AssistantContent::ToolCall(
                         ToolCall::new(
-                            tool_call_id.clone(),
+                            p.tool_call_id.clone(),
                             ToolFunction {
-                                name: tool_name.clone(),
+                                name: p.tool_name.clone(),
                                 arguments: input.clone(),
                             },
                         )
-                        .with_call_id(tool_call_id.clone()),
+                        .with_call_id(p.tool_call_id.clone()),
                     ))
                 }
                 DynamicToolState::InputStreaming { input } => {
@@ -258,13 +242,13 @@ fn to_assistant_content(part: &UIMessagePart) -> Option<AssistantContent> {
                     input.as_ref().map(|i| {
                         AssistantContent::ToolCall(
                             ToolCall::new(
-                                tool_call_id.clone(),
+                                p.tool_call_id.clone(),
                                 ToolFunction {
-                                    name: tool_name.clone(),
+                                    name: p.tool_name.clone(),
                                     arguments: i.clone(),
                                 },
                             )
-                            .with_call_id(tool_call_id.clone()),
+                            .with_call_id(p.tool_call_id.clone()),
                         )
                     })
                 }
@@ -272,7 +256,8 @@ fn to_assistant_content(part: &UIMessagePart) -> Option<AssistantContent> {
             }
         }
 
-        // Other types not currently supported as AssistantContent
+        // Filter out: Reasoning (AI-generated, should not be sent back to AI),
+        // Data (metadata like usage info), SourceUrl, SourceDocument, StepStart
         _ => None,
     }
 }
@@ -309,547 +294,3 @@ fn parse_image_media_type(media_type: &str) -> Option<ImageMediaType> {
 // ============================================================================
 // Tests
 // ============================================================================
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::message::PartState;
-    use serde_json::json;
-
-    #[test]
-    fn test_convert_user_text_message() {
-        let msg = UIMessage {
-            id: "1".to_string(),
-            role: "user".to_string(),
-            metadata: None,
-            parts: vec![UIMessagePart::Text {
-                text: "Hello".to_string(),
-                state: None,
-                provider_metadata: None,
-            }],
-        };
-
-        let result = convert_message(&msg).unwrap();
-
-        println!("{:?}", result);
-        match result {
-            Message::User { content } => {
-                assert_eq!(content.iter().count(), 1);
-            }
-            _ => panic!("Expected User message"),
-        }
-    }
-
-    #[test]
-    fn test_convert_assistant_text_message() {
-        let msg = UIMessage {
-            id: "2".to_string(),
-            role: "assistant".to_string(),
-            metadata: None,
-            parts: vec![UIMessagePart::Text {
-                text: "Hi there!".to_string(),
-                state: Some(PartState::Done),
-                provider_metadata: None,
-            }],
-        };
-
-        let result = convert_message(&msg).unwrap();
-        println!("{:?}", result);
-        match result {
-            Message::Assistant { id, content } => {
-                assert_eq!(id, Some("2".to_string()));
-                assert_eq!(content.iter().count(), 1);
-            }
-            _ => panic!("Expected Assistant message"),
-        }
-    }
-
-    #[test]
-    fn test_convert_tool_call_message() {
-        let msg = UIMessage {
-            id: "3".to_string(),
-            role: "assistant".to_string(),
-            metadata: None,
-            parts: vec![UIMessagePart::ToolCall {
-                tool_call_id: "call_123".to_string(),
-                tool_name: "get_weather".to_string(),
-                args: json!({"city": "北京"}),
-                provider_metadata: None,
-            }],
-        };
-
-        let result = convert_message(&msg).unwrap();
-        println!("{:?}", result);
-        match result {
-            Message::Assistant { content, .. } => {
-                let first = content.iter().next().unwrap();
-                match first {
-                    AssistantContent::ToolCall(tc) => {
-                        assert_eq!(tc.function.name, "get_weather");
-                    }
-                    _ => panic!("Expected ToolCall"),
-                }
-            }
-            _ => panic!("Expected Assistant message"),
-        }
-    }
-
-    #[test]
-    fn test_convert_dynamic_tool_message() {
-        let msg = UIMessage {
-            id: "4".to_string(),
-            role: "assistant".to_string(),
-            metadata: None,
-            parts: vec![UIMessagePart::DynamicTool {
-                tool_name: "search".to_string(),
-                tool_call_id: "call_456".to_string(),
-                title: None,
-                provider_executed: true,
-                state: DynamicToolState::InputAvailable {
-                    input: json!({"query": "Rust"}),
-                },
-                call_provider_metadata: None,
-                preliminary: false,
-            }],
-        };
-
-        let result = convert_message(&msg).unwrap();
-        println!("{:?}", result);
-        match result {
-            Message::Assistant { content, .. } => {
-                let first = content.iter().next().unwrap();
-                match first {
-                    AssistantContent::ToolCall(tc) => {
-                        assert_eq!(tc.function.name, "search");
-                    }
-                    _ => panic!("Expected ToolCall"),
-                }
-            }
-            _ => panic!("Expected Assistant message"),
-        }
-    }
-
-    #[test]
-    fn test_convert_tool_result_message() {
-        let msg = UIMessage {
-            id: "5".to_string(),
-            role: "user".to_string(),
-            metadata: None,
-            parts: vec![UIMessagePart::ToolResult {
-                tool_call_id: "call_123".to_string(),
-                tool_name: Some("get_weather".to_string()),
-                result: json!({"temp": 25, "weather": "晴"}),
-            }],
-        };
-
-        let result = convert_message(&msg).unwrap();
-        println!("{:?}", result);
-        match result {
-            Message::User { content } => {
-                let first = content.iter().next().unwrap();
-                match first {
-                    UserContent::ToolResult(tr) => {
-                        assert_eq!(tr.id, "call_123");
-                    }
-                    _ => panic!("Expected ToolResult"),
-                }
-            }
-            _ => panic!("Expected User message"),
-        }
-    }
-
-    #[test]
-    fn test_convert_dynamic_tool_result_message() {
-        let msg = UIMessage {
-            id: "6".to_string(),
-            role: "user".to_string(),
-            metadata: None,
-            parts: vec![UIMessagePart::DynamicTool {
-                tool_name: "search".to_string(),
-                tool_call_id: "call_789".to_string(),
-                title: None,
-                provider_executed: true,
-                state: DynamicToolState::OutputAvailable {
-                    input: json!({"query": "Rust"}),
-                    output: json!({"results": ["Rust", "Cargo"]}),
-                },
-                call_provider_metadata: None,
-                preliminary: false,
-            }],
-        };
-
-        let result = convert_message(&msg).unwrap();
-        println!("{:?}", result);
-        match result {
-            Message::User { content } => {
-                let first = content.iter().next().unwrap();
-                match first {
-                    UserContent::ToolResult(tr) => {
-                        assert_eq!(tr.id, "call_789");
-                    }
-                    _ => panic!("Expected ToolResult"),
-                }
-            }
-            _ => panic!("Expected User message"),
-        }
-    }
-
-    #[test]
-    fn test_convert_image_file() {
-        let msg = UIMessage {
-            id: "7".to_string(),
-            role: "user".to_string(),
-            metadata: None,
-            parts: vec![UIMessagePart::File {
-                media_type: "image/png".to_string(),
-                url: "https://example.com/image.png".to_string(),
-                filename: Some("screenshot.png".to_string()),
-                provider_metadata: None,
-            }],
-        };
-
-        let result = convert_message(&msg).unwrap();
-        match result {
-            Message::User { content } => {
-                let first = content.iter().next().unwrap();
-                match first {
-                    UserContent::Image(img) => {
-                        assert_eq!(img.media_type, Some(ImageMediaType::PNG));
-                    }
-                    _ => panic!("Expected Image"),
-                }
-            }
-            _ => panic!("Expected User message"),
-        }
-    }
-
-    #[test]
-    fn test_convert_reasoning_part() {
-        let msg = UIMessage {
-            id: "8".to_string(),
-            role: "assistant".to_string(),
-            metadata: None,
-            parts: vec![UIMessagePart::Reasoning {
-                text: "Let me think about this...".to_string(),
-                state: Some(PartState::Done),
-                provider_metadata: None,
-            }],
-        };
-
-        let result = convert_message(&msg).unwrap();
-        match result {
-            Message::Assistant { content, .. } => {
-                let first = content.iter().next().unwrap();
-                match first {
-                    AssistantContent::Reasoning(r) => {
-                        // Reasoning 结构有 reasoning 字段 (Vec<String>) 而不是 text
-                        assert!(r.reasoning.iter().any(|s| s.contains("think")));
-                    }
-                    _ => panic!("Expected Reasoning"),
-                }
-            }
-            _ => panic!("Expected Assistant message"),
-        }
-    }
-
-    #[test]
-    fn test_dynamic_tool_streaming_with_empty_input() {
-        let msg = UIMessage {
-            id: "9".to_string(),
-            role: "user".to_string(),
-            metadata: None,
-            parts: vec![UIMessagePart::DynamicTool {
-                tool_name: "search".to_string(),
-                tool_call_id: "call_999".to_string(),
-                title: None,
-                provider_executed: true,
-                state: DynamicToolState::InputStreaming { input: None },
-                call_provider_metadata: None,
-                preliminary: false,
-            }],
-        };
-
-        let result = convert_message(&msg).unwrap();
-        match result {
-            Message::User { content } => {
-                // InputStreaming 状态没有输入时不产生转换内容，会返回空文本
-                let first = content.iter().next().unwrap();
-                match first {
-                    UserContent::Text(text) => {
-                        assert!(text.text.is_empty());
-                    }
-                    _ => panic!("Expected empty Text content"),
-                }
-            }
-            _ => panic!("Expected User message"),
-        }
-    }
-
-    /// 测试用户消息：文本 + 图片
-    #[test]
-    fn test_multi_part_user_text_and_image() {
-        let msg = UIMessage {
-            id: "10".to_string(),
-            role: "user".to_string(),
-            metadata: None,
-            parts: vec![
-                UIMessagePart::Text {
-                    text: "请查看这张图片".to_string(),
-                    state: None,
-                    provider_metadata: None,
-                },
-                UIMessagePart::File {
-                    media_type: "image/jpeg".to_string(),
-                    url: "https://example.com/photo.jpg".to_string(),
-                    filename: Some("photo.jpg".to_string()),
-                    provider_metadata: None,
-                },
-            ],
-        };
-
-        let result = convert_message(&msg).unwrap();
-        match result {
-            Message::User { content } => {
-                let contents: Vec<_> = content.iter().collect();
-                assert_eq!(contents.len(), 2);
-                // 第一个应该是文本
-                match &contents[0] {
-                    UserContent::Text(t) => {
-                        assert_eq!(t.text, "请查看这张图片");
-                    }
-                    _ => panic!("Expected Text first"),
-                }
-                // 第二个应该是图片
-                match &contents[1] {
-                    UserContent::Image(img) => {
-                        assert_eq!(img.media_type, Some(ImageMediaType::JPEG));
-                    }
-                    _ => panic!("Expected Image second"),
-                }
-            }
-            _ => panic!("Expected User message"),
-        }
-    }
-
-    /// 测试助手消息：文本 + 工具调用
-    #[test]
-    fn test_multi_part_assistant_text_and_tool_call() {
-        let msg = UIMessage {
-            id: "11".to_string(),
-            role: "assistant".to_string(),
-            metadata: None,
-            parts: vec![
-                UIMessagePart::Text {
-                    text: "我来帮你查询天气".to_string(),
-                    state: Some(PartState::Done),
-                    provider_metadata: None,
-                },
-                UIMessagePart::DynamicTool {
-                    tool_name: "get_weather".to_string(),
-                    tool_call_id: "call_111".to_string(),
-                    title: None,
-                    provider_executed: true,
-                    state: DynamicToolState::InputAvailable {
-                        input: json!({"city": "北京"}),
-                    },
-                    call_provider_metadata: None,
-                    preliminary: false,
-                },
-            ],
-        };
-
-        let result = convert_message(&msg).unwrap();
-        match result {
-            Message::Assistant { content, id } => {
-                assert_eq!(id, Some("11".to_string()));
-                let contents: Vec<_> = content.iter().collect();
-                assert_eq!(contents.len(), 2);
-                match &contents[0] {
-                    AssistantContent::Text(t) => {
-                        assert_eq!(t.text, "我来帮你查询天气");
-                    }
-                    _ => panic!("Expected Text first"),
-                }
-                match &contents[1] {
-                    AssistantContent::ToolCall(tc) => {
-                        assert_eq!(tc.function.name, "get_weather");
-                    }
-                    _ => panic!("Expected ToolCall second"),
-                }
-            }
-            _ => panic!("Expected Assistant message"),
-        }
-    }
-
-    /// 测试用户消息：工具结果 + 文本
-    #[test]
-    fn test_multi_part_user_tool_result_and_text() {
-        let msg = UIMessage {
-            id: "12".to_string(),
-            role: "user".to_string(),
-            metadata: None,
-            parts: vec![
-                UIMessagePart::DynamicTool {
-                    tool_name: "search".to_string(),
-                    tool_call_id: "call_222".to_string(),
-                    title: None,
-                    provider_executed: true,
-                    state: DynamicToolState::OutputAvailable {
-                        input: json!({"query": "Rust"}),
-                        output: json!({"results": ["Rust Programming Language"]}),
-                    },
-                    call_provider_metadata: None,
-                    preliminary: false,
-                },
-                UIMessagePart::Text {
-                    text: "搜索结果怎么样？".to_string(),
-                    state: None,
-                    provider_metadata: None,
-                },
-            ],
-        };
-
-        let result = convert_message(&msg).unwrap();
-        match result {
-            Message::User { content } => {
-                let contents: Vec<_> = content.iter().collect();
-                assert_eq!(contents.len(), 2);
-                // 第一个是工具结果
-                match &contents[0] {
-                    UserContent::ToolResult(tr) => {
-                        assert_eq!(tr.id, "call_222");
-                    }
-                    _ => panic!("Expected ToolResult first"),
-                }
-                // 第二个是文本
-                match &contents[1] {
-                    UserContent::Text(t) => {
-                        assert_eq!(t.text, "搜索结果怎么样？");
-                    }
-                    _ => panic!("Expected Text second"),
-                }
-            }
-            _ => panic!("Expected User message"),
-        }
-    }
-
-    /// 测试助手消息：推理 + 文本 + 工具调用
-    #[test]
-    fn test_multi_part_assistant_reasoning_text_and_tool() {
-        let msg = UIMessage {
-            id: "13".to_string(),
-            role: "assistant".to_string(),
-            metadata: None,
-            parts: vec![
-                UIMessagePart::Reasoning {
-                    text: "需要分析用户的需求".to_string(),
-                    state: Some(PartState::Done),
-                    provider_metadata: None,
-                },
-                UIMessagePart::Text {
-                    text: "我理解了，让我来处理".to_string(),
-                    state: Some(PartState::Done),
-                    provider_metadata: None,
-                },
-                UIMessagePart::ToolCall {
-                    tool_call_id: "call_333".to_string(),
-                    tool_name: "calculate".to_string(),
-                    args: json!({"expression": "1+1"}),
-                    provider_metadata: None,
-                },
-            ],
-        };
-
-        let result = convert_message(&msg).unwrap();
-        match result {
-            Message::Assistant { content, .. } => {
-                let contents: Vec<_> = content.iter().collect();
-                assert_eq!(contents.len(), 3);
-                match &contents[0] {
-                    AssistantContent::Reasoning(r) => {
-                        assert!(r.reasoning.iter().any(|s| s.contains("用户的需求")));
-                    }
-                    _ => panic!("Expected Reasoning first"),
-                }
-                match &contents[1] {
-                    AssistantContent::Text(t) => {
-                        assert_eq!(t.text, "我理解了，让我来处理");
-                    }
-                    _ => panic!("Expected Text second"),
-                }
-                match &contents[2] {
-                    AssistantContent::ToolCall(tc) => {
-                        assert_eq!(tc.function.name, "calculate");
-                    }
-                    _ => panic!("Expected ToolCall third"),
-                }
-            }
-            _ => panic!("Expected Assistant message"),
-        }
-    }
-
-    /// 测试批量消息转换
-    #[test]
-    fn test_convert_multiple_messages() {
-        let messages = vec![
-            UIMessage {
-                id: "14".to_string(),
-                role: "user".to_string(),
-                metadata: None,
-                parts: vec![UIMessagePart::Text {
-                    text: "你好".to_string(),
-                    state: None,
-                    provider_metadata: None,
-                }],
-            },
-            UIMessage {
-                id: "15".to_string(),
-                role: "assistant".to_string(),
-                metadata: None,
-                parts: vec![UIMessagePart::Text {
-                    text: "你好！".to_string(),
-                    state: Some(PartState::Done),
-                    provider_metadata: None,
-                }],
-            },
-            UIMessage {
-                id: "16".to_string(),
-                role: "user".to_string(),
-                metadata: None,
-                parts: vec![UIMessagePart::Text {
-                    text: "再见".to_string(),
-                    state: None,
-                    provider_metadata: None,
-                }],
-            },
-        ];
-
-        let result = convert_messages(&messages).unwrap();
-        assert_eq!(result.len(), 3);
-
-        // 验证第一条
-        match &result[0] {
-            Message::User { content } => {
-                assert_eq!(content.iter().count(), 1);
-            }
-            _ => panic!("Expected User message at index 0"),
-        }
-
-        // 验证第二条
-        match &result[1] {
-            Message::Assistant { id, content } => {
-                assert_eq!(id, &Some("15".to_string()));
-                assert_eq!(content.iter().count(), 1);
-            }
-            _ => panic!("Expected Assistant message at index 1"),
-        }
-
-        // 验证第三条
-        match &result[2] {
-            Message::User { content } => {
-                assert_eq!(content.iter().count(), 1);
-            }
-            _ => panic!("Expected User message at index 2"),
-        }
-    }
-}

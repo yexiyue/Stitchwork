@@ -82,7 +82,7 @@ where
 ///
 /// # Event Flow
 ///
-/// The adapter emits events in the following order:
+/// The adapter emits events in following order:
 ///
 /// 1. `data-start` - Initial connection acknowledgment
 /// 2. Streaming content events (text-delta, tool-input-*, reasoning-*, etc.)
@@ -106,7 +106,7 @@ where
 ///
 /// while let Some(event) = ai_sdk_stream.next().await {
 ///     match event? {
-///         AISdkEvent::TextDelta { text } => println!("{}", text),
+///         AISdkEvent::TextDelta { id, delta, .. } => println!("{}: {}", id, delta),
 ///         AISdkEvent::ToolInputStart { tool_name, .. } => {
 ///             println!("Calling tool: {}", tool_name);
 ///         }
@@ -149,7 +149,7 @@ where
 
 /// Converts a single [`MultiTurnStreamItem`] into zero or more [`AISdkEvent`]s.
 ///
-/// This internal function handles the core conversion logic from rig's stream
+/// This internal function handles of core conversion logic from rig's stream
 /// items to AI SDK events. The mapping is as follows:
 ///
 /// | Rig Item | AI SDK Events |
@@ -172,7 +172,7 @@ where
 ///
 /// # Returns
 ///
-/// A vector of AI SDK events (may be empty if the item is ignored)
+/// A vector of AI SDK events (may be empty if item is ignored)
 fn convert_stream_item<R>(
     events: &mut AISdkStreamBuilder,
     tool_names: &mut HashMap<String, String>,
@@ -190,6 +190,9 @@ fn convert_stream_item<R>(
             result.push(AISdkEvent::ToolOutputAvailable {
                 tool_call_id,
                 output: serde_json::to_value(&tool_result.content).unwrap_or_default(),
+                provider_executed: None,
+                dynamic: None,
+                preliminary: None,
             });
         }
         MultiTurnStreamItem::StreamAssistantItem(assistant) => match assistant {
@@ -197,7 +200,10 @@ fn convert_stream_item<R>(
                 // If coming from reasoning, end reasoning and start text
                 if let Some(reasoning_end) = events.reasoning_end() {
                     result.push(reasoning_end);
-                    result.push(events.text_start());
+                }
+
+                if let Some(text_start) = events.text_start() {
+                    result.push(text_start);
                 }
 
                 if let Some(text_delta) = events.text_delta(text.text) {
@@ -205,15 +211,14 @@ fn convert_stream_item<R>(
                 }
             }
             StreamedAssistantContent::ToolCall(tool_call) => {
-                let tool_call_id = tool_call
-                    .call_id
-                    .as_ref()
-                    .unwrap_or(&tool_call.id)
-                    .clone();
+                let tool_call_id = tool_call.call_id.as_ref().unwrap_or(&tool_call.id).clone();
                 result.push(AISdkEvent::ToolInputAvailable {
                     tool_call_id,
                     tool_name: tool_call.function.name,
                     input: tool_call.function.arguments,
+                    provider_executed: None,
+                    provider_metadata: None,
+                    dynamic: None,
                 });
             }
             StreamedAssistantContent::ToolCallDelta { id, content } => match content {
@@ -222,6 +227,9 @@ fn convert_stream_item<R>(
                     result.push(AISdkEvent::ToolInputStart {
                         tool_call_id: id,
                         tool_name: name,
+                        provider_executed: None,
+                        provider_metadata: None,
+                        dynamic: None,
                     });
                 }
                 ToolCallDeltaContent::Delta(delta) => {
@@ -232,15 +240,15 @@ fn convert_stream_item<R>(
                 }
             },
             StreamedAssistantContent::Reasoning(reasoning) => {
-                result.push(events.reasoning_start());
+                result.push(events.reasoning_start(reasoning.id));
                 for item in &reasoning.reasoning {
-                    if let Some(delta) = events.reasoning_delta(item) {
+                    if let Some(delta) = events.reasoning_delta(item, None) {
                         result.push(delta);
                     }
                 }
             }
-            StreamedAssistantContent::ReasoningDelta { reasoning, .. } => {
-                if let Some(reasoning_delta) = events.reasoning_delta(reasoning) {
+            StreamedAssistantContent::ReasoningDelta { reasoning, id } => {
+                if let Some(reasoning_delta) = events.reasoning_delta(reasoning, id) {
                     result.push(reasoning_delta);
                 }
             }

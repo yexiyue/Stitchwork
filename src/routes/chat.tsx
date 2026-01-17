@@ -7,7 +7,6 @@ import {
 } from "@assistant-ui/react-ai-sdk";
 import { useAuthStore } from "@/stores/auth";
 import { Thread } from "@/components/thread";
-import { DevToolsModal } from "@assistant-ui/react-devtools";
 
 export const Route = createFileRoute("/chat")({
   beforeLoad: () => {
@@ -50,7 +49,6 @@ function ChatPage() {
           <Thread />
         </div>
       </div>
-      <DevToolsModal />
     </AssistantRuntimeProvider>
   );
 }

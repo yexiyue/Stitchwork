@@ -6,9 +6,9 @@ use entity::user::Role;
 use futures::Stream;
 use rig::agent::Agent;
 use rig::message::Message;
-use rig::providers::openai::responses_api::ResponsesCompletionModel;
+use rig::providers::anthropic::completion::CompletionModel;
 use rig::streaming::StreamingChat;
-use rig::{client::CompletionClient, providers::openai};
+use rig::{client::CompletionClient, providers::anthropic};
 use rmcp::service::RunningService;
 use rmcp::ServiceExt;
 use sea_orm::DbConn;
@@ -17,8 +17,8 @@ use tokio::io::duplex;
 
 // Re-export from rig-ai-sdk for convenience
 pub use rig_ai_sdk::{
-    adapt_rig_stream_sse, AISdkEvent, AISdkStreamBuilder, UIMessage, UIMessagePart,
-    convert_message, convert_messages, extract_prompt_and_history,
+    adapt_rig_stream_sse, convert_message, convert_messages, extract_prompt_and_history,
+    AISdkEvent, AISdkStreamBuilder, UIMessage, UIMessagePart,
 };
 
 pub mod knowledge_base;
@@ -29,14 +29,14 @@ pub mod session_manager;
 pub use request::AISdkChatRequest;
 
 pub struct ChatSession {
-    pub agent: Agent<ResponsesCompletionModel>,
+    pub agent: Agent<CompletionModel>,
     pub mcp_client: RunningService<rmcp::RoleClient, rmcp::model::InitializeRequestParam>,
 }
 
 impl ChatSession {
     pub async fn new(
         db: &DbConn,
-        client: &openai::Client,
+        client: &anthropic::Client,
         claims: Claims,
         // index: InMemoryVectorIndex<openai::EmbeddingModel, String>,
     ) -> Result<Self> {
@@ -119,7 +119,8 @@ impl ChatSession {
         };
 
         let agent = client
-            .agent("gpt-5-codex")
+            .agent("glm-4.7")
+            .max_tokens(3000)
             // .dynamic_context(3, index)
             .rmcp_tools(tools.tools, mcp_client.peer().clone())
             .preamble(&preamble)

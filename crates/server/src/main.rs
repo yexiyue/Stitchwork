@@ -1,5 +1,5 @@
 use axum::{routing::get, Router};
-use rig::providers::openai;
+use rig::providers::anthropic;
 use sea_orm::Database;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -42,13 +42,14 @@ async fn main() {
         tracing::info!("S3 client initialized");
     }
 
-    let rig_client = openai::Client::builder()
+    let rig_client = anthropic::Client::builder()
         // .http_client(client)
         .base_url(&std::env::var("RIG_BASE_URL").expect("RIG_BASE_URL must be set"))
         .api_key(&std::env::var("RIG_API_KEY").expect("RIG_API_KEY must be set"))
         .build()
         .unwrap();
 
+    
     // let embedding_model = rig_client.embedding_model(openai::TEXT_EMBEDDING_3_SMALL);
 
     // let knowledge_base = KnowledgeBase::new("./docs", embedding_model).await.unwrap();

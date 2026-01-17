@@ -36,7 +36,7 @@
 //! };
 //! ```
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 
 // ============================================================================
@@ -67,13 +67,12 @@ pub struct ProviderMetadata {
 ///
 /// Indicates whether content is being streamed or is complete.
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "lowercase")]
 pub enum PartState {
     /// Content is currently being streamed
-    #[serde(rename = "streaming")]
     Streaming,
 
     /// Content is complete
-    #[serde(rename = "done")]
     #[default]
     Done,
 }
@@ -82,159 +81,224 @@ pub enum PartState {
 // AI SDK UIMessage Part types
 // ============================================================================
 
+/// Text content part
+///
+/// Plain text content with optional streaming state and provider metadata.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TextPart {
+    pub text: String,
+    #[serde(default)]
+    pub state: Option<PartState>,
+    #[serde(default)]
+    pub provider_metadata: Option<ProviderMetadata>,
+}
+
+/// Reasoning/thinking part
+///
+/// Model reasoning or thinking block content (e.g., for o1-style models).
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReasoningPart {
+    /// Reasoning/thinking content
+    pub text: String,
+    #[serde(default)]
+    pub state: Option<PartState>,
+    #[serde(default)]
+    pub provider_metadata: Option<ProviderMetadata>,
+}
+
+/// File attachment part (supports any media type)
+///
+/// Represents a file attachment with URL, media type, and optional filename.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FilePart {
+    pub media_type: String,
+    pub url: String,
+    #[serde(default)]
+    pub filename: Option<String>,
+    #[serde(default)]
+    pub provider_metadata: Option<ProviderMetadata>,
+}
+
+/// Tool call (legacy format for compatibility)
+///
+/// Legacy tool call format without streaming state support.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ToolCallPart {
+    pub tool_call_id: String,
+    pub tool_name: String,
+    pub args: Value,
+    #[serde(default)]
+    pub provider_metadata: Option<ProviderMetadata>,
+}
+
+/// Tool result
+///
+/// Result from a previous tool execution.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ToolResultPart {
+    pub tool_call_id: String,
+    #[serde(default)]
+    pub tool_name: Option<String>,
+    pub result: Value,
+}
+
+/// Dynamic tool call (AI SDK 5.x format with state support)
+///
+/// Modern tool call format with streaming state support and provider execution info.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DynamicToolPart {
+    pub tool_name: String,
+    pub tool_call_id: String,
+    #[serde(default)]
+    pub title: Option<String>,
+    #[serde(default)]
+    pub provider_executed: bool,
+    pub state: DynamicToolState,
+    #[serde(default)]
+    pub call_provider_metadata: Option<ProviderMetadata>,
+    #[serde(default)]
+    pub preliminary: bool,
+}
+
+/// URL source reference
+///
+/// References a URL as a source for the response.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SourceUrlPart {
+    pub source_id: String,
+    pub url: String,
+    #[serde(default)]
+    pub title: Option<String>,
+    #[serde(default)]
+    pub provider_metadata: Option<ProviderMetadata>,
+}
+
+/// Document source reference
+///
+/// References a document as a source with media type and title.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SourceDocumentPart {
+    pub source_id: String,
+    pub media_type: String,
+    pub title: String,
+    #[serde(default)]
+    pub filename: Option<String>,
+    #[serde(default)]
+    pub provider_metadata: Option<ProviderMetadata>,
+}
+
+/// Custom data part (supports dynamic `data-{name}` tags)
+///
+/// Arbitrary custom data attachment with a type name.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DataPart {
+    /// Data type name (the `{name}` in `data-{name}`)
+    pub data_type: String,
+    #[serde(default)]
+    pub id: Option<String>,
+    pub data: Value,
+}
+
 /// AI SDK UIMessage part types.
 ///
 /// A message consists of one or more parts, each representing a different
 /// type of content (text, file, tool call, reasoning, etc.).
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+///
+/// The format uses a `type` field to distinguish between different part types:
+/// ```json
+/// { "type": "text", "text": "Hello" }
+/// { "type": "file", "mediaType": "image/png", "url": "..." }
+/// { "type": "data-usage", "data": {...} }
+/// ```
+#[derive(Debug, Clone, Serialize)]
 pub enum UIMessagePart {
-    /// Text content part
-    ///
-    /// Plain text content with optional streaming state and provider metadata.
-    Text {
-        text: String,
-        #[serde(default)]
-        state: Option<PartState>,
-        #[serde(default)]
-        provider_metadata: Option<ProviderMetadata>,
-    },
-
-    /// Reasoning/thinking part
-    ///
-    /// Model reasoning or thinking block content (e.g., for o1-style models).
-    Reasoning {
-        text: String,
-        #[serde(default)]
-        state: Option<PartState>,
-        #[serde(default)]
-        provider_metadata: Option<ProviderMetadata>,
-    },
-
-    /// File attachment part (supports any media type)
-    ///
-    /// Represents a file attachment with URL, media type, and optional filename.
-    File {
-        #[serde(rename = "mediaType")]
-        media_type: String,
-        url: String,
-        #[serde(default)]
-        filename: Option<String>,
-        #[serde(default)]
-        provider_metadata: Option<ProviderMetadata>,
-    },
-
-    /// Tool call (legacy format for compatibility)
-    ///
-    /// Legacy tool call format without streaming state support.
-    #[serde(rename = "tool-call")]
-    ToolCall {
-        #[serde(rename = "toolCallId")]
-        tool_call_id: String,
-        #[serde(rename = "toolName")]
-        tool_name: String,
-        args: Value,
-        #[serde(default)]
-        provider_metadata: Option<ProviderMetadata>,
-    },
-
+    /// Text content
+    Text(TextPart),
+    /// Reasoning/thinking content
+    Reasoning(ReasoningPart),
+    /// File attachment
+    File(FilePart),
+    /// Legacy tool call
+    ToolCall(ToolCallPart),
     /// Tool result
-    ///
-    /// Result from a previous tool execution.
-    #[serde(rename = "tool-result")]
-    ToolResult {
-        #[serde(rename = "toolCallId")]
-        tool_call_id: String,
-        #[serde(rename = "toolName", default)]
-        tool_name: Option<String>,
-        result: Value,
-    },
-
-    /// Dynamic tool call (AI SDK 5.x format with state support)
-    ///
-    /// Modern tool call format with streaming state support and provider execution info.
-    #[serde(rename = "dynamic-tool")]
-    DynamicTool {
-        /// Tool name
-        #[serde(rename = "toolName")]
-        tool_name: String,
-
-        /// Tool call ID
-        #[serde(rename = "toolCallId")]
-        tool_call_id: String,
-
-        /// Optional display title for the tool call
-        #[serde(default)]
-        title: Option<String>,
-
-        /// Whether the tool was executed by the provider
-        #[serde(rename = "providerExecuted", default)]
-        provider_executed: bool,
-
-        /// Current state of the tool call
-        state: DynamicToolState,
-
-        /// Metadata about the provider call
-        #[serde(rename = "callProviderMetadata", default)]
-        call_provider_metadata: Option<ProviderMetadata>,
-
-        /// Whether this is a preliminary result
-        #[serde(default)]
-        preliminary: bool,
-    },
-
-    /// URL source reference
-    ///
-    /// References a URL as a source for the response.
-    #[serde(rename = "source-url")]
-    SourceUrl {
-        #[serde(rename = "sourceId")]
-        source_id: String,
-        url: String,
-        #[serde(default)]
-        title: Option<String>,
-        #[serde(default)]
-        provider_metadata: Option<ProviderMetadata>,
-    },
-
-    /// Document source reference
-    ///
-    /// References a document as a source with media type and title.
-    #[serde(rename = "source-document")]
-    SourceDocument {
-        #[serde(rename = "sourceId")]
-        source_id: String,
-        #[serde(rename = "mediaType")]
-        media_type: String,
-        title: String,
-        #[serde(default)]
-        filename: Option<String>,
-        #[serde(default)]
-        provider_metadata: Option<ProviderMetadata>,
-    },
-
+    ToolResult(ToolResultPart),
+    /// Dynamic tool call
+    DynamicTool(DynamicToolPart),
+    /// URL source
+    SourceUrl(SourceUrlPart),
+    /// Document source
+    SourceDocument(SourceDocumentPart),
     /// Step start marker
-    ///
-    /// Marks the beginning of a processing step.
-    #[serde(rename = "step-start")]
     StepStart,
+    /// Dynamic data part (data-{name} pattern)
+    Data(DataPart),
+}
 
-    /// Custom data part
-    ///
-    /// Arbitrary custom data attachment with a type name.
-    #[serde(rename = "data")]
-    Data {
-        /// Data type name
-        #[serde(rename = "type")]
-        data_type: String,
+/// Helper struct for deserialization of UIMessagePart with type field
+///
+/// Uses `tag = "type"` to handle standard types: text, reasoning, file,
+/// tool-call, tool-result, dynamic-tool, source-url, source-document, step-start
+#[derive(Debug, Clone, Deserialize)]
+#[serde(tag = "type", rename_all = "kebab-case")]
+enum UIMessagePartTagged {
+    Text(TextPart),
+    Reasoning(ReasoningPart),
+    File(FilePart),
+    ToolCall(ToolCallPart),
+    ToolResult(ToolResultPart),
+    DynamicTool(DynamicToolPart),
+    SourceUrl(SourceUrlPart),
+    SourceDocument(SourceDocumentPart),
+    StepStart,
+}
 
-        /// Optional data ID
-        #[serde(default)]
-        id: Option<String>,
+impl<'de> Deserialize<'de> for UIMessagePart {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let raw = serde_json::Value::deserialize(deserializer)?;
 
-        /// Data content
-        data: Value,
-    },
+        // Check if this is a data-{name} type
+        if let Some(t) = raw.get("type").and_then(|v| v.as_str()) {
+            if t.starts_with("data-") {
+                let data_part = DataPart {
+                    data_type: t.strip_prefix("data-").unwrap_or(t).to_string(),
+                    id: raw.get("id").and_then(|v| v.as_str()).map(String::from),
+                    data: raw.get("data").cloned().unwrap_or(Value::Null),
+                };
+                return Ok(UIMessagePart::Data(data_part));
+            }
+        }
+
+        // Otherwise, try tagged deserialization
+        let tagged: Result<UIMessagePartTagged, _> =
+            serde_json::from_value(raw.clone()).map_err(serde::de::Error::custom);
+
+        match tagged {
+            Ok(tagged) => Ok(match tagged {
+                UIMessagePartTagged::Text(v) => UIMessagePart::Text(v),
+                UIMessagePartTagged::Reasoning(v) => UIMessagePart::Reasoning(v),
+                UIMessagePartTagged::File(v) => UIMessagePart::File(v),
+                UIMessagePartTagged::ToolCall(v) => UIMessagePart::ToolCall(v),
+                UIMessagePartTagged::ToolResult(v) => UIMessagePart::ToolResult(v),
+                UIMessagePartTagged::DynamicTool(v) => UIMessagePart::DynamicTool(v),
+                UIMessagePartTagged::SourceUrl(v) => UIMessagePart::SourceUrl(v),
+                UIMessagePartTagged::SourceDocument(v) => UIMessagePart::SourceDocument(v),
+                UIMessagePartTagged::StepStart => UIMessagePart::StepStart,
+            }),
+            Err(e) => Err(e),
+        }
+    }
 }
 
 /// Dynamic tool state for AI SDK 5.x
@@ -255,17 +319,12 @@ pub enum DynamicToolState {
     /// Input is available
     ///
     /// The complete tool input is now available.
-    InputAvailable {
-        input: Value,
-    },
+    InputAvailable { input: Value },
 
     /// Output is available
     ///
     /// The tool has been executed and output is ready.
-    OutputAvailable {
-        input: Value,
-        output: Value,
-    },
+    OutputAvailable { input: Value, output: Value },
 
     /// Output error
     ///
@@ -316,29 +375,45 @@ impl UIMessagePart {
     /// ```
     pub fn as_text(&self) -> Option<&str> {
         match self {
-            UIMessagePart::Text { text, .. } => Some(text),
+            UIMessagePart::Text(p) => Some(&p.text),
             _ => None,
         }
     }
 
     /// Returns `true` if this is a `Text` part.
     pub fn is_text(&self) -> bool {
-        matches!(self, UIMessagePart::Text { .. })
+        matches!(self, UIMessagePart::Text(_))
     }
 
     /// Returns `true` if this is a `Reasoning` part.
     pub fn is_reasoning(&self) -> bool {
-        matches!(self, UIMessagePart::Reasoning { .. })
+        matches!(self, UIMessagePart::Reasoning(_))
     }
 
     /// Returns `true` if this is a tool call (including `DynamicTool`).
     pub fn is_tool_call(&self) -> bool {
-        matches!(self, UIMessagePart::ToolCall { .. } | UIMessagePart::DynamicTool { .. })
+        matches!(
+            self,
+            UIMessagePart::ToolCall(_) | UIMessagePart::DynamicTool(_)
+        )
     }
 
     /// Returns `true` if this is a tool result.
     pub fn is_tool_result(&self) -> bool {
-        matches!(self, UIMessagePart::ToolResult { .. })
+        matches!(self, UIMessagePart::ToolResult(_))
+    }
+
+    /// Returns `true` if this is a `Data` part.
+    pub fn is_data(&self) -> bool {
+        matches!(self, UIMessagePart::Data(_))
+    }
+
+    /// Gets the data content if this is a `Data` part.
+    pub fn as_data(&self) -> Option<&DataPart> {
+        match self {
+            UIMessagePart::Data(p) => Some(p),
+            _ => None,
+        }
     }
 
     /// Gets the file content if this is a `File` part.
@@ -346,12 +421,7 @@ impl UIMessagePart {
     /// Returns a tuple of `(media_type, url, optional_filename)`.
     pub fn as_file(&self) -> Option<(&str, &str, Option<&String>)> {
         match self {
-            UIMessagePart::File {
-                media_type,
-                url,
-                filename,
-                ..
-            } => Some((media_type, url, filename.as_ref())),
+            UIMessagePart::File(p) => Some((&p.media_type, &p.url, p.filename.as_ref())),
             _ => None,
         }
     }
@@ -361,7 +431,8 @@ impl UIMessagePart {
     /// Returns `Some(state)` for `Text` and `Reasoning` parts, `None` otherwise.
     pub fn state(&self) -> Option<PartState> {
         match self {
-            UIMessagePart::Text { state, .. } | UIMessagePart::Reasoning { state, .. } => *state,
+            UIMessagePart::Text(p) => p.state,
+            UIMessagePart::Reasoning(p) => p.state,
             _ => None,
         }
     }
@@ -371,16 +442,36 @@ impl UIMessagePart {
     /// Returns `Some(MediaType)` for `File` and `SourceDocument` parts, `None` otherwise.
     pub fn media_type_kind(&self) -> Option<MediaType> {
         match self {
-            UIMessagePart::File { media_type, .. }
-            | UIMessagePart::SourceDocument { media_type, .. } => {
-                if media_type.starts_with("image/") {
+            UIMessagePart::File(p) => {
+                if p.media_type.starts_with("image/") {
                     Some(MediaType::Image)
-                } else if media_type.starts_with("audio/") {
+                } else if p.media_type.starts_with("audio/") {
                     Some(MediaType::Audio)
-                } else if media_type.starts_with("video/") {
+                } else if p.media_type.starts_with("video/") {
                     Some(MediaType::Video)
                 } else if matches!(
-                    media_type.as_str(),
+                    p.media_type.as_str(),
+                    "application/pdf"
+                        | "application/msword"
+                        | "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        | "text/plain"
+                        | "text/csv"
+                        | "application/json"
+                ) {
+                    Some(MediaType::Document)
+                } else {
+                    Some(MediaType::Other)
+                }
+            }
+            UIMessagePart::SourceDocument(p) => {
+                if p.media_type.starts_with("image/") {
+                    Some(MediaType::Image)
+                } else if p.media_type.starts_with("audio/") {
+                    Some(MediaType::Audio)
+                } else if p.media_type.starts_with("video/") {
+                    Some(MediaType::Video)
+                } else if matches!(
+                    p.media_type.as_str(),
                     "application/pdf"
                         | "application/msword"
                         | "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -485,7 +576,9 @@ impl UIMessage {
     ///
     /// Checks if any part has `PartState::Streaming`.
     pub fn has_streaming_content(&self) -> bool {
-        self.parts.iter().any(|p| p.state() == Some(PartState::Streaming))
+        self.parts
+            .iter()
+            .any(|p| p.state() == Some(PartState::Streaming))
     }
 
     /// Returns `true` if the message contains tool calls.
