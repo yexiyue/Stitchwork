@@ -1,13 +1,11 @@
 use axum::{routing::get, Router};
-use rig::{client::EmbeddingsClient, completion::request, providers::openai};
+use rig::providers::openai;
 use sea_orm::Database;
 use std::collections::HashMap;
 use std::sync::Arc;
 use stitchwork_server::{
-    chat::{knowledge_base::KnowledgeBase, session_manager::SessionManager},
-    init_super_admin,
-    s3::S3Config,
-    service, AppState, Notifier, S3Client,
+    chat::session_manager::SessionManager, init_super_admin, s3::S3Config, service, AppState,
+    Notifier, S3Client,
 };
 use tokio::sync::RwLock;
 use tower_http::cors::{Any, CorsLayer};
@@ -44,11 +42,10 @@ async fn main() {
         tracing::info!("S3 client initialized");
     }
 
-
     let rig_client = openai::Client::builder()
         // .http_client(client)
-        .base_url("https://www.packyapi.com/v1")
-        .api_key("sk-H2nbepB0YiatnZg8YrMDvqCKC1fxY0LNRNOP9JPfJ31dcutt")
+        .base_url(&std::env::var("RIG_BASE_URL").expect("RIG_BASE_URL must be set"))
+        .api_key(&std::env::var("RIG_API_KEY").expect("RIG_API_KEY must be set"))
         .build()
         .unwrap();
 

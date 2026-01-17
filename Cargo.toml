@@ -4,5 +4,6 @@ members = [
     "crates/entity",
     "crates/server",
     "crates/proxy",
+    "crates/rig-ai-sdk",
 ]
 resolver = "2"

@@ -54,6 +54,7 @@ rig-core = { version = "0.28.0", default-features = false, features = [
     "rmcp",
 ] }
 entity = { version = "0.1.0", path = "../entity" }
+rig-ai-sdk = { version = "0.1.0", path = "../rig-ai-sdk", features = ["axum-sse"] }
 schemars = { version = "1.2.0", features = [
     "rust_decimal1",
     "uuid1",

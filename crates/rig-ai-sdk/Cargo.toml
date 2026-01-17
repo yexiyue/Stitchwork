@@ -1,0 +1,50 @@
+[package]
+name = "rig-ai-sdk"
+version = "0.1.0"
+edition = "2024"
+
+description = "AI SDK Data Stream Protocol adapter for rig"
+authors = ["yexiyue <yexiyue666@qq.com>"]
+license = "MIT"
+repository = "https://github.com/yexiyue/Stitchwork"
+keywords = [
+    "ai",
+    "sdk",
+    "stream",
+    "protocol",
+    "assistant-ui",
+    "sse",
+    "axum",
+    "rig",
+]
+categories = [
+    "api-bindings",
+    "asynchronous",
+    "parser-implementations",
+    "web-programming",
+    "value-formatting",
+]
+
+
+[dependencies]
+# Core rig types for message conversion
+rig-core = { version = "0.28.0", default-features = false }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# ID generation
+uuid = { version = "1", features = ["v4", "serde"] }
+
+# Error handling
+anyhow = "1.0"
+
+# Optional: Axum SSE stream adapter
+async-stream = { version = "0.3", optional = true }
+futures = { version = "0.3", optional = true }
+axum = { version = "0.8", optional = true }
+
+[features]
+default = []
+axum-sse = ["dep:async-stream", "dep:futures", "dep:axum"]

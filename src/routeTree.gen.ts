@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ScanRouteImport } from './routes/scan'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ChatRouteImport } from './routes/chat'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AuthIndexRouteImport } from './routes/_auth/index'
 import { Route as ShareTokenRouteImport } from './routes/share/$token'
@@ -63,6 +64,11 @@ const RegisterRoute = RegisterRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChatRoute = ChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -250,6 +256,7 @@ const AuthBossOrdersIdEditRoute = AuthBossOrdersIdEditRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
+  '/chat': typeof ChatRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/scan': typeof ScanRoute
@@ -289,6 +296,7 @@ export interface FileRoutesByFullPath {
   '/orders/$id': typeof AuthBossOrdersIdIndexRoute
 }
 export interface FileRoutesByTo {
+  '/chat': typeof ChatRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/scan': typeof ScanRoute
@@ -329,6 +337,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_auth': typeof AuthRouteWithChildren
+  '/chat': typeof ChatRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/scan': typeof ScanRoute
@@ -372,6 +381,7 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/chat'
     | '/login'
     | '/register'
     | '/scan'
@@ -411,6 +421,7 @@ export interface FileRouteTypes {
     | '/orders/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/chat'
     | '/login'
     | '/register'
     | '/scan'
@@ -450,6 +461,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_auth'
+    | '/chat'
     | '/login'
     | '/register'
     | '/scan'
@@ -493,6 +505,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AuthRoute: typeof AuthRouteWithChildren
+  ChatRoute: typeof ChatRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
   ScanRoute: typeof ScanRoute
@@ -520,6 +533,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chat': {
+      id: '/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof ChatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_auth': {
@@ -894,6 +914,7 @@ const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRouteWithChildren,
+  ChatRoute: ChatRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
   ScanRoute: ScanRoute,

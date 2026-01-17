@@ -8,35 +8,38 @@ use axum::{
 };
 
 use axum_extra::routing::{RouterExt, TypedPath};
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
-use crate::{chat::ChatSession, error::Result, service::auth::Claims, AppState};
+use crate::{
+    chat::{AISdkChatRequest, ChatSession},
+    error::Result,
+    service::auth::Claims,
+    AppState,
+};
 
 #[derive(TypedPath)]
 #[typed_path("/chat")]
 pub struct ChatPath;
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ChatRequest {
-    message: String,
-    id: Uuid,
-}
-
 pub async fn chat(
     _: ChatPath,
     State(app_state): State<Arc<AppState>>,
     Extension(claims): Extension<Claims>,
-    Json(req): Json<ChatRequest>,
+    Json(req): Json<AISdkChatRequest>,
 ) -> Result<impl IntoResponse> {
+    let session_id = req
+        .id
+        .and_then(|s| uuid::Uuid::parse_str(&s).ok())
+        .unwrap_or_else(uuid::Uuid::new_v4);
+
     let chat_session = app_state
         .session_manager
-        .get_or_try_insert(req.id, || {
+        .get_or_try_insert(session_id, || {
             ChatSession::new(&app_state.db, &app_state.rig_client, claims)
         })
         .await?;
 
-    let stream = chat_session.chat(req.message.into(), vec![]).await;
+    let (prompt, history) = rig_ai_sdk::extract_prompt_and_history(&req.messages)?;
+    let stream = chat_session.chat(prompt, history).await;
 
     Ok((
         [(
