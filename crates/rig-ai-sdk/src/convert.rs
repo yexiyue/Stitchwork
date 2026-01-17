@@ -54,7 +54,7 @@ use rig::message::{
 };
 use serde_json::Value;
 
-use crate::message::{DynamicToolState, UIMessage, UIMessagePart};
+use crate::message::{ToolState, UIMessage, UIMessagePart};
 
 /// Extracts the prompt (last message) and history (previous messages) from a message list.
 ///
@@ -126,44 +126,40 @@ pub fn convert_message(msg: &UIMessage) -> Result<Message> {
 /// Returns `None` for parts that don't map to user content:
 ///
 /// - `Text` → `UserContent::Text`
-/// - `ToolResult` → `UserContent::ToolResult`
-/// - `DynamicTool` (OutputAvailable/Error) → `UserContent::ToolResult`
+/// - `Tool` (OutputAvailable/Error) → `UserContent::ToolResult`
 /// - `File` (image only) → `UserContent::Image`
 fn to_user_content(part: &UIMessagePart) -> Option<UserContent> {
     match part {
         // Text part
         UIMessagePart::Text(p) => Some(UserContent::text(p.text.clone())),
 
-        // Tool result
-        UIMessagePart::ToolResult(p) => Some(UserContent::ToolResult(ToolResult {
-            id: p.tool_call_id.clone(),
-            call_id: Some(p.tool_call_id.clone()),
-            content: OneOrMany::one(ToolResultContent::text(json_to_string(&p.result))),
-        })),
-
-        // DynamicTool tool result (OutputAvailable and OutputError)
-        UIMessagePart::DynamicTool(p) => {
-            // Only convert completed dynamic-tools with output to tool result
-            match &p.state {
-                DynamicToolState::OutputAvailable { input: _, output } => {
-                    Some(UserContent::ToolResult(ToolResult {
-                        id: p.tool_call_id.clone(),
-                        call_id: Some(p.tool_call_id.clone()),
-                        content: OneOrMany::one(ToolResultContent::text(json_to_string(output))),
-                    }))
+        // Tool result (only OutputAvailable and OutputError convert to UserContent)
+        UIMessagePart::Tool(p) => {
+            match p.state {
+                ToolState::OutputAvailable => {
+                    if let Some(output) = &p.output {
+                        Some(UserContent::ToolResult(ToolResult {
+                            id: p.tool_call_id.clone(),
+                            call_id: Some(p.tool_call_id.clone()),
+                            content: OneOrMany::one(ToolResultContent::text(json_to_string(output))),
+                        }))
+                    } else {
+                        None
+                    }
                 }
-                DynamicToolState::OutputError {
-                    input: _,
-                    error_text,
-                } => {
-                    // Use error text as tool result
-                    Some(UserContent::ToolResult(ToolResult {
-                        id: p.tool_call_id.clone(),
-                        call_id: Some(p.tool_call_id.clone()),
-                        content: OneOrMany::one(ToolResultContent::text(error_text.clone())),
-                    }))
+                ToolState::OutputError => {
+                    if let Some(error_text) = &p.error_text {
+                        Some(UserContent::ToolResult(ToolResult {
+                            id: p.tool_call_id.clone(),
+                            call_id: Some(p.tool_call_id.clone()),
+                            content: OneOrMany::one(ToolResultContent::text(error_text.clone())),
+                        }))
+                    } else {
+                        None
+                    }
                 }
-                _ => None, // InputStreaming and InputAvailable don't convert to UserContent
+                // InputStreaming and InputAvailable don't convert to UserContent
+                _ => None,
             }
         }
 
@@ -193,8 +189,7 @@ fn to_user_content(part: &UIMessagePart) -> Option<UserContent> {
 /// Returns `None` for parts that don't map to assistant content:
 ///
 /// - `Text` → `AssistantContent::Text`
-/// - `ToolCall` → `AssistantContent::ToolCall`
-/// - `DynamicTool` (with input) → `AssistantContent::ToolCall`
+/// - `Tool` (with input) → `AssistantContent::ToolCall`
 ///
 /// # Important
 ///
@@ -208,43 +203,35 @@ fn to_assistant_content(part: &UIMessagePart) -> Option<AssistantContent> {
         // Text part
         UIMessagePart::Text(p) => Some(AssistantContent::text(p.text.clone())),
 
-        // Legacy tool call format
-        UIMessagePart::ToolCall(p) => Some(AssistantContent::ToolCall(
-            ToolCall::new(
-                p.tool_call_id.clone(),
-                ToolFunction {
-                    name: p.tool_name.clone(),
-                    arguments: p.args.clone(),
-                },
-            )
-            .with_call_id(p.tool_call_id.clone()),
-        )),
+        // Tool call (InputAvailable, OutputAvailable, or InputStreaming with input)
+        UIMessagePart::Tool(p) => {
+            // Extract tool name from type field (already set during deserialization)
+            let tool_name = p.tool_name.clone();
 
-        // DynamicTool tool call
-        UIMessagePart::DynamicTool(p) => {
-            // Only convert to ToolCall when input is available
-            match &p.state {
-                DynamicToolState::InputAvailable { input }
-                | DynamicToolState::OutputAvailable { input, .. } => {
-                    Some(AssistantContent::ToolCall(
-                        ToolCall::new(
-                            p.tool_call_id.clone(),
-                            ToolFunction {
-                                name: p.tool_name.clone(),
-                                arguments: input.clone(),
-                            },
-                        )
-                        .with_call_id(p.tool_call_id.clone()),
-                    ))
+            match p.state {
+                ToolState::InputAvailable | ToolState::OutputAvailable => {
+                    if let Some(input) = &p.input {
+                        Some(AssistantContent::ToolCall(
+                            ToolCall::new(
+                                p.tool_call_id.clone(),
+                                ToolFunction {
+                                    name: tool_name,
+                                    arguments: input.clone(),
+                                },
+                            )
+                            .with_call_id(p.tool_call_id.clone()),
+                        ))
+                    } else {
+                        None
+                    }
                 }
-                DynamicToolState::InputStreaming { input } => {
-                    // If there's partial input, create ToolCall anyway
-                    input.as_ref().map(|i| {
+                ToolState::InputStreaming => {
+                    p.input.as_ref().map(|i| {
                         AssistantContent::ToolCall(
                             ToolCall::new(
                                 p.tool_call_id.clone(),
                                 ToolFunction {
-                                    name: p.tool_name.clone(),
+                                    name: tool_name,
                                     arguments: i.clone(),
                                 },
                             )
@@ -252,7 +239,7 @@ fn to_assistant_content(part: &UIMessagePart) -> Option<AssistantContent> {
                         )
                     })
                 }
-                _ => None, // OutputError state doesn't convert to ToolCall
+                ToolState::OutputError => None,
             }
         }
 

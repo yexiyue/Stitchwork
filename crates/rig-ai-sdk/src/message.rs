@@ -88,9 +88,7 @@ pub enum PartState {
 #[serde(rename_all = "camelCase")]
 pub struct TextPart {
     pub text: String,
-    #[serde(default)]
     pub state: Option<PartState>,
-    #[serde(default)]
     pub provider_metadata: Option<ProviderMetadata>,
 }
 
@@ -102,9 +100,7 @@ pub struct TextPart {
 pub struct ReasoningPart {
     /// Reasoning/thinking content
     pub text: String,
-    #[serde(default)]
     pub state: Option<PartState>,
-    #[serde(default)]
     pub provider_metadata: Option<ProviderMetadata>,
 }
 
@@ -116,54 +112,45 @@ pub struct ReasoningPart {
 pub struct FilePart {
     pub media_type: String,
     pub url: String,
-    #[serde(default)]
     pub filename: Option<String>,
-    #[serde(default)]
     pub provider_metadata: Option<ProviderMetadata>,
 }
 
-/// Tool call (legacy format for compatibility)
+/// Tool state as string literal (AI SDK 5.x format)
 ///
-/// Legacy tool call format without streaming state support.
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ToolCallPart {
-    pub tool_call_id: String,
-    pub tool_name: String,
-    pub args: Value,
-    #[serde(default)]
-    pub provider_metadata: Option<ProviderMetadata>,
+/// Represents the current state of a tool invocation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ToolState {
+    /// Input is being streamed
+    InputStreaming,
+    /// Input is available
+    InputAvailable,
+    /// Output is available
+    OutputAvailable,
+    /// Output error
+    OutputError,
 }
 
-/// Tool result
-///
-/// Result from a previous tool execution.
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ToolResultPart {
-    pub tool_call_id: String,
-    #[serde(default)]
-    pub tool_name: Option<String>,
-    pub result: Value,
-}
-
-/// Dynamic tool call (AI SDK 5.x format with state support)
+/// Tool invocation part (AI SDK 5.x ToolUIPart format)
 ///
 /// Modern tool call format with streaming state support and provider execution info.
+/// The `type` field uses dynamic format: "tool-{toolName}"
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct DynamicToolPart {
-    pub tool_name: String,
+pub struct ToolPart {
     pub tool_call_id: String,
     #[serde(default)]
+    pub tool_name: String,
+    pub state: ToolState,
     pub title: Option<String>,
-    #[serde(default)]
-    pub provider_executed: bool,
-    pub state: DynamicToolState,
-    #[serde(default)]
+    pub provider_executed: Option<bool>,
     pub call_provider_metadata: Option<ProviderMetadata>,
-    #[serde(default)]
-    pub preliminary: bool,
+    pub preliminary: Option<bool>,
+    pub input: Option<Value>,
+    pub output: Option<Value>,
+    pub raw_input: Option<Value>,
+    pub error_text: Option<String>,
 }
 
 /// URL source reference
@@ -174,9 +161,7 @@ pub struct DynamicToolPart {
 pub struct SourceUrlPart {
     pub source_id: String,
     pub url: String,
-    #[serde(default)]
     pub title: Option<String>,
-    #[serde(default)]
     pub provider_metadata: Option<ProviderMetadata>,
 }
 
@@ -189,9 +174,7 @@ pub struct SourceDocumentPart {
     pub source_id: String,
     pub media_type: String,
     pub title: String,
-    #[serde(default)]
     pub filename: Option<String>,
-    #[serde(default)]
     pub provider_metadata: Option<ProviderMetadata>,
 }
 
@@ -203,7 +186,6 @@ pub struct SourceDocumentPart {
 pub struct DataPart {
     /// Data type name (the `{name}` in `data-{name}`)
     pub data_type: String,
-    #[serde(default)]
     pub id: Option<String>,
     pub data: Value,
 }
@@ -217,6 +199,7 @@ pub struct DataPart {
 /// ```json
 /// { "type": "text", "text": "Hello" }
 /// { "type": "file", "mediaType": "image/png", "url": "..." }
+/// { "type": "tool-get_weather", "toolCallId": "...", "state": "input-available" }
 /// { "type": "data-usage", "data": {...} }
 /// ```
 #[derive(Debug, Clone, Serialize)]
@@ -227,12 +210,8 @@ pub enum UIMessagePart {
     Reasoning(ReasoningPart),
     /// File attachment
     File(FilePart),
-    /// Legacy tool call
-    ToolCall(ToolCallPart),
-    /// Tool result
-    ToolResult(ToolResultPart),
-    /// Dynamic tool call
-    DynamicTool(DynamicToolPart),
+    /// Tool invocation (AI SDK 5.x ToolUIPart format)
+    Tool(ToolPart),
     /// URL source
     SourceUrl(SourceUrlPart),
     /// Document source
@@ -246,16 +225,14 @@ pub enum UIMessagePart {
 /// Helper struct for deserialization of UIMessagePart with type field
 ///
 /// Uses `tag = "type"` to handle standard types: text, reasoning, file,
-/// tool-call, tool-result, dynamic-tool, source-url, source-document, step-start
+/// source-url, source-document, step-start. Tool parts are handled separately
+/// due to dynamic type field (tool-{NAME}).
 #[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "type", rename_all = "kebab-case")]
 enum UIMessagePartTagged {
     Text(TextPart),
     Reasoning(ReasoningPart),
     File(FilePart),
-    ToolCall(ToolCallPart),
-    ToolResult(ToolResultPart),
-    DynamicTool(DynamicToolPart),
     SourceUrl(SourceUrlPart),
     SourceDocument(SourceDocumentPart),
     StepStart,
@@ -268,7 +245,7 @@ impl<'de> Deserialize<'de> for UIMessagePart {
     {
         let raw = serde_json::Value::deserialize(deserializer)?;
 
-        // Check if this is a data-{name} type
+        // Check if this is a data-{name} or tool-{NAME} type
         if let Some(t) = raw.get("type").and_then(|v| v.as_str()) {
             if t.starts_with("data-") {
                 let data_part = DataPart {
@@ -277,6 +254,16 @@ impl<'de> Deserialize<'de> for UIMessagePart {
                     data: raw.get("data").cloned().unwrap_or(Value::Null),
                 };
                 return Ok(UIMessagePart::Data(data_part));
+            }
+
+            // Handle tool-{NAME} type (AI SDK 5.x ToolUIPart format)
+            if t.starts_with("tool-") {
+                let tool_name = t.strip_prefix("tool-").unwrap_or(t).to_string();
+                let mut tool_part: ToolPart =
+                    serde_json::from_value(raw.clone()).map_err(serde::de::Error::custom)?;
+                // Set tool_name from the type field
+                tool_part.tool_name = tool_name;
+                return Ok(UIMessagePart::Tool(tool_part));
             }
         }
 
@@ -289,9 +276,6 @@ impl<'de> Deserialize<'de> for UIMessagePart {
                 UIMessagePartTagged::Text(v) => UIMessagePart::Text(v),
                 UIMessagePartTagged::Reasoning(v) => UIMessagePart::Reasoning(v),
                 UIMessagePartTagged::File(v) => UIMessagePart::File(v),
-                UIMessagePartTagged::ToolCall(v) => UIMessagePart::ToolCall(v),
-                UIMessagePartTagged::ToolResult(v) => UIMessagePart::ToolResult(v),
-                UIMessagePartTagged::DynamicTool(v) => UIMessagePart::DynamicTool(v),
                 UIMessagePartTagged::SourceUrl(v) => UIMessagePart::SourceUrl(v),
                 UIMessagePartTagged::SourceDocument(v) => UIMessagePart::SourceDocument(v),
                 UIMessagePartTagged::StepStart => UIMessagePart::StepStart,
@@ -299,42 +283,6 @@ impl<'de> Deserialize<'de> for UIMessagePart {
             Err(e) => Err(e),
         }
     }
-}
-
-/// Dynamic tool state for AI SDK 5.x
-///
-/// Represents the current state of a dynamic tool call through its lifecycle.
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(tag = "state", rename_all = "kebab-case")]
-pub enum DynamicToolState {
-    /// Input is being streamed
-    ///
-    /// The tool call is receiving input incrementally. The `input` field may
-    /// contain partial data.
-    InputStreaming {
-        #[serde(default)]
-        input: Option<Value>,
-    },
-
-    /// Input is available
-    ///
-    /// The complete tool input is now available.
-    InputAvailable { input: Value },
-
-    /// Output is available
-    ///
-    /// The tool has been executed and output is ready.
-    OutputAvailable { input: Value, output: Value },
-
-    /// Output error
-    ///
-    /// The tool execution resulted in an error.
-    OutputError {
-        #[serde(default)]
-        input: Option<Value>,
-        #[serde(rename = "errorText")]
-        error_text: String,
-    },
 }
 
 /// Media type classification
@@ -390,17 +338,17 @@ impl UIMessagePart {
         matches!(self, UIMessagePart::Reasoning(_))
     }
 
-    /// Returns `true` if this is a tool call (including `DynamicTool`).
-    pub fn is_tool_call(&self) -> bool {
-        matches!(
-            self,
-            UIMessagePart::ToolCall(_) | UIMessagePart::DynamicTool(_)
-        )
+    /// Returns `true` if this is a tool invocation.
+    pub fn is_tool(&self) -> bool {
+        matches!(self, UIMessagePart::Tool(_))
     }
 
-    /// Returns `true` if this is a tool result.
-    pub fn is_tool_result(&self) -> bool {
-        matches!(self, UIMessagePart::ToolResult(_))
+    /// Gets the tool part if this is a Tool.
+    pub fn as_tool(&self) -> Option<&ToolPart> {
+        match self {
+            UIMessagePart::Tool(p) => Some(p),
+            _ => None,
+        }
     }
 
     /// Returns `true` if this is a `Data` part.
@@ -507,7 +455,6 @@ pub struct UIMessage {
     pub role: String,
 
     /// Optional message metadata
-    #[serde(default)]
     pub metadata: Option<Value>,
 
     /// Message parts (content items)
@@ -581,14 +528,9 @@ impl UIMessage {
             .any(|p| p.state() == Some(PartState::Streaming))
     }
 
-    /// Returns `true` if the message contains tool calls.
+    /// Returns `true` if the message contains tool invocations.
     pub fn has_tool_calls(&self) -> bool {
-        self.parts.iter().any(|p| p.is_tool_call())
-    }
-
-    /// Returns `true` if the message contains tool results.
-    pub fn has_tool_results(&self) -> bool {
-        self.parts.iter().any(|p| p.is_tool_result())
+        self.parts.iter().any(|p| p.is_tool())
     }
 
     /// Returns `true` if the message contains file attachments.

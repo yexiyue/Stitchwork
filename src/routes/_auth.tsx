@@ -83,56 +83,30 @@ function AuthLayout() {
       .find((t) => t.key !== "/" && location.pathname.startsWith(t.key))?.key ||
     "/";
 
-  // 是否显示中间凸起的助手按钮（超管不显示）
-  const showAssistantButton = !isSuperAdmin;
-
   return (
     <div className="flex h-full flex-col">
       <div className="flex-1 overflow-auto">
         <Outlet />
       </div>
-      <div className="relative">
-        {/* 中间凸起的助手按钮 */}
-        {showAssistantButton && (
-          <button
-            onClick={() => navigate({ to: "/chat" })}
-            className="absolute -top-5 left-1/2 z-10 flex size-14 -translate-x-1/2 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform active:scale-95"
-          >
-            <span className="absolute inset-0 rounded-full border-4 border-background" />
-            <BotIcon size={26} />
-          </button>
-        )}
-        <TabBar activeKey={activeKey} className="[&_.adm-tab-bar-wrap]:gap-0">
-          {tabs.map((tab, index) => {
-            // 在中间位置插入占位符（宽度较小）
-            const middleIndex = Math.floor(tabs.length / 2);
-            if (showAssistantButton && index === middleIndex) {
-              return [
-                <TabBar.Item
-                  key="__placeholder__"
-                  icon={<div className="size-6" />}
-                  title=""
-                  className="max-w-12! min-w-12!"
-                />,
-                <TabBar.Item
-                  key={tab.key}
-                  icon={tab.icon}
-                  title={tab.title}
-                  onClick={() => navigate({ to: tab.key })}
-                />,
-              ];
-            }
-            return (
-              <TabBar.Item
-                key={tab.key}
-                icon={tab.icon}
-                title={tab.title}
-                onClick={() => navigate({ to: tab.key })}
-              />
-            );
-          })}
-        </TabBar>
-      </div>
+      <TabBar activeKey={activeKey}>
+        {tabs.map((tab) => (
+          <TabBar.Item
+            key={tab.key}
+            icon={tab.icon}
+            title={tab.title}
+            onClick={() => navigate({ to: tab.key })}
+          />
+        ))}
+      </TabBar>
+      {/* 右下角悬浮助手按钮（超管不显示） */}
+      {!isSuperAdmin && (
+        <button
+          onClick={() => navigate({ to: "/chat" })}
+          className="fixed bottom-16 right-6 z-10 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform active:scale-95"
+        >
+          <BotIcon size={26} />
+        </button>
+      )}
     </div>
   );
 }
