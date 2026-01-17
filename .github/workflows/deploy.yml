@@ -7,6 +7,7 @@ on:
     paths:
       - "crates/server/**"
       - "crates/entity/**"
+      - "crates/rig-ai-sdk/**"
   workflow_dispatch:
 
 env:
