@@ -8,11 +8,7 @@ authors = ["yexiyue <yexiyue666@qq.com>"]
 license = "MIT"
 repository = "https://github.com/yexiyue/Stitchwork"
 keywords = [
-    "ai",
-    "sdk",
-    "stream",
-    "protocol",
-    "assistant-ui",
+    "ai-sdk",
     "sse",
     "axum",
     "rig",
