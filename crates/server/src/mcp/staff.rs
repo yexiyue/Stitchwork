@@ -129,7 +129,7 @@ impl StaffMcp {
     }
 
     /// 查询我的计件记录
-    #[tool(description = "查询我的计件记录，支持按状态、日期范围筛选")]
+    #[tool(description = "查询我的计件记录，支持按状态、日期范围筛选。结果会通过专用 UI 组件展示，你无需重复列出详细数据，只需简要确认查询结果或提供简单总结即可。")]
     pub async fn get_my_records(
         &self,
         Parameters(params): Parameters<GetMyRecordsParams>,
@@ -153,7 +153,7 @@ impl StaffMcp {
     }
 
     /// 查询我的收入统计
-    #[tool(description = "查询我的收入统计，包括总数量、总金额、待审批金额和每日趋势")]
+    #[tool(description = "查询我的收入统计，包括总数量、总金额、待审批金额和每日趋势。结果会通过专用 UI 组件展示，你无需重复列出详细数据，只需简要确认查询结果或提供简单总结即可。")]
     pub async fn get_my_earnings(
         &self,
         Parameters(params): Parameters<GetMyEarningsParams>,
@@ -333,7 +333,9 @@ impl ServerHandler for StaffMcp {
                 - get_my_records: 查询我的计件记录\n\
                 - get_my_earnings: 查询我的收入统计\n\
                 - get_my_payrolls: 查询我的工资单\n\
-                - get_available_tasks: 查看可接工序"
+                - get_available_tasks: 查看可接工序\n\
+                \n\
+                注意：这些查询工具的结果会通过专用的 UI 组件在界面中展示，你无需在回复中重复列出详细数据。只需简要确认查询结果，或者提供简单的总结/分析即可。"
                     .into(),
             ),
         }

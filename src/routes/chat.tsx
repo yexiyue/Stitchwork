@@ -10,7 +10,12 @@ import {
 } from "@assistant-ui/react-ai-sdk";
 import { useAuthStore } from "@/stores/auth";
 import { Thread } from "@/components/thread";
-import { StatsToolUi } from "@/components/tools";
+import {
+  RecordsToolUi,
+  StatsToolUi,
+  PayrollToolUi,
+  AvailableTasksToolUi,
+} from "@/components/tools";
 
 export const Route = createFileRoute("/chat")({
   beforeLoad: () => {
@@ -57,6 +62,9 @@ function ChatPage() {
         </div>
       </div>
       <StatsToolUi />
+      <RecordsToolUi />
+      <PayrollToolUi />
+      <AvailableTasksToolUi />
     </AssistantRuntimeProvider>
   );
 }
