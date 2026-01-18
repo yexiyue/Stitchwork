@@ -1,6 +1,7 @@
 "use client";
 
 import "@assistant-ui/react-markdown/styles/dot.css";
+import { MermaidDiagram } from "./mermaid-diagram";
 
 import {
   type CodeHeaderProps,
@@ -21,6 +22,11 @@ const MarkdownTextImpl = () => {
       remarkPlugins={[remarkGfm]}
       className="aui-md"
       components={defaultComponents}
+      componentsByLanguage={{
+        mermaid: {
+          SyntaxHighlighter: MermaidDiagram,
+        },
+      }}
     />
   );
 };

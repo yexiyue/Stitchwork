@@ -1,12 +1,16 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
-import { AssistantRuntimeProvider } from "@assistant-ui/react";
+import {
+  AssistantRuntimeProvider,
+  WebSpeechSynthesisAdapter,
+} from "@assistant-ui/react";
 import {
   useChatRuntime,
   AssistantChatTransport,
 } from "@assistant-ui/react-ai-sdk";
 import { useAuthStore } from "@/stores/auth";
 import { Thread } from "@/components/thread";
+import { StatsToolUi } from "@/components/tools";
 
 export const Route = createFileRoute("/chat")({
   beforeLoad: () => {
@@ -29,6 +33,9 @@ function ChatPage() {
         Authorization: `Bearer ${token}`,
       },
     }),
+    adapters: {
+      speech: new WebSpeechSynthesisAdapter(),
+    },
   });
 
   return (
@@ -49,6 +56,7 @@ function ChatPage() {
           <Thread />
         </div>
       </div>
+      <StatsToolUi />
     </AssistantRuntimeProvider>
   );
 }

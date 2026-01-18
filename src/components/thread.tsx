@@ -30,6 +30,7 @@ import {
   SquareIcon,
 } from "lucide-react";
 import type { FC } from "react";
+import { Reasoning, ReasoningGroup } from "./reasoning";
 
 export const Thread: FC = () => {
   return (
@@ -215,6 +216,8 @@ const AssistantMessage: FC = () => {
           components={{
             Text: MarkdownText,
             tools: { Fallback: ToolFallback },
+            Reasoning: Reasoning,
+            ReasoningGroup: ReasoningGroup,
           }}
         />
         <MessageError />
@@ -330,7 +333,7 @@ const BranchPicker: FC<BranchPickerPrimitive.Root.Props> = ({
       hideWhenSingleBranch
       className={cn(
         "aui-branch-picker-root mr-2 -ml-2 inline-flex items-center text-muted-foreground text-xs",
-        className
+        className,
       )}
       {...rest}
     >
