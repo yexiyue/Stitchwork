@@ -1,9 +1,10 @@
-import { create } from "zustand";
+import { createWithEqualityFn } from "zustand/traditional";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type { LoginUser } from "@/types";
 import { authApi } from "@/api";
 import { setToken, clearToken } from "@/api/client";
 import { TauriStoreState } from "./tauriStoreState";
+import { shallow } from "zustand/shallow";
 
 interface AuthState {
   token: string | null;
@@ -17,7 +18,7 @@ interface AuthState {
 const storage = new TauriStoreState("auth-store.json");
 export const storageReady = storage.init();
 
-export const useAuthStore = create<AuthState>()(
+export const useAuthStore = createWithEqualityFn<AuthState>()(
   persist(
     (set) => ({
       token: null,
@@ -40,11 +41,13 @@ export const useAuthStore = create<AuthState>()(
       name: "auth-storage",
       storage: createJSONStorage(() => storage),
       partialize: (state) => ({ token: state.token, user: state.user }),
-    }
-  )
+    },
+  ),
+  shallow,
 );
 
 // Helper selectors
 export const selectIsAuthenticated = (state: AuthState) => !!state.token;
 export const selectIsBoss = (state: AuthState) => state.user?.role === "boss";
-export const selectIsSuperAdmin = (state: AuthState) => state.user?.isSuperAdmin === true;
+export const selectIsSuperAdmin = (state: AuthState) =>
+  state.user?.isSuperAdmin === true;

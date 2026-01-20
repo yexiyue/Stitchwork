@@ -1,7 +1,7 @@
 [package]
 name = "stitchwork-server"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 axum = { version = "0.8.8", features = ["macros"] }
@@ -48,7 +48,7 @@ async-stream = "0.3"
 futures = "0.3"
 tokio-stream = "0.1"
 rand = "0.9"
-rig-core = { version = "0.28.0", default-features = false, features = [
+rig-core = { git = "https://github.com/0xPlaygrounds/rig", default-features = false, features = [
     "derive",
     "reqwest-rustls",
     "rmcp",
@@ -60,7 +60,7 @@ schemars = { version = "1.2.0", features = [
     "uuid1",
     "chrono04",
 ] }
-rmcp = { version = "0.12.0", features = [
+rmcp = { version = "0.13", features = [
     "macros",
     "schemars",
 ] }

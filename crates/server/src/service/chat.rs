@@ -1,19 +1,19 @@
 use std::sync::Arc;
 
 use axum::{
+    Extension, Json, Router,
     extract::State,
     http::header,
-    response::{sse::KeepAlive, IntoResponse, Sse},
-    Extension, Json, Router,
+    response::{IntoResponse, Sse, sse::KeepAlive},
 };
 
 use axum_extra::routing::{RouterExt, TypedPath};
 
 use crate::{
+    AppState,
     chat::{AISdkChatRequest, ChatSession},
     error::Result,
     service::auth::Claims,
-    AppState,
 };
 
 #[derive(TypedPath)]
@@ -27,19 +27,24 @@ pub async fn chat(
     Json(req): Json<AISdkChatRequest>,
 ) -> Result<impl IntoResponse> {
     let session_id = req
-        .id
+        .session_id
         .and_then(|s| uuid::Uuid::parse_str(&s).ok())
         .unwrap_or_else(uuid::Uuid::new_v4);
 
     let chat_session = app_state
         .session_manager
         .get_or_try_insert(session_id, || {
-            ChatSession::new(&app_state.db, &app_state.rig_client, claims)
+            ChatSession::new(
+                &app_state.db,
+                &app_state.rig_client,
+                claims,
+                req.tools.clone(),
+            )
         })
         .await?;
 
     let (prompt, history) = rig_ai_sdk::extract_prompt_and_history(&req.messages)?;
-    let stream = chat_session.chat(prompt, history).await;
+    let stream = chat_session.chat(prompt, req.tools, history).await;
 
     Ok((
         [(

@@ -1,9 +1,7 @@
+import { useRef } from "react";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
-import {
-  AssistantRuntimeProvider,
-  WebSpeechSynthesisAdapter,
-} from "@assistant-ui/react";
+import { AssistantRuntimeProvider } from "@assistant-ui/react";
 import {
   useChatRuntime,
   AssistantChatTransport,
@@ -16,6 +14,8 @@ import {
   PayrollToolUi,
   AvailableTasksToolUi,
 } from "@/components/tools";
+import { CreateRecordTool } from "@/components/tools/crate-record";
+import { lastAssistantMessageIsCompleteWithToolCalls } from "ai";
 
 export const Route = createFileRoute("/chat")({
   beforeLoad: () => {
@@ -29,7 +29,8 @@ export const Route = createFileRoute("/chat")({
 
 function ChatPage() {
   const navigate = useNavigate();
-  const token = useAuthStore((state) => state.token);
+  const [token, user] = useAuthStore((state) => [state.token, state.user]);
+  const processedToolCalls = useRef(new Set<string>());
 
   const runtime = useChatRuntime({
     transport: new AssistantChatTransport({
@@ -37,9 +38,28 @@ function ChatPage() {
       headers: {
         Authorization: `Bearer ${token}`,
       },
+      body: {
+        sessionId: user?.id,
+      },
     }),
-    adapters: {
-      speech: new WebSpeechSynthesisAdapter(),
+    sendAutomaticallyWhen: (options) => {
+      if (!lastAssistantMessageIsCompleteWithToolCalls(options)) {
+        return false;
+      }
+      const lastMsg = options.messages.at(-1);
+      const toolPart = lastMsg?.parts.find(
+        (part) =>
+          part.type === "tool-create-record" &&
+          part.state === "output-available"
+      ) as { toolCallId: string } | undefined;
+      if (toolPart) {
+        const toolCallId = toolPart.toolCallId;
+        if (!processedToolCalls.current.has(toolCallId)) {
+          processedToolCalls.current.add(toolCallId);
+          return true;
+        }
+      }
+      return false;
     },
   });
 
@@ -65,6 +85,7 @@ function ChatPage() {
       <RecordsToolUi />
       <PayrollToolUi />
       <AvailableTasksToolUi />
+      <CreateRecordTool />
     </AssistantRuntimeProvider>
   );
 }

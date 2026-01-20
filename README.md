@@ -8,6 +8,7 @@
 - **计件录入** - 员工提交计件、老板审批、自动计算工资
 - **工资发放** - 一键生成工资单、历史记录查询
 - **实时通知** - SSE 推送，新计件/审批结果即时提醒
+- **AI 助手** - 智能对话，支持语音录入计件、查询统计
 - **多端支持** - 移动端 (Android)、Web 浏览器
 
 ## 用户角色
@@ -26,6 +27,7 @@
 - TanStack Router / Query
 - Ant Design Mobile + Tailwind CSS 4
 - Zustand 状态管理
+- assistant-ui (AI 聊天界面)
 
 ### 移动端
 
@@ -38,6 +40,7 @@
 - SeaORM 2.0 (Entity First)
 - PostgreSQL
 - JWT 认证 + SSE 实时推送
+- Rig (AI Agent 框架)
 
 ## 快速开始
 
@@ -112,6 +115,7 @@ StitchWork/
 ├── src/                    # React 前端
 │   ├── api/                # API 客户端
 │   ├── components/         # 共享组件
+│   │   └── tools/          # AI 工具 UI
 │   ├── hooks/              # 自定义 Hooks
 │   ├── routes/             # 页面路由
 │   └── stores/             # 状态管理
@@ -119,10 +123,13 @@ StitchWork/
 │   └── src/
 │       ├── sse.rs          # SSE 实时通知
 │       └── image.rs        # 图片压缩
-├── server/                 # Axum 后端
-│   └── src/
-│       ├── entity/         # 数据库实体
-│       └── service/        # 业务模块
+├── crates/                 # Rust 工作空间
+│   ├── server/             # Axum 后端
+│   │   └── src/
+│   │       ├── entity/     # 数据库实体
+│   │       ├── service/    # 业务模块
+│   │       └── chat/       # AI 聊天服务
+│   └── rig-ai-sdk/         # AI SDK 适配
 └── docs/                   # 开发文档
 ```
 
@@ -136,6 +143,26 @@ flowchart LR
     D --> E[计件录入]
     E --> F[审批]
     F --> G[出货/工资发放]
+```
+
+## AI 助手
+
+支持自然语言交互，实现 Human-in-the-Loop 人机协作：
+
+```text
+用户: 帮我记一下，今天做了 50 件 A 款
+
+AI: 好的，我来帮你创建计件记录
+    ┌─────────────────────────┐
+    │ 确认创建计件记录          │
+    │ 订单: A 款               │
+    │ 数量: 50                 │
+    │ [确认]  [取消]           │
+    └─────────────────────────┘
+
+用户: *点击确认*
+
+AI: ✅ 已创建计件记录：A 款 x 50
 ```
 
 ## Downloads

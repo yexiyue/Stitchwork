@@ -31,8 +31,11 @@ use async_stream::stream;
 use futures::{Stream, StreamExt};
 use rig::agent::MultiTurnStreamItem;
 use rig::streaming::{StreamedAssistantContent, StreamedUserContent, ToolCallDeltaContent};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Display;
+
+/// 前端工具取消的特殊标记（与 server 端保持一致）
+pub const FRONTEND_TOOL_CANCEL_REASON: &str = "__FRONTEND_TOOL__";
 
 /// Adapts a rig multi-turn stream into an Axum SSE event stream.
 ///
@@ -131,7 +134,12 @@ where
             let msg = match msg {
                 Ok(m) => m,
                 Err(e) => {
-                    yield Ok(AISdkEvent::error(e.to_string()));
+                    let err_str = e.to_string();
+                    
+                    if err_str.contains(FRONTEND_TOOL_CANCEL_REASON){
+                        break;
+                    }
+                    yield Ok(AISdkEvent::error(err_str));
                     break;
                 }
             };

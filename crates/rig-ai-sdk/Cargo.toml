@@ -24,7 +24,7 @@ categories = [
 
 [dependencies]
 # Core rig types for message conversion
-rig-core = { version = "0.28.0", default-features = false }
+rig-core = { git = "https://github.com/0xPlaygrounds/rig", default-features = false }
 
 # Serialization
 serde = { version = "1", features = ["derive"] }
