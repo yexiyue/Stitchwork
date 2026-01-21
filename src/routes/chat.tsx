@@ -9,10 +9,18 @@ import {
 import { useAuthStore } from "@/stores/auth";
 import { Thread } from "@/components/thread";
 import {
+  // 员工端
   RecordsToolUi,
   StatsToolUi,
   PayrollToolUi,
   AvailableTasksToolUi,
+  // 老板端
+  OrdersToolUi,
+  PieceRecordsToolUi,
+  WorkerStatsToolUi,
+  OverviewToolUi,
+  OrderProgressToolUi,
+  UnpaidSummaryToolUi,
 } from "@/components/tools";
 import { CreateRecordTool } from "@/components/tools/crate-record";
 import { lastAssistantMessageIsCompleteWithToolCalls } from "ai";
@@ -81,11 +89,19 @@ function ChatPage() {
           <Thread />
         </div>
       </div>
+      {/* 员工端 Tool UI */}
       <StatsToolUi />
       <RecordsToolUi />
       <PayrollToolUi />
       <AvailableTasksToolUi />
       <CreateRecordTool />
+      {/* 老板端 Tool UI */}
+      <OrdersToolUi />
+      <PieceRecordsToolUi />
+      <WorkerStatsToolUi />
+      <OverviewToolUi />
+      <OrderProgressToolUi />
+      <UnpaidSummaryToolUi />
     </AssistantRuntimeProvider>
   );
 }
