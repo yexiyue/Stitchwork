@@ -1,8 +1,6 @@
 import { makeAssistantToolUI } from "@assistant-ui/react";
-import {
-  StatsDisplay,
-  StatsDisplayProgress,
-} from "@/components/tool-ui/stats-display";
+import { StatsDisplay } from "@/components/tool-ui/stats-display";
+import { ToolLoading } from "../shared";
 import { getOverviewStats } from "./constants";
 import type { Output, BossOverview } from "../types";
 
@@ -12,7 +10,7 @@ export const OverviewToolUi = makeAssistantToolUI<unknown, Output>({
   render: ({ status, result }) => {
     // 加载状态
     if (status?.type === "running") {
-      return <StatsDisplayProgress />;
+      return <ToolLoading toolName="get_overview" />;
     }
 
     // 无结果则不渲染

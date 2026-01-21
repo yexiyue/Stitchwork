@@ -1,6 +1,6 @@
 import { makeAssistantToolUI } from "@assistant-ui/react";
 import { DataTable } from "@/components/tool-ui/data-table";
-import { TableLoading } from "../shared";
+import { ToolLoading } from "../shared";
 import { getPayrollColumns } from "./columns";
 import type { Output, MyPayrollListResponse } from "../types";
 
@@ -10,7 +10,7 @@ export const PayrollToolUi = makeAssistantToolUI<unknown, Output>({
   render: ({ status, result }) => {
     // 加载状态
     if (status?.type === "running") {
-      return <TableLoading id="my-payrolls-loading" />;
+      return <ToolLoading toolName="get_my_payrolls" />;
     }
 
     // 无结果则不渲染

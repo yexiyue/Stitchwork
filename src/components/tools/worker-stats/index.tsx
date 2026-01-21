@@ -1,10 +1,7 @@
 import { makeAssistantToolUI } from "@assistant-ui/react";
 import { DataTable } from "@/components/tool-ui/data-table";
-import {
-  StatsDisplay,
-  StatsDisplayProgress,
-  type StatItem,
-} from "@/components/tool-ui/stats-display";
+import { StatsDisplay, type StatItem } from "@/components/tool-ui/stats-display";
+import { SectionLabel, ToolLoading } from "../shared";
 import { getWorkerStatsColumns } from "./columns";
 import type { Output, WorkerProductionList } from "../types";
 
@@ -47,7 +44,7 @@ export const WorkerStatsToolUi = makeAssistantToolUI<unknown, Output>({
   render: ({ status, result }) => {
     // 加载状态
     if (status?.type === "running") {
-      return <StatsDisplayProgress />;
+      return <ToolLoading toolName="get_worker_stats" />;
     }
 
     // 无结果则不渲染
@@ -72,9 +69,7 @@ export const WorkerStatsToolUi = makeAssistantToolUI<unknown, Output>({
         footer={
           tableData.length > 0 && (
             <div className="p-2">
-              <span className="ml-2 text-muted-foreground relative text-[10px] sm:text-xs font-normal tracking-wider uppercase opacity-90 animate-in fade-in slide-in-from-bottom-1 duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] fill-mode-both">
-                员工排行榜
-              </span>
+              <SectionLabel>员工排行榜</SectionLabel>
               <DataTable
                 id="worker-stats-list"
                 columns={getWorkerStatsColumns()}

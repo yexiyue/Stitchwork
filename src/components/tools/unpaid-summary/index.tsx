@@ -1,11 +1,9 @@
 import { makeAssistantToolUI } from "@assistant-ui/react";
 import { DataTable } from "@/components/tool-ui/data-table";
-import {
-  StatsDisplay,
-  StatsDisplayProgress,
-  type StatItem,
-} from "@/components/tool-ui/stats-display";
+import { StatsDisplay, type StatItem } from "@/components/tool-ui/stats-display";
+import { SectionLabel, ToolLoading } from "../shared";
 import { getUnpaidSummaryColumns } from "./columns";
+import { Wallet } from "lucide-react";
 import type { Output, UnpaidSummaryResponse } from "../types";
 
 // 计算汇总统计
@@ -41,13 +39,25 @@ function getSummaryStats(data: UnpaidSummaryResponse): StatItem[] {
   ];
 }
 
+// 空状态组件
+function EmptyState() {
+  return (
+    <div className="flex flex-col items-center justify-center py-8 text-center">
+      <div className="w-12 h-12 mb-3 rounded-full bg-muted/50 flex items-center justify-center">
+        <Wallet className="w-6 h-6 text-muted-foreground/60" />
+      </div>
+      <p className="text-sm text-muted-foreground">暂无待发工资记录</p>
+    </div>
+  );
+}
+
 // 待发工资汇总 UI
 export const UnpaidSummaryToolUi = makeAssistantToolUI<unknown, Output>({
   toolName: "get_unpaid_summary",
   render: ({ status, result }) => {
     // 加载状态
     if (status?.type === "running") {
-      return <StatsDisplayProgress />;
+      return <ToolLoading toolName="get_unpaid_summary" />;
     }
 
     // 无结果则不渲染
@@ -57,11 +67,7 @@ export const UnpaidSummaryToolUi = makeAssistantToolUI<unknown, Output>({
     const data: UnpaidSummaryResponse = JSON.parse(result[0].text);
 
     if (data.list.length === 0) {
-      return (
-        <div className="p-4 text-center text-muted-foreground text-sm">
-          暂无待发工资记录
-        </div>
-      );
+      return <EmptyState />;
     }
 
     // 转换为 DataTable 兼容格式
@@ -80,9 +86,7 @@ export const UnpaidSummaryToolUi = makeAssistantToolUI<unknown, Output>({
         footer={
           tableData.length > 0 && (
             <div className="p-2">
-              <span className="ml-2 text-muted-foreground relative text-[10px] sm:text-xs font-normal tracking-wider uppercase opacity-90 animate-in fade-in slide-in-from-bottom-1 duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] fill-mode-both">
-                员工明细
-              </span>
+              <SectionLabel>员工明细</SectionLabel>
               <DataTable
                 id="unpaid-summary-list"
                 columns={getUnpaidSummaryColumns()}

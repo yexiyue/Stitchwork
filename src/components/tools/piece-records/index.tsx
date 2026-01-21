@@ -1,6 +1,6 @@
 import { makeAssistantToolUI } from "@assistant-ui/react";
 import { DataTable } from "@/components/tool-ui/data-table";
-import { TableLoading } from "../shared";
+import { ToolLoading } from "../shared";
 import { getPieceRecordsColumns } from "./columns";
 import type { Output, BossPieceRecordListResponse } from "../types";
 
@@ -10,7 +10,7 @@ export const PieceRecordsToolUi = makeAssistantToolUI<unknown, Output>({
   render: ({ status, result }) => {
     // 加载状态
     if (status?.type === "running") {
-      return <TableLoading id="piece-records-loading" />;
+      return <ToolLoading toolName="query_piece_records" />;
     }
 
     // 无结果则不渲染

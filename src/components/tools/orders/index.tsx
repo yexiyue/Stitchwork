@@ -1,6 +1,6 @@
 import { makeAssistantToolUI } from "@assistant-ui/react";
 import { DataTable } from "@/components/tool-ui/data-table";
-import { TableLoading } from "../shared";
+import { ToolLoading } from "../shared";
 import { getOrdersColumns } from "./columns";
 import type { Output, OrderListResponse } from "../types";
 
@@ -10,7 +10,7 @@ export const OrdersToolUi = makeAssistantToolUI<unknown, Output>({
   render: ({ status, result }) => {
     // 加载状态
     if (status?.type === "running") {
-      return <TableLoading id="orders-loading" />;
+      return <ToolLoading toolName="query_orders" />;
     }
 
     // 无结果则不渲染

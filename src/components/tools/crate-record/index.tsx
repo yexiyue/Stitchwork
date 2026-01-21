@@ -6,6 +6,180 @@ import {
 } from "./schema";
 import { pieceRecordApi } from "@/api";
 import { useAuthStore } from "@/stores/auth";
+import { cn } from "@/lib/utils";
+import { CheckCircle2, XCircle, ClipboardList } from "lucide-react";
+
+// 成功状态卡片
+function SuccessCard({
+  orderName,
+  processName,
+  quantity,
+  totalAmount,
+}: {
+  orderName: string;
+  processName: string;
+  quantity: number;
+  totalAmount: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-xl border border-emerald-200 dark:border-emerald-800/50",
+        "bg-emerald-50 dark:bg-emerald-950/30 p-4",
+        "animate-in fade-in slide-in-from-bottom-2 duration-300"
+      )}
+    >
+      <div className="flex items-center gap-2.5 text-emerald-700 dark:text-emerald-400">
+        <CheckCircle2 className="w-5 h-5 shrink-0" />
+        <span className="font-medium">计件记录已提交</span>
+      </div>
+      <div className="mt-2.5 text-sm text-emerald-600 dark:text-emerald-500">
+        <span className="font-medium">{orderName}</span>
+        <span className="mx-1.5 text-emerald-400 dark:text-emerald-600">·</span>
+        <span>{processName}</span>
+        <span className="mx-1.5 text-emerald-400 dark:text-emerald-600">×</span>
+        <span className="tabular-nums">{quantity}</span>
+        <span className="mx-1.5 text-emerald-400 dark:text-emerald-600">=</span>
+        <span className="font-semibold tabular-nums">¥{totalAmount}</span>
+      </div>
+      <div className="mt-1.5 text-xs text-emerald-500 dark:text-emerald-600">
+        待老板审核
+      </div>
+    </div>
+  );
+}
+
+// 错误状态卡片
+function ErrorCard({ error }: { error: string }) {
+  return (
+    <div
+      className={cn(
+        "rounded-xl border border-red-200 dark:border-red-800/50",
+        "bg-red-50 dark:bg-red-950/30 p-4",
+        "animate-in fade-in slide-in-from-bottom-2 duration-300"
+      )}
+    >
+      <div className="flex items-center gap-2.5 text-red-700 dark:text-red-400">
+        <XCircle className="w-5 h-5 shrink-0" />
+        <span className="font-medium">创建失败</span>
+      </div>
+      <div className="mt-1.5 text-sm text-red-600 dark:text-red-500">
+        {error}
+      </div>
+    </div>
+  );
+}
+
+// 确认卡片
+function ConfirmCard({
+  orderName,
+  processName,
+  piecePrice,
+  quantity,
+  totalAmount,
+  onConfirm,
+  onCancel,
+}: {
+  orderName: string;
+  processName: string;
+  piecePrice: string;
+  quantity: number;
+  totalAmount: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-xl border border-amber-200 dark:border-amber-800/50",
+        "bg-amber-50 dark:bg-amber-950/30 p-4",
+        "animate-in fade-in slide-in-from-bottom-2 duration-300"
+      )}
+    >
+      <div className="flex items-center gap-2.5 mb-3">
+        <ClipboardList className="w-5 h-5 text-amber-600 dark:text-amber-500 shrink-0" />
+        <span className="font-medium text-amber-800 dark:text-amber-300">
+          确认创建计件记录
+        </span>
+      </div>
+
+      <div className="mb-4 space-y-2 text-sm">
+        <div className="flex justify-between items-center">
+          <span className="text-amber-700/70 dark:text-amber-400/70">订单</span>
+          <span className="font-medium text-amber-800 dark:text-amber-300 truncate ml-4 max-w-[60%] text-right">
+            {orderName}
+          </span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-amber-700/70 dark:text-amber-400/70">工序</span>
+          <span className="font-medium text-amber-800 dark:text-amber-300">
+            {processName}
+          </span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-amber-700/70 dark:text-amber-400/70">单价</span>
+          <span className="text-amber-800 dark:text-amber-300 tabular-nums">
+            ¥{piecePrice}
+          </span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-amber-700/70 dark:text-amber-400/70">数量</span>
+          <span className="text-amber-800 dark:text-amber-300 tabular-nums">
+            {quantity}
+          </span>
+        </div>
+        <div className="flex justify-between items-center pt-2.5 mt-1 border-t border-amber-200 dark:border-amber-800/50">
+          <span className="text-amber-700/70 dark:text-amber-400/70">
+            合计金额
+          </span>
+          <span className="text-lg font-bold text-amber-600 dark:text-amber-400 tabular-nums">
+            ¥{totalAmount}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex gap-2.5">
+        <button
+          className={cn(
+            "flex-1 rounded-lg px-4 py-2.5 text-sm font-medium",
+            "bg-amber-500 text-white",
+            "hover:bg-amber-600 active:bg-amber-700",
+            "transition-colors duration-150",
+            "focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:focus:ring-offset-amber-950"
+          )}
+          onClick={onConfirm}
+        >
+          确认提交
+        </button>
+        <button
+          className={cn(
+            "flex-1 rounded-lg px-4 py-2.5 text-sm font-medium",
+            "border border-amber-300 dark:border-amber-700",
+            "text-amber-700 dark:text-amber-400",
+            "hover:bg-amber-100 dark:hover:bg-amber-900/30 active:bg-amber-200 dark:active:bg-amber-900/50",
+            "transition-colors duration-150",
+            "focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:focus:ring-offset-amber-950"
+          )}
+          onClick={onCancel}
+        >
+          取消
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// 加载状态卡片
+function LoadingCard() {
+  return (
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted border-t-amber-500" />
+        <span>正在准备...</span>
+      </div>
+    </div>
+  );
+}
 
 export const CreateRecordTool = makeAssistantTool<
   CreateRecordSchemaType,
@@ -53,8 +227,7 @@ export const CreateRecordTool = makeAssistantTool<
     }
   },
 
-  render: ({ args, status, result, resume, interrupt }) => {
-    console.log("CreateRecordTool", status, result, interrupt);
+  render: ({ args, status, result, resume }) => {
     const totalAmount = (
       parseFloat(args.piecePrice || "0") * (args.quantity || 0)
     ).toFixed(2);
@@ -63,88 +236,34 @@ export const CreateRecordTool = makeAssistantTool<
     if (result) {
       if (result.success) {
         return (
-          <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-            <div className="flex items-center gap-2 text-green-700">
-              <span className="text-lg">✅</span>
-              <span className="font-medium">计件记录已提交</span>
-            </div>
-            <div className="mt-2 text-sm text-green-600">
-              {args.orderName} · {args.processName} × {args.quantity} = ¥
-              {totalAmount}
-            </div>
-            <div className="mt-1 text-xs text-green-500">待老板审核</div>
-          </div>
+          <SuccessCard
+            orderName={args.orderName}
+            processName={args.processName}
+            quantity={args.quantity}
+            totalAmount={totalAmount}
+          />
         );
       } else {
-        return (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-            <div className="flex items-center gap-2 text-red-700">
-              <span className="text-lg">❌</span>
-              <span className="font-medium">创建失败</span>
-            </div>
-            <div className="mt-1 text-sm text-red-600">{result.error}</div>
-          </div>
-        );
+        return <ErrorCard error={result.error || "未知错误"} />;
       }
     }
 
     // 等待用户确认 (running: 执行到 human(), requires-action: human() 已触发)
     if (status.type === "running" || status.type === "requires-action") {
       return (
-        <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
-          <div className="mb-3 font-medium text-orange-800">
-            确认创建计件记录
-          </div>
-          <div className="mb-4 space-y-1 text-sm text-orange-700">
-            <div className="flex justify-between">
-              <span>订单:</span>
-              <span className="font-medium">{args.orderName}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>工序:</span>
-              <span className="font-medium">{args.processName}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>单价:</span>
-              <span>¥{args.piecePrice}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>数量:</span>
-              <span>{args.quantity}</span>
-            </div>
-            <div className="flex justify-between border-t border-orange-200 pt-2 mt-2">
-              <span>合计金额:</span>
-              <span className="text-lg font-bold text-orange-600">
-                ¥{totalAmount}
-              </span>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              className="flex-1 rounded-lg bg-orange-500 px-4 py-2 text-white hover:bg-orange-600 transition-colors"
-              onClick={() => resume({ confirmed: true })}
-            >
-              确认提交
-            </button>
-            <button
-              className="flex-1 rounded-lg border border-gray-300 px-4 py-2 hover:bg-gray-50 transition-colors"
-              onClick={() => resume({ confirmed: false })}
-            >
-              取消
-            </button>
-          </div>
-        </div>
+        <ConfirmCard
+          orderName={args.orderName}
+          processName={args.processName}
+          piecePrice={args.piecePrice}
+          quantity={args.quantity}
+          totalAmount={totalAmount}
+          onConfirm={() => resume({ confirmed: true })}
+          onCancel={() => resume({ confirmed: false })}
+        />
       );
     }
 
     // 默认状态 (loading)
-    return (
-      <div className="rounded-lg border p-4">
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-orange-500" />
-          正在准备...
-        </div>
-      </div>
-    );
+    return <LoadingCard />;
   },
 });

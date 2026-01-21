@@ -1,9 +1,7 @@
 import { makeAssistantToolUI } from "@assistant-ui/react";
-import {
-  StatsDisplay,
-  StatsDisplayProgress,
-} from "@/components/tool-ui/stats-display";
+import { StatsDisplay } from "@/components/tool-ui/stats-display";
 import { DailyTrendChart } from "../daily-trend-chart";
+import { SectionLabel, ToolLoading } from "../shared";
 import { getMyEarningsStats } from "./constants";
 import type { Output, MyEarningsSummary } from "../types";
 
@@ -13,7 +11,7 @@ export const StatsToolUi = makeAssistantToolUI<unknown, Output>({
   render: ({ status, result }) => {
     // 加载状态
     if (status?.type === "running") {
-      return <StatsDisplayProgress />;
+      return <ToolLoading toolName="get_my_earnings" />;
     }
 
     // 无结果则不渲染
@@ -33,9 +31,7 @@ export const StatsToolUi = makeAssistantToolUI<unknown, Output>({
         footer={
           data.dailyStats.length > 0 && (
             <div className="p-2">
-              <span className="ml-2 text-muted-foreground relative text-[10px] sm:text-xs font-normal tracking-wider uppercase opacity-90 animate-in fade-in slide-in-from-bottom-1 duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] fill-mode-both">
-                收入趋势图
-              </span>
+              <SectionLabel>收入趋势图</SectionLabel>
               <DailyTrendChart dailyStats={data.dailyStats} />
             </div>
           )

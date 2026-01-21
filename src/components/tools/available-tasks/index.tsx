@@ -1,5 +1,6 @@
 import { makeAssistantToolUI } from "@assistant-ui/react";
 import { DataTable, type Column } from "@/components/tool-ui/data-table";
+import { ToolLoading } from "../shared";
 import type { Output, AvailableTasksResponse } from "../types";
 
 // 可接工序表格列定义
@@ -37,26 +38,13 @@ function getTaskColumns(): Column[] {
   ];
 }
 
-// 加载状态组件
-function LoadingState() {
-  return (
-    <DataTable
-      id="available-tasks-loading"
-      columns={[]}
-      data={[]}
-      isLoading={true}
-      layout="auto"
-    />
-  );
-}
-
 // 可接工序 UI
 export const AvailableTasksToolUi = makeAssistantToolUI<unknown, Output>({
   toolName: "get_available_tasks",
   render: ({ status, result }) => {
     // 加载状态
     if (status?.type === "running") {
-      return <LoadingState />;
+      return <ToolLoading toolName="get_available_tasks" />;
     }
 
     // 无结果则不渲染
