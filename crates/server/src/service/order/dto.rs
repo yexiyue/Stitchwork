@@ -7,62 +7,84 @@ use uuid::Uuid;
 
 use entity::order::{Model, OrderStatus};
 
+/// 创建订单请求
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateOrderDto {
-    #[schemars(description = "客户ID")]
+    /// 客户ID
     pub customer_id: Uuid,
-    #[schemars(description = "产品名称")]
+    /// 产品名称
     pub product_name: String,
-    #[schemars(description = "订单描述")]
+    /// 订单描述
     pub description: Option<String>,
-    #[schemars(description = "产品图片URL列表")]
+    /// 产品图片URL列表
     pub images: Option<Json>,
-    #[schemars(description = "订单数量")]
+    /// 订单数量
     pub quantity: i32,
-    #[schemars(description = "单价")]
+    /// 单价
     pub unit_price: Decimal,
 }
 
+/// 订单查询参数
 #[derive(Debug, Deserialize, Default, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct OrderQueryParams {
-    #[schemars(description = "按客户ID筛选")]
+    /// 按客户ID筛选
     pub customer_id: Option<Uuid>,
 }
 
+/// 更新订单状态请求
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateOrderStatusDto {
-    #[schemars(description = "订单状态: pending/processing/completed/delivered/cancelled")]
+    /// 订单状态: pending/processing/completed/delivered/cancelled
     pub status: String,
 }
 
+/// 更新订单请求
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateOrderDto {
+    /// 产品名称
     pub product_name: Option<String>,
+    /// 订单描述
     pub description: Option<String>,
+    /// 产品图片URL列表
     pub images: Option<Json>,
+    /// 订单数量
     pub quantity: Option<i32>,
+    /// 单价
     pub unit_price: Option<Decimal>,
+    /// 订单状态: pending/processing/completed/delivered/cancelled
     pub status: Option<String>,
 }
 
+/// 订单详情响应
 #[derive(Debug, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct OrderResponse {
+    /// 订单ID
     pub id: Uuid,
+    /// 客户ID
     pub customer_id: Uuid,
+    /// 老板ID
     pub boss_id: Uuid,
+    /// 产品名称
     pub product_name: String,
+    /// 订单描述
     pub description: Option<String>,
+    /// 产品图片URL列表
     pub images: Option<Json>,
+    /// 订单数量
     pub quantity: i32,
+    /// 单价（员工不可见时为None）
     #[serde(skip_serializing_if = "Option::is_none")]
     pub unit_price: Option<Decimal>,
+    /// 订单状态: pending/processing/completed/delivered/cancelled
     pub status: OrderStatus,
+    /// 接单时间
     pub received_at: DateTime<Utc>,
+    /// 出货时间
     pub delivered_at: Option<DateTime<Utc>>,
 }
 

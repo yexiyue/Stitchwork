@@ -22,91 +22,116 @@ use uuid::Uuid;
 
 // ============ 工具参数定义 ============
 
+/// 查询我的计件记录参数
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct GetMyRecordsParams {
-    #[schemars(description = "按状态筛选: pending,approved,rejected。不指定则返回所有状态")]
+    /// 按状态筛选: pending,approved,rejected。不指定则返回所有状态
     #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub status: Option<String>,
-    #[schemars(description = "开始日期，格式 YYYY-MM-DD。不指定则不限制")]
+    /// 开始日期，格式 YYYY-MM-DD。不指定则不限制
     #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub start_date: Option<String>,
-    #[schemars(description = "结束日期，格式 YYYY-MM-DD。不指定则不限制")]
+    /// 结束日期，格式 YYYY-MM-DD。不指定则不限制
     #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub end_date: Option<String>,
-    #[schemars(description = "页码，从1开始，默认1")]
+    /// 页码，从1开始，默认1
     pub page: Option<u64>,
-    #[schemars(description = "每页数量，默认20")]
+    /// 每页数量，默认20
     pub page_size: Option<u64>,
 }
 
+/// 查询我的收入统计参数
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct GetMyEarningsParams {
-    #[schemars(description = "开始日期，格式 YYYY-MM-DD。不指定则统计全部")]
+    /// 开始日期，格式 YYYY-MM-DD。不指定则统计全部
     #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub start_date: Option<String>,
-    #[schemars(description = "结束日期，格式 YYYY-MM-DD。不指定则统计全部")]
+    /// 结束日期，格式 YYYY-MM-DD。不指定则统计全部
     #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub end_date: Option<String>,
 }
 
+/// 查询我的工资单参数
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct GetMyPayrollsParams {
-    #[schemars(description = "开始日期，格式 YYYY-MM-DD。不指定则不限制")]
+    /// 开始日期，格式 YYYY-MM-DD。不指定则不限制
     #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub start_date: Option<String>,
-    #[schemars(description = "结束日期，格式 YYYY-MM-DD。不指定则不限制")]
+    /// 结束日期，格式 YYYY-MM-DD。不指定则不限制
     #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub end_date: Option<String>,
-    #[schemars(description = "页码，从1开始，默认1")]
+    /// 页码，从1开始，默认1
     pub page: Option<u64>,
-    #[schemars(description = "每页数量，默认20")]
+    /// 每页数量，默认20
     pub page_size: Option<u64>,
 }
 
 // ============ 响应类型 ============
 
+/// 我的计件记录列表响应
 #[derive(Debug, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct MyRecordsResponse {
+    /// 计件记录列表
     pub list: Vec<PieceRecordResponse>,
+    /// 总记录数
     pub total: u64,
 }
 
+/// 我的收入统计汇总
 #[derive(Debug, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct MyEarningsSummary {
+    /// 已审批通过的总数量（件）
     pub total_quantity: i64,
+    /// 已审批通过的总金额（元）
     pub total_amount: Decimal,
+    /// 待审批的数量（件）
     pub pending_quantity: i64,
+    /// 待审批的金额（元）
     pub pending_amount: Decimal,
+    /// 每日统计列表，用于趋势图展示
     pub daily_stats: Vec<crate::service::stats::dto::DailyStat>,
 }
 
+/// 工资单列表响应
 #[derive(Debug, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PayrollListResponse {
+    /// 工资单列表
     pub list: Vec<entity::payroll::Model>,
+    /// 总记录数
     pub total: u64,
 }
 
+/// 可接工序任务
 #[derive(Debug, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AvailableTask {
+    /// 工序ID，创建计件记录时需要此值
     pub process_id: Uuid,
+    /// 工序名称
     pub process_name: String,
+    /// 单价（元），创建计件记录时需要此值
     pub piece_price: Decimal,
+    /// 订单ID
     pub order_id: Uuid,
+    /// 订单/产品名称，创建计件记录时需要此值
     pub order_name: String,
+    /// 订单图片URL
     pub order_image: Option<String>,
+    /// 剩余可接数量，创建计件记录的数量不能超过此值
     pub remaining_quantity: i32,
 }
 
+/// 可接工序列表响应
 #[derive(Debug, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AvailableTasksResponse {
+    /// 可接工序列表
     pub list: Vec<AvailableTask>,
 }
 

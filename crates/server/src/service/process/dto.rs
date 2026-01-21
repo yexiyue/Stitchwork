@@ -3,30 +3,36 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use uuid::Uuid;
 
+/// 创建工序请求
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateProcessDto {
-    #[schemars(description = "所属订单ID")]
+    /// 所属订单ID
     pub order_id: Uuid,
-    #[schemars(description = "工序名称")]
+    /// 工序名称
     pub name: String,
-    #[schemars(description = "工序描述")]
+    /// 工序描述
     pub description: Option<String>,
-    #[schemars(description = "计件单价")]
+    /// 计件单价
     pub piece_price: Decimal,
 }
 
+/// 工序查询参数
 #[derive(Debug, Deserialize, Default, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ProcessQueryParams {
-    #[schemars(description = "按订单ID筛选")]
+    /// 按订单ID筛选
     pub order_id: Option<Uuid>,
 }
 
+/// 更新工序请求
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateProcessDto {
+    /// 工序名称
     pub name: Option<String>,
+    /// 工序描述
     pub description: Option<String>,
+    /// 计件单价
     pub piece_price: Option<Decimal>,
 }

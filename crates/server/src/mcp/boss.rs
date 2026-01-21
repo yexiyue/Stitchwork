@@ -23,107 +23,121 @@ use uuid::Uuid;
 
 // ============ 工具参数定义 ============
 
+/// 查询订单参数
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct QueryOrdersParams {
-    #[schemars(
-        description = "按状态筛选，多个状态用逗号分隔: pending,processing,completed,delivered,cancelled。不指定则返回所有状态"
-    )]
+    /// 按状态筛选，多个状态用逗号分隔: pending,processing,completed,delivered,cancelled。不指定则返回所有状态
     #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub status: Option<String>,
-    #[schemars(description = "搜索关键词（产品名称或客户名称）。不指定则不筛选")]
+    /// 搜索关键词（产品名称或客户名称）。不指定则不筛选
     #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub search: Option<String>,
-    #[schemars(description = "开始日期，格式 YYYY-MM-DD。不指定则不限制开始时间")]
+    /// 开始日期，格式 YYYY-MM-DD。不指定则不限制开始时间
     #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub start_date: Option<String>,
-    #[schemars(description = "结束日期，格式 YYYY-MM-DD。不指定则不限制结束时间")]
+    /// 结束日期，格式 YYYY-MM-DD。不指定则不限制结束时间
     #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub end_date: Option<String>,
-    #[schemars(description = "页码，从1开始，默认1")]
+    /// 页码，从1开始，默认1
     pub page: Option<u64>,
-    #[schemars(description = "每页数量，默认20")]
+    /// 每页数量，默认20
     pub page_size: Option<u64>,
 }
 
+/// 查询计件记录参数
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct QueryPieceRecordsParams {
-    #[schemars(
-        description = "按状态筛选，多个状态用逗号分隔: pending,approved,rejected。不指定则返回所有状态"
-    )]
+    /// 按状态筛选，多个状态用逗号分隔: pending,approved,rejected。不指定则返回所有状态
     #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub status: Option<String>,
-    #[schemars(description = "开始日期，格式 YYYY-MM-DD。不指定则不限制")]
+    /// 开始日期，格式 YYYY-MM-DD。不指定则不限制
     #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub start_date: Option<String>,
-    #[schemars(description = "结束日期，格式 YYYY-MM-DD。不指定则不限制")]
+    /// 结束日期，格式 YYYY-MM-DD。不指定则不限制
     #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub end_date: Option<String>,
-    #[schemars(description = "页码，从1开始，默认1")]
+    /// 页码，从1开始，默认1
     pub page: Option<u64>,
-    #[schemars(description = "每页数量，默认20")]
+    /// 每页数量，默认20
     pub page_size: Option<u64>,
 }
 
+/// 获取员工统计参数
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct GetWorkerStatsParams {
-    #[schemars(description = "开始日期，格式 YYYY-MM-DD。不指定则统计全部")]
+    /// 开始日期，格式 YYYY-MM-DD。不指定则统计全部
     #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub start_date: Option<String>,
-    #[schemars(description = "结束日期，格式 YYYY-MM-DD。不指定则统计全部")]
+    /// 结束日期，格式 YYYY-MM-DD。不指定则统计全部
     #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub end_date: Option<String>,
 }
 
+/// 获取订单进度参数
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct GetOrderProgressParams {
-    #[schemars(description = "开始日期，格式 YYYY-MM-DD。不指定则显示全部")]
+    /// 开始日期，格式 YYYY-MM-DD。不指定则显示全部
     #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub start_date: Option<String>,
-    #[schemars(description = "结束日期，格式 YYYY-MM-DD。不指定则显示全部")]
+    /// 结束日期，格式 YYYY-MM-DD。不指定则显示全部
     #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub end_date: Option<String>,
 }
 
+/// 获取待发工资汇总参数
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct GetUnpaidSummaryParams {
-    #[schemars(description = "员工姓名关键词，不传则查询所有员工")]
+    /// 员工姓名关键词，不传则查询所有员工
     #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub user_name: Option<String>,
 }
 
 // ============ 响应类型 ============
 
+/// 订单列表响应
 #[derive(Debug, serde::Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct OrderListResponse {
+    /// 订单列表
     pub list: Vec<entity::order::Model>,
+    /// 总记录数
     pub total: u64,
 }
 
+/// 计件记录列表响应
 #[derive(Debug, serde::Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PieceRecordListResponse {
+    /// 计件记录列表
     pub list: Vec<PieceRecordResponse>,
+    /// 总记录数
     pub total: u64,
 }
 
+/// 待发工资汇总项
 #[derive(Debug, serde::Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UnpaidSummaryItem {
+    /// 员工ID
     pub user_id: Uuid,
+    /// 员工姓名
     pub user_name: String,
+    /// 待发数量（件）
     pub total_quantity: i64,
+    /// 待发金额（元）
     pub total_amount: rust_decimal::Decimal,
 }
 
+/// 待发工资汇总响应
 #[derive(Debug, serde::Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UnpaidSummaryResponse {
+    /// 各员工待发工资汇总列表
     pub list: Vec<UnpaidSummaryItem>,
 }
 
