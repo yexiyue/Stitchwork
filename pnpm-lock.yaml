@@ -89,6 +89,9 @@ importers:
       antd-mobile:
         specifier: ^5.42.1
         version: 5.42.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      assistant-stream:
+        specifier: ^0.2.47
+        version: 0.2.47
       browser-image-compression:
         specifier: ^2.0.2
         version: 2.0.2
@@ -1672,8 +1675,8 @@ packages:
   assistant-cloud@0.1.12:
     resolution: {integrity: sha512-A2tY6QIdP9+RkE8Mmpm4kAoO0NyKsKpJKYebbYFZ3bAnQKyB15Bw/PS9AovpdeziGU9At97TyiMrT36pDjCD7A==}
 
-  assistant-stream@0.2.46:
-    resolution: {integrity: sha512-smcC4sqOcTrUO01YpiHPgdG3Wc57kmQlCIEdMXSNuWMgcDvo60hnRY3rPDhZQBJHZOXQ9Q1wLR8ugKDjxi72GQ==}
+  assistant-stream@0.2.47:
+    resolution: {integrity: sha512-0f+yVwoh7GVwYqaWh6vT+P/zflvEyqysJJzGhjqOPxUYjbNOjcifBw+fVwQPtxysyzye2TZCQtmOWjP0ggvnqw==}
 
   ast-types@0.16.1:
     resolution: {integrity: sha512-6t10qk83GOG8p0vKmaCr8eiilZwO171AvbROMtvvNiwrTly62t+7XkA8RdIIVbpMhCASAsxgAzdRSwh6nw/5Dg==}
@@ -3099,7 +3102,7 @@ snapshots:
       '@radix-ui/react-use-callback-ref': 1.1.1(@types/react@19.2.7)(react@19.2.3)
       '@radix-ui/react-use-escape-keydown': 1.1.1(@types/react@19.2.7)(react@19.2.3)
       assistant-cloud: 0.1.12
-      assistant-stream: 0.2.46
+      assistant-stream: 0.2.47
       nanoid: 5.1.6
       react: 19.2.3
       react-dom: 19.2.3(react@19.2.3)
@@ -4418,9 +4421,9 @@ snapshots:
 
   assistant-cloud@0.1.12:
     dependencies:
-      assistant-stream: 0.2.46
+      assistant-stream: 0.2.47
 
-  assistant-stream@0.2.46:
+  assistant-stream@0.2.47:
     dependencies:
       '@standard-schema/spec': 1.1.0
       nanoid: 5.1.6

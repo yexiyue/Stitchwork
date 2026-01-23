@@ -9,7 +9,7 @@ use crate::chat::ChatSession;
 
 #[derive(Clone)]
 pub struct SessionManager {
-    sessions: Cache<Uuid, Arc<ChatSession>>,
+    pub sessions: Cache<Uuid, Arc<ChatSession>>,
 }
 
 impl Default for SessionManager {

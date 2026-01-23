@@ -2,8 +2,39 @@
  * RemoteThreadListAdapter 实现
  * 用于管理会话列表的 CRUD 操作
  */
-import type { unstable_RemoteThreadListAdapter as RemoteThreadListAdapter } from "@assistant-ui/react";
+import type {
+  unstable_RemoteThreadListAdapter as RemoteThreadListAdapter,
+  ThreadMessage,
+} from "@assistant-ui/react";
+import { AssistantStream, UIMessageStreamDecoder } from "assistant-stream";
 import { chatApi } from "@/api";
+import { useAuthStore } from "@/stores/auth";
+
+/** 将 ThreadMessage 转换为后端期望的 UIMessage 格式 */
+function toUIMessages(messages: readonly ThreadMessage[]) {
+  return messages.map((msg) => ({
+    id: msg.id,
+    role: msg.role,
+    parts: msg.content.map((part) => {
+      if (part.type === "text") {
+        return { type: "text", text: part.text };
+      }
+      if (part.type === "tool-call") {
+        return {
+          type: `tool-${part.toolName}`,
+          toolCallId: part.toolCallId,
+          toolName: part.toolName,
+          state:
+            part.result !== undefined ? "output-available" : "input-available",
+          input: part.args,
+          output: part.result,
+        };
+      }
+      // 其他类型暂不处理
+      return { type: "text", text: "" };
+    }),
+  }));
+}
 
 export const createThreadListAdapter = (): RemoteThreadListAdapter => ({
   /**
@@ -71,14 +102,29 @@ export const createThreadListAdapter = (): RemoteThreadListAdapter => ({
   },
 
   /**
-   * 生成标题（暂不实现，返回空流）
+   * 生成标题
    */
-  async generateTitle(_remoteId: string, _messages: readonly unknown[]) {
-    // TODO: 实现标题生成 API
-    return new ReadableStream({
-      start(controller) {
-        controller.close();
+  async generateTitle(remoteId: string, messages: readonly ThreadMessage[]) {
+    const token = useAuthStore.getState().token;
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/api/chat/generate-title`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          thread_id: remoteId,
+          messages: toUIMessages(messages),
+        }),
       },
-    }) as never;
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to generate title: ${response.statusText}`);
+    }
+
+    return AssistantStream.fromResponse(response, new UIMessageStreamDecoder());
   },
 });
