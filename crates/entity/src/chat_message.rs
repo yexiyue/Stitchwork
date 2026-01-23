@@ -8,17 +8,21 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "camelCase")]
 #[sea_orm(table_name = "chat_message")]
 pub struct Model {
-    /// 消息唯一标识符
+    /// 消息唯一标识符（使用前端生成的消息 ID）
     #[sea_orm(primary_key, auto_increment = false)]
-    pub id: Uuid,
+    pub id: String,
     /// 所属会话线程的 ID
     pub thread_id: Uuid,
+    /// 父消息 ID（用于消息链表结构）
+    pub parent_id: Option<String>,
+    /// 消息格式（如 "aisdk/v5"）
+    pub format: String,
+    /// 消息内容，JSON 格式存储编码后的消息
+    #[sea_orm(column_type = "JsonBinary")]
+    pub content: serde_json::Value,
     /// 消息创建时间
     #[sea_orm(default_expr = "Expr::current_timestamp()")]
     pub created_at: DateTimeUtc,
-    /// 消息内容，JSON 格式存储完整的消息结构（包含 role、content 等字段）
-    #[sea_orm(column_type = "JsonBinary")]
-    pub value: serde_json::Value,
 
     #[serde(skip)]
     #[sea_orm(belongs_to, from = "thread_id", to = "id", on_delete = "Cascade")]

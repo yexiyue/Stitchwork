@@ -1,4 +1,4 @@
-use super::dto::UpdateThreadDto;
+use super::dto::{AddMessageDto, UpdateThreadDto};
 use crate::common::{ListData, QueryParams, apply_date_filter};
 use crate::error::Result;
 use anyhow::anyhow;
@@ -81,6 +81,7 @@ pub async fn create(
 ) -> Result<entity::chat_thread::Model> {
     let model = entity::chat_thread::ActiveModelEx::new()
         .set_user_id(user_id)
+        .set_id(Uuid::new_v4())
         .set_created_at(Utc::now());
     Ok(model.insert(db).await?.into())
 }
@@ -97,7 +98,7 @@ pub async fn add_message(
     db: &DbConn,
     thread_id: Uuid,
     user_id: Uuid,
-    message: serde_json::Value,
+    dto: AddMessageDto,
 ) -> Result<entity::chat_message::Model> {
     // 验证 thread 存在且属于该用户
     let exists = entity::chat_thread::Entity::find_by_id(thread_id)
@@ -110,8 +111,11 @@ pub async fn add_message(
     }
 
     let model = entity::chat_message::ActiveModelEx::new()
+        .set_id(dto.id)
         .set_thread_id(thread_id)
-        .set_value(message)
+        .set_parent_id(dto.parent_id)
+        .set_format(dto.format)
+        .set_content(dto.content)
         .set_created_at(Utc::now());
     Ok(model.insert(db).await?.into())
 }

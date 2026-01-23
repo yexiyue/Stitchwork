@@ -44,7 +44,7 @@ flowchart TB
 ### 1. 为什么需要 Custom Thread List？
 
 | 场景 | 默认行为 | Custom Thread List |
-|------|---------|-------------------|
+| ---- | -------- | ------------------ |
 | 会话存储 | 仅内存，刷新丢失 | 持久化到数据库 |
 | 多设备同步 | 不支持 | 支持 |
 | 会话归档 | 不支持 | 支持 |
@@ -139,21 +139,26 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "camelCase")]
 #[sea_orm(table_name = "chat_message")]
 pub struct Model {
-    /// 消息唯一标识符
+    /// 消息唯一标识符（使用前端生成的消息 ID）
     #[sea_orm(primary_key, auto_increment = false)]
-    pub id: Uuid,
+    pub id: String,
 
     /// 所属会话线程的 ID
     pub thread_id: Uuid,
 
+    /// 父消息 ID（用于消息链表结构）
+    pub parent_id: Option<String>,
+
+    /// 消息格式（如 "ai-sdk-ui"、"thread-message"）
+    pub format: String,
+
+    /// 消息内容，JSON 格式存储编码后的消息
+    #[sea_orm(column_type = "JsonBinary")]
+    pub content: serde_json::Value,
+
     /// 消息创建时间
     #[sea_orm(default_expr = "Expr::current_timestamp()")]
     pub created_at: DateTimeUtc,
-
-    /// 消息内容，JSON 格式存储完整的消息结构
-    /// 包含 message、parentId 等字段，与 assistant-ui 的格式兼容
-    #[sea_orm(column_type = "JsonBinary")]
-    pub value: serde_json::Value,
 
     // 关联关系
     #[serde(skip)]
@@ -165,17 +170,41 @@ impl ActiveModelBehavior for ActiveModel {}
 ```
 
 > **设计要点**：
-> - `value` 字段使用 `JsonBinary` 类型，直接存储 assistant-ui 的消息格式
+>
+> - `id` 使用 `String` 类型，直接使用前端生成的消息 ID，避免 ID 冗余
+> - `parent_id` 和 `format` 作为独立字段，便于查询和过滤
+> - `content` 字段使用 `JsonBinary` 类型，存储 `formatAdapter.encode()` 编码后的消息
 > - 使用 `on_delete = "Cascade"` 确保删除会话时自动清理消息
-> - `updated_at` 使用 `auto_update` 自动更新时间戳
 
-### 第二步：实现 Service 层
+### 第二步：定义 DTO
+
+```rust
+// crates/server/src/service/chat_thread/dto.rs
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UpdateThreadDto {
+    pub title: Option<String>,
+    pub archived: Option<bool>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AddMessageDto {
+    pub id: String,
+    pub parent_id: Option<String>,
+    pub format: String,
+    pub content: serde_json::Value,
+}
+```
+
+### 第三步：实现 Service 层
 
 Service 层封装业务逻辑，提供会话和消息的 CRUD 操作。
 
 ```rust
 // crates/server/src/service/chat_thread/service.rs
-use super::dto::UpdateThreadDto;
+use super::dto::{AddMessageDto, UpdateThreadDto};
 use crate::common::{ListData, QueryParams, apply_date_filter};
 use crate::error::Result;
 use anyhow::anyhow;
@@ -282,7 +311,7 @@ pub async fn add_message(
     db: &DbConn,
     thread_id: Uuid,
     user_id: Uuid,
-    message: serde_json::Value,
+    dto: AddMessageDto,
 ) -> Result<entity::chat_message::Model> {
     // 使用 exists() 验证会话归属，比 one() 更高效
     let exists = entity::chat_thread::Entity::find_by_id(thread_id)
@@ -295,8 +324,11 @@ pub async fn add_message(
     }
 
     let model = entity::chat_message::ActiveModelEx::new()
+        .set_id(dto.id)
         .set_thread_id(thread_id)
-        .set_value(message)
+        .set_parent_id(dto.parent_id)
+        .set_format(dto.format)
+        .set_content(dto.content)
         .set_created_at(Utc::now());
     Ok(model.insert(db).await?.into())
 }
@@ -326,7 +358,7 @@ pub async fn list_messages(
 }
 ```
 
-### 第三步：实现 Controller 层
+### 第四步：实现 Controller 层
 
 Controller 层定义 RESTful API 路由。
 
@@ -344,7 +376,7 @@ use crate::AppState;
 use crate::common::{ApiResponse, ListData, QueryParams};
 use crate::error::{AppJson, Result};
 use crate::service::auth::Claims;
-use crate::service::chat_thread::dto::UpdateThreadDto;
+use crate::service::chat_thread::dto::{AddMessageDto, UpdateThreadDto};
 use entity::chat_message::Model as MessageModel;
 use entity::chat_thread::Model as ThreadModel;
 
@@ -437,10 +469,10 @@ async fn add_message(
     MessagesPath { thread_id }: MessagesPath,
     State(state): State<Arc<AppState>>,
     Extension(claims): Extension<Claims>,
-    AppJson(message): AppJson<serde_json::Value>,
+    AppJson(dto): AppJson<AddMessageDto>,
 ) -> Result<ApiResponse<MessageModel>> {
     Ok(ApiResponse::ok(
-        service::add_message(&state.db, thread_id, claims.sub, message).await?,
+        service::add_message(&state.db, thread_id, claims.sub, dto).await?,
     ))
 }
 
@@ -460,7 +492,7 @@ pub fn router() -> Router<Arc<AppState>> {
 ### API 接口汇总
 
 | 方法 | 路径 | 描述 |
-|------|------|------|
+| ---- | ---- | ---- |
 | GET | `/api/threads` | 获取会话列表 |
 | POST | `/api/threads` | 创建新会话 |
 | GET | `/api/threads/{id}` | 获取单个会话 |
@@ -491,9 +523,19 @@ export interface ChatThread {
 /** 消息模型 */
 export interface ChatMessage {
   id: string;
-  thread_id: string;
-  value: unknown;  // assistant-ui 的消息格式
-  created_at: string;
+  threadId: string;
+  parentId: string | null;
+  format: string;
+  content: unknown;
+  createdAt: string;
+}
+
+/** 添加消息 DTO */
+export interface AddMessageDto {
+  id: string;
+  parentId: string | null;
+  format: string;
+  content: unknown;
 }
 
 /** 更新会话 DTO */
@@ -523,8 +565,8 @@ export const chatApi = {
   listMessages: (threadId: string) =>
     client.get<ChatMessage[]>(`/api/threads/${threadId}/messages`),
 
-  addMessage: (threadId: string, message: unknown) =>
-    client.post<ChatMessage>(`/api/threads/${threadId}/messages`, message),
+  addMessage: (threadId: string, dto: AddMessageDto) =>
+    client.post<ChatMessage>(`/api/threads/${threadId}/messages`, dto),
 };
 ```
 
@@ -624,8 +666,17 @@ export const createThreadListAdapter = (): RemoteThreadListAdapter => ({
 
 `ThreadHistoryAdapter` 负责消息历史的加载和保存。
 
+> **⚠️ 重要提醒**：如果你使用 `useChatRuntime`（AI SDK v5），必须实现 `withFormat` 方法！详见下文"踩坑提醒"部分。
+
 ```typescript
-// src/lib/chat/history-adapter.ts
+/**
+ * ThreadHistoryAdapter 实现
+ * 用于加载和保存消息历史
+ *
+ * AI SDK runtime 使用 withFormat 模式调用 history adapter:
+ * historyAdapter.withFormat(formatAdapter).append(item)
+ * historyAdapter.withFormat(formatAdapter).load()
+ */
 import type {
   ThreadHistoryAdapter,
   ExportedMessageRepository,
@@ -635,66 +686,195 @@ import { useAssistantApi } from "@assistant-ui/react";
 import { chatApi, type ChatMessage } from "@/api/chat";
 import { useMemo } from "react";
 
-/**
- * 消息仓库项（与 assistant-ui 内部类型匹配）
- */
 interface MessageRepositoryItem {
   message: ThreadMessage;
   parentId: string | null;
 }
 
+interface MessageFormatItem<TMessage> {
+  message: TMessage;
+  parentId: string | null;
+}
+
+interface MessageFormatRepository<TMessage> {
+  headId?: string | null;
+  messages: MessageFormatItem<TMessage>[];
+}
+
+interface MessageFormatAdapter<TMessage, TStorageFormat> {
+  format: string;
+  encode(item: MessageFormatItem<TMessage>): TStorageFormat;
+  decode(entry: {
+    id: string;
+    parent_id: string | null;
+    format: string;
+    content: TStorageFormat;
+  }): MessageFormatItem<TMessage>;
+  getId(message: TMessage): string;
+}
+
+interface GenericThreadHistoryAdapter<TMessage> {
+  load(): Promise<MessageFormatRepository<TMessage>>;
+  append(item: MessageFormatItem<TMessage>): Promise<void>;
+}
+
 /**
  * 创建消息历史适配器的 Hook
- * 需要在 RuntimeAdapterProvider 内部使用
  */
 export function useHistoryAdapter(): ThreadHistoryAdapter {
   const api = useAssistantApi();
 
-  return useMemo<ThreadHistoryAdapter>(
-    () => ({
-      /**
-       * 加载历史消息
-       * 在切换会话时调用
-       */
+  return useMemo<ThreadHistoryAdapter>(() => {
+    const getRemoteId = () => api.threadListItem().getState().remoteId;
+
+    const initializeAndGetRemoteId = async () => {
+      const { remoteId } = await api.threadListItem().initialize();
+      return remoteId;
+    };
+
+    return {
+      // 直接调用模式（用于 LocalRuntime）
       async load(): Promise<ExportedMessageRepository> {
-        const { remoteId } = api.threadListItem().getState();
+        const remoteId = getRemoteId();
         if (!remoteId) return { messages: [] };
 
         const messages = await chatApi.listMessages(remoteId);
-
-        // 构建 ExportedMessageRepository 格式
         const exportedMessages = messages.map(
-          (m: ChatMessage) => m.value as MessageRepositoryItem
+          (m: ChatMessage) => m.content as MessageRepositoryItem,
         );
-        const headId =
-          exportedMessages.length > 0
-            ? exportedMessages[exportedMessages.length - 1].message.id
-            : null;
 
         return {
-          headId,
+          headId: exportedMessages.at(-1)?.message.id ?? null,
           messages: exportedMessages,
         };
       },
 
-      /**
-       * 保存新消息
-       * 每条消息发送后调用
-       */
       async append(item: MessageRepositoryItem): Promise<void> {
-        // 重要：等待会话初始化完成，避免竞态条件
-        const { remoteId } = await api.threadListItem().initialize();
-        if (!remoteId) return;
-
-        await chatApi.addMessage(remoteId, item);
+        const remoteId = await initializeAndGetRemoteId();
+        if (remoteId) {
+          await chatApi.addMessage(remoteId, {
+            id: item.message.id,
+            parentId: item.parentId,
+            format: "thread-message",
+            content: item,
+          });
+        }
       },
-    }),
-    [api]
-  );
+
+      // withFormat 模式（用于 AI SDK runtime）
+      withFormat<TMessage, TStorageFormat>(
+        formatAdapter: MessageFormatAdapter<TMessage, TStorageFormat>,
+      ): GenericThreadHistoryAdapter<TMessage> {
+        return {
+          async load(): Promise<MessageFormatRepository<TMessage>> {
+            const remoteId = getRemoteId();
+            if (!remoteId) return { messages: [] };
+
+            const messages = await chatApi.listMessages(remoteId);
+
+            // 直接从数据库字段读取，不再需要嵌套解析
+            const decodedMessages = messages
+              .filter((m) => m.format === formatAdapter.format)
+              .map((m: ChatMessage) =>
+                formatAdapter.decode({
+                  id: m.id,
+                  parent_id: m.parentId,
+                  format: m.format,
+                  content: m.content as TStorageFormat,
+                }),
+              );
+
+            return {
+              headId:
+                decodedMessages.length > 0
+                  ? formatAdapter.getId(decodedMessages.at(-1)!.message)
+                  : null,
+              messages: decodedMessages,
+            };
+          },
+
+          async append(item: MessageFormatItem<TMessage>): Promise<void> {
+            const remoteId = await initializeAndGetRemoteId();
+            if (!remoteId) return;
+
+            const encoded = formatAdapter.encode(item);
+            await chatApi.addMessage(remoteId, {
+              id: formatAdapter.getId(item.message),
+              parentId: item.parentId,
+              format: formatAdapter.format,
+              content: encoded,
+            });
+          },
+        };
+      },
+    };
+  }, [api]);
 }
 ```
 
-> **重要提示**：在 `append` 方法中必须使用 `await api.threadListItem().initialize()` 等待会话初始化完成。这避免了首条消息可能因竞态条件而丢失的问题。
+> **重要变化**：新版本将 `id`、`parentId`、`format` 作为独立字段存储，`content` 只存储编码后的消息内容。这简化了数据结构，避免了嵌套解析的复杂性。
+
+### 踩坑提醒：AI SDK Runtime 必须实现 withFormat
+
+这是一个非常隐蔽的坑！如果你使用 `useChatRuntime`（AI SDK v5），直接实现 `load()` 和 `append()` 方法是**不够的**。
+
+#### 问题现象
+
+- `HistoryAdapterProvider` 正常渲染
+- `useHistoryAdapter()` 正常创建 adapter
+- 但发送消息后，`append()` **永远不会被调用**
+
+#### 问题根因
+
+查看 `@assistant-ui/react-ai-sdk` 的源码：
+
+```typescript
+// useExternalHistory.tsx
+useEffect(() => {
+  return runtimeRef.current.thread.subscribe(async () => {
+    // ...
+    await historyAdapter?.withFormat?.(storageFormatAdapter).append({
+      parentId,
+      message: getExternalStoreMessages<TMessage>(message)[0]!,
+    });
+  });
+}, [historyAdapter, storageFormatAdapter, runtimeRef]);
+```
+
+关键点：**AI SDK runtime 调用的是 `historyAdapter.withFormat(formatAdapter).append()`，而不是直接调用 `historyAdapter.append()`！**
+
+由于 `withFormat?.()` 使用了可选链，如果 `withFormat` 未实现，返回 `undefined`，后续的 `.append()` 就不会执行。
+
+#### 不同 Runtime 的调用方式
+
+| Runtime            | 调用方式                                  | 需要实现                                    |
+| ------------------ | ----------------------------------------- | ------------------------------------------- |
+| `useLocalRuntime`  | `historyAdapter.append()`                 | `load()`, `append()`                        |
+| `useChatRuntime`   | `historyAdapter.withFormat().append()`    | `load()`, `append()`, **`withFormat()`**    |
+
+#### 存储格式设计
+
+新版本将消息元数据提取为独立字段，简化了存储结构：
+
+```typescript
+// 数据库存储结构
+{
+  id: string,           // 前端消息 ID（主键）
+  thread_id: string,    // 会话 ID
+  parent_id: string,    // 父消息 ID
+  format: string,       // 格式标识，如 "ai-sdk-ui"
+  content: TStorageFormat, // formatAdapter.encode() 的结果
+  created_at: string
+}
+```
+
+与旧版嵌套结构相比：
+
+| 特性 | 旧版（嵌套） | 新版（扁平） |
+| ---- | ------------ | ------------ |
+| ID 存储 | 后端生成 Uuid + 前端 ID 在 value 中 | 直接使用前端 ID |
+| 查询过滤 | 需解析 JSON | 直接字段过滤 |
+| 数据冗余 | parentId 存两处 | 无冗余 |
 
 ### 第四步：集成到 Chat 页面
 
@@ -779,6 +959,85 @@ function ChatPage() {
 }
 ```
 
+### 深入理解：allowNesting 机制
+
+你可能注意到我们在 `runtimeHook` 中使用了 `useChatRuntime`，而 `useChatRuntime` 内部也调用了 `useRemoteThreadListRuntime`。这会导致嵌套吗？
+
+答案是：**不会**，这是 assistant-ui 的设计特性。
+
+#### 源码解析
+
+查看 `useRemoteThreadListRuntime` 的源码：
+
+```typescript
+// @assistant-ui/react 源码
+export const useRemoteThreadListRuntime = (
+  options: RemoteThreadListOptions,
+): AssistantRuntime => {
+  const api = useAssistantApiImpl();
+  const isNested = api.threadListItem.source !== null;  // 检测是否嵌套
+
+  if (isNested) {
+    if (!options.allowNesting) {
+      throw new Error(
+        "useRemoteThreadListRuntime cannot be nested inside another RemoteThreadListRuntime. " +
+          "Set allowNesting: true to allow nesting (the inner runtime will become a no-op).",
+      );
+    }
+
+    // 如果 allowNesting 为 true 且已在嵌套上下文中，
+    // 直接调用 runtimeHook() 返回，跳过 thread list 逻辑
+    return options.runtimeHook();
+  }
+
+  return useRemoteThreadListRuntimeImpl(options);
+};
+```
+
+#### 工作流程
+
+```mermaid
+flowchart TB
+    subgraph Outer["外层 useRemoteThreadListRuntime（我们的自定义 adapter）"]
+        Check1{isNested?}
+        Check1 -->|false| CreateThreadList[创建 ThreadListRuntime]
+        CreateThreadList --> CallHook[调用 runtimeHook]
+    end
+
+    subgraph Inner["内层 useChatRuntime"]
+        InnerRemote[useRemoteThreadListRuntime<br/>allowNesting: true]
+        Check2{isNested?}
+        InnerRemote --> Check2
+        Check2 -->|true| DirectReturn[直接返回 useChatThreadRuntime]
+    end
+
+    CallHook --> InnerRemote
+    DirectReturn --> Result[最终 Runtime]
+
+    style CreateThreadList fill:#90EE90
+    style DirectReturn fill:#87CEEB
+```
+
+#### 执行顺序
+
+1. **外层** `useRemoteThreadListRuntime`（我们的代码）
+   - `isNested = false`（不在任何 thread list 上下文中）
+   - 正常创建 `RemoteThreadListRuntimeCore`，使用我们的自定义 adapter
+   - 调用 `runtimeHook()`
+
+2. **内层** `useChatRuntime` 中的 `useRemoteThreadListRuntime`
+   - `isNested = true`（已在外层的 thread list 上下文中）
+   - 由于 `allowNesting: true`，**跳过** cloud adapter 的 thread list 逻辑
+   - 直接调用并返回 `useChatThreadRuntime()`
+
+#### 结果
+
+- 只有**我们的自定义 adapter** 生效
+- `useChatRuntime` 内部的 cloud adapter 被跳过（no-op）
+- 保留了 `useChatThreadRuntime` 的聊天能力
+
+这个设计使得我们可以安全地组合使用 `useRemoteThreadListRuntime` 和 `useChatRuntime`，而不用担心冲突。
+
 ## 数据流示意
 
 ### 创建新会话流程
@@ -834,26 +1093,40 @@ sequenceDiagram
 
 ## 消息格式说明
 
-assistant-ui 使用特定的消息格式，我们直接将其存储在 `value` 字段中：
+消息存储采用扁平化结构，`content` 字段存储 `formatAdapter.encode()` 编码后的消息：
+
+### AI SDK Runtime 格式 (format: "ai-sdk-ui")
 
 ```typescript
-// MessageRepositoryItem 格式
+// content 字段存储 UIMessage 格式
+{
+  "id": "msg-uuid",
+  "role": "user" | "assistant",
+  "parts": [
+    { "type": "text", "text": "消息内容" },
+    // 或工具调用
+    { "type": "tool-call", "toolCallId": "xxx", "toolName": "xxx", "args": {} }
+  ],
+  "createdAt": "2024-01-01T00:00:00Z"
+}
+```
+
+### LocalRuntime 格式 (format: "thread-message")
+
+```typescript
+// content 字段存储 MessageRepositoryItem 格式
 {
   "message": {
     "id": "msg-uuid",
     "role": "user" | "assistant",
-    "parts": [
-      { "type": "text", "text": "消息内容" },
-      // 或工具调用
-      { "type": "tool-call", "toolCallId": "xxx", "toolName": "xxx", "args": {} }
-    ],
+    "content": [{ "type": "text", "text": "消息内容" }],
     "createdAt": "2024-01-01T00:00:00Z"
   },
   "parentId": "parent-msg-uuid" | null
 }
 ```
 
-> **设计考量**：直接存储 assistant-ui 的原始格式，避免格式转换带来的复杂性和潜在问题。
+> **设计考量**：通过 `format` 字段区分不同 runtime 的消息格式，便于在 `load()` 时筛选和解码。
 
 ## 最佳实践
 
@@ -893,12 +1166,18 @@ let exists = thread.is_some();
 在 HistoryAdapter 的 `append` 方法中，必须等待会话初始化完成：
 
 ```typescript
-async append(item: MessageRepositoryItem): Promise<void> {
+async append(item: MessageFormatItem<TMessage>): Promise<void> {
   // 必须 await，避免首条消息丢失
-  const { remoteId } = await api.threadListItem().initialize();
+  const remoteId = await initializeAndGetRemoteId();
   if (!remoteId) return;
 
-  await chatApi.addMessage(remoteId, item);
+  const encoded = formatAdapter.encode(item);
+  await chatApi.addMessage(remoteId, {
+    id: formatAdapter.getId(item.message),
+    parentId: item.parentId,
+    format: formatAdapter.format,
+    content: encoded,
+  });
 }
 ```
 

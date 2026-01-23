@@ -1,6 +1,6 @@
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, MessageSquareText } from "lucide-react";
 import {
   AssistantRuntimeProvider,
   RuntimeAdapterProvider,
@@ -12,6 +12,7 @@ import {
 } from "@assistant-ui/react-ai-sdk";
 import { useAuthStore } from "@/stores/auth";
 import { Thread } from "@/components/thread";
+import { ThreadList } from "@/components/thread-list";
 import {
   // 员工端
   RecordsToolUi,
@@ -40,9 +41,13 @@ export const Route = createFileRoute("/chat")({
   component: ChatPage,
 });
 
-/** History adapter provider */
+/** History adapter provider - 由 unstable_Provider 渲染 */
 function HistoryAdapterProvider({ children }: { children?: React.ReactNode }) {
+  console.log(
+    "[HistoryAdapterProvider] Rendering - unstable_Provider is working",
+  );
   const history = useHistoryAdapter();
+  console.log("[HistoryAdapterProvider] history adapter created:", history);
   return (
     <RuntimeAdapterProvider adapters={{ history }}>
       {children}
@@ -54,6 +59,7 @@ function ChatPage() {
   const navigate = useNavigate();
   const [token, user] = useAuthStore((state) => [state.token, state.user]);
   const processedToolCalls = useRef(new Set<string>());
+  const [threadListOpen, setThreadListOpen] = useState(false);
 
   // 创建 thread list adapter
   const threadListAdapter = useMemo(() => {
@@ -80,9 +86,10 @@ function ChatPage() {
             return false;
           }
           const lastMsg = options.messages.at(-1);
+          // 查找已完成的前端工具调用 (type 格式为 "tool-${toolName}")
           const toolPart = lastMsg?.parts.find(
             (part) =>
-              part.type === "tool-create-record" &&
+              part.type === "tool-create_piece_record" &&
               part.state === "output-available",
           ) as { toolCallId: string } | undefined;
           if (toolPart) {
@@ -94,6 +101,7 @@ function ChatPage() {
           }
           return false;
         },
+        // history adapter 通过 unstable_Provider -> RuntimeAdapterProvider 自动注入
       }),
     adapter: threadListAdapter,
   });
@@ -102,14 +110,23 @@ function ChatPage() {
     <AssistantRuntimeProvider runtime={runtime}>
       <div className="flex h-full flex-col bg-background">
         {/* 顶部导航栏 */}
-        <div className="flex h-12 items-center border-b px-2">
+        <div className="flex h-12 items-center justify-between border-b px-2">
+          <div className="flex items-center">
+            <button
+              onClick={() => navigate({ to: "/" })}
+              className="flex size-10 items-center justify-center rounded-full hover:bg-muted"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <span className="ml-2 font-medium">AI 助手</span>
+          </div>
           <button
-            onClick={() => navigate({ to: "/" })}
+            onClick={() => setThreadListOpen(true)}
             className="flex size-10 items-center justify-center rounded-full hover:bg-muted"
+            aria-label="会话历史"
           >
-            <ArrowLeft size={20} />
+            <MessageSquareText size={20} />
           </button>
-          <span className="ml-2 font-medium">AI 助手</span>
         </div>
         {/* 聊天内容 */}
         <div className="flex-1 overflow-hidden">
@@ -129,6 +146,11 @@ function ChatPage() {
       <OverviewToolUi />
       <OrderProgressToolUi />
       <UnpaidSummaryToolUi />
+      {/* 会话列表侧边栏 */}
+      <ThreadList
+        open={threadListOpen}
+        onClose={() => setThreadListOpen(false)}
+      />
     </AssistantRuntimeProvider>
   );
 }

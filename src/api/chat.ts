@@ -14,9 +14,19 @@ export interface ChatThread {
 /** 消息模型 */
 export interface ChatMessage {
   id: string;
-  thread_id: string;
-  value: unknown;
-  created_at: string;
+  threadId: string;
+  parentId: string | null;
+  format: string;
+  content: unknown;
+  createdAt: string;
+}
+
+/** 添加消息 DTO */
+export interface AddMessageDto {
+  id: string;
+  parentId: string | null;
+  format: string;
+  content: unknown;
 }
 
 /** 更新会话 DTO */
@@ -43,6 +53,6 @@ export const chatApi = {
   listMessages: (threadId: string) =>
     client.get<ChatMessage[]>(`/api/threads/${threadId}/messages`),
 
-  addMessage: (threadId: string, message: unknown) =>
-    client.post<ChatMessage>(`/api/threads/${threadId}/messages`, message),
+  addMessage: (threadId: string, dto: AddMessageDto) =>
+    client.post<ChatMessage>(`/api/threads/${threadId}/messages`, dto),
 };

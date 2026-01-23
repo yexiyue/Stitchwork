@@ -10,7 +10,7 @@ use crate::AppState;
 use crate::common::{ApiResponse, ListData, QueryParams};
 use crate::error::{AppJson, Result};
 use crate::service::auth::Claims;
-use crate::service::chat_thread::dto::UpdateThreadDto;
+use crate::service::chat_thread::dto::{AddMessageDto, UpdateThreadDto};
 use entity::chat_message::Model as MessageModel;
 use entity::chat_thread::Model as ThreadModel;
 
@@ -94,10 +94,10 @@ async fn add_message(
     MessagesPath { thread_id }: MessagesPath,
     State(state): State<Arc<AppState>>,
     Extension(claims): Extension<Claims>,
-    AppJson(message): AppJson<serde_json::Value>,
+    AppJson(dto): AppJson<AddMessageDto>,
 ) -> Result<ApiResponse<MessageModel>> {
     Ok(ApiResponse::ok(
-        service::add_message(&state.db, thread_id, claims.sub, message).await?,
+        service::add_message(&state.db, thread_id, claims.sub, dto).await?,
     ))
 }
 

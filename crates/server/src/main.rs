@@ -22,7 +22,7 @@ async fn main() {
         .expect("Failed to connect to database");
 
     // Entity First: 同步数据库 schema
-    db.get_schema_registry("stitchwork_server::entity::*")
+    db.get_schema_registry("entity::*")
         .sync(&db)
         .await
         .expect("Failed to sync schema");
