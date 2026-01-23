@@ -2,7 +2,6 @@ mod controller;
 
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use tokio::sync::broadcast;
 use uuid::Uuid;
 
@@ -119,6 +118,3 @@ impl Default for Notifier {
         Self::new()
     }
 }
-
-/// 包装类型，方便共享
-pub type SharedNotifier = Arc<Notifier>;

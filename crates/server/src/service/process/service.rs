@@ -81,6 +81,7 @@ pub async fn create(db: &DbConn, dto: CreateProcessDto) -> Result<Model> {
         name: Set(dto.name),
         description: Set(dto.description),
         piece_price: Set(dto.piece_price),
+        ..Default::default()
     };
     Ok(model.insert(db).await?)
 }

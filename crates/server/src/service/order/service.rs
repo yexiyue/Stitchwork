@@ -103,6 +103,7 @@ pub async fn create(db: &DbConn, dto: CreateOrderDto) -> Result<Model> {
         status: Set(OrderStatus::Pending),
         received_at: Set(chrono::Utc::now()),
         delivered_at: Set(None),
+        ..Default::default()
     };
     Ok(model.insert(db).await?)
 }

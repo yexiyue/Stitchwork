@@ -12,6 +12,7 @@ pub mod share;
 pub mod stats;
 pub mod upload;
 pub mod workshop;
+pub mod chat_thread;
 
 use axum::{middleware, Router};
 use std::sync::Arc;
@@ -35,6 +36,7 @@ pub fn routes() -> Router<Arc<AppState>> {
         .merge(workshop::router())
         // .merge(mcp_router(db))
         .merge(chat::router())
+        .merge(chat_thread::router())
         .layer(middleware::from_fn(auth::auth_middleware));
 
     Router::new().nest(

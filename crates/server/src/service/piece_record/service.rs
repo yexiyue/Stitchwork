@@ -216,6 +216,7 @@ pub async fn create(db: &DbConn, dto: CreatePieceRecordDto, claims: &Claims) -> 
         status: Set(status),
         recorded_by: Set(recorded_by),
         recorded_at: Set(chrono::Utc::now()),
+        ..Default::default()
     };
     Ok(model.insert(db).await?)
 }

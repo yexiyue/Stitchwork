@@ -48,6 +48,7 @@ pub async fn create(db: &DbConn, user_id: Uuid, dto: CreateCustomerDto) -> Resul
         phone: Set(dto.phone),
         description: Set(dto.description),
         created_at: Set(chrono::Utc::now()),
+        ..Default::default()
     };
     Ok(model.insert(db).await?)
 }

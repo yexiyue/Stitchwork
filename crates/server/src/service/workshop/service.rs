@@ -2,7 +2,6 @@ use sea_orm::{
     ColumnTrait, DbConn, EntityLoaderTrait, EntityTrait, ExprTrait, PaginatorTrait, QueryFilter,
     QueryOrder, Set,
 };
-use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::common::{ListData, QueryParams};
@@ -108,7 +107,7 @@ pub async fn update_workshop(
 // 生成邀请码
 pub async fn generate_invite_code(
     db: &DbConn,
-    invite_codes: &Arc<InviteCodes>,
+    invite_codes: &InviteCodes,
     boss_id: Uuid,
 ) -> Result<InviteCodeResponse> {
     let ws = get_boss_workshop(db, boss_id).await?;
@@ -128,7 +127,7 @@ pub async fn generate_invite_code(
 // 员工绑定工坊
 pub async fn bind_workshop(
     db: &DbConn,
-    invite_codes: &Arc<InviteCodes>,
+    invite_codes: &InviteCodes,
     staff_id: Uuid,
     req: BindWorkshopRequest,
 ) -> Result<()> {

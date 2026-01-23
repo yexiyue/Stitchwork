@@ -8,6 +8,8 @@ pub mod register_code;
 pub mod share;
 pub mod user;
 pub mod workshop;
+pub mod chat_thread;
+pub mod chat_message;
 
 pub mod prelude {
     pub use super::customer::Entity as Customer;

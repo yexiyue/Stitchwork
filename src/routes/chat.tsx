@@ -1,7 +1,11 @@
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
-import { AssistantRuntimeProvider } from "@assistant-ui/react";
+import {
+  AssistantRuntimeProvider,
+  RuntimeAdapterProvider,
+  unstable_useRemoteThreadListRuntime as useRemoteThreadListRuntime,
+} from "@assistant-ui/react";
 import {
   useChatRuntime,
   AssistantChatTransport,
@@ -24,6 +28,7 @@ import {
 } from "@/components/tools";
 import { CreateRecordTool } from "@/components/tools/crate-record";
 import { lastAssistantMessageIsCompleteWithToolCalls } from "ai";
+import { createThreadListAdapter, useHistoryAdapter } from "@/lib/chat";
 
 export const Route = createFileRoute("/chat")({
   beforeLoad: () => {
@@ -35,40 +40,62 @@ export const Route = createFileRoute("/chat")({
   component: ChatPage,
 });
 
+/** History adapter provider */
+function HistoryAdapterProvider({ children }: { children?: React.ReactNode }) {
+  const history = useHistoryAdapter();
+  return (
+    <RuntimeAdapterProvider adapters={{ history }}>
+      {children}
+    </RuntimeAdapterProvider>
+  );
+}
+
 function ChatPage() {
   const navigate = useNavigate();
   const [token, user] = useAuthStore((state) => [state.token, state.user]);
   const processedToolCalls = useRef(new Set<string>());
 
-  const runtime = useChatRuntime({
-    transport: new AssistantChatTransport({
-      api: `${import.meta.env.VITE_API_URL}/api/chat`,
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: {
-        sessionId: user?.id,
-      },
-    }),
-    sendAutomaticallyWhen: (options) => {
-      if (!lastAssistantMessageIsCompleteWithToolCalls(options)) {
-        return false;
-      }
-      const lastMsg = options.messages.at(-1);
-      const toolPart = lastMsg?.parts.find(
-        (part) =>
-          part.type === "tool-create-record" &&
-          part.state === "output-available"
-      ) as { toolCallId: string } | undefined;
-      if (toolPart) {
-        const toolCallId = toolPart.toolCallId;
-        if (!processedToolCalls.current.has(toolCallId)) {
-          processedToolCalls.current.add(toolCallId);
-          return true;
-        }
-      }
-      return false;
-    },
+  // 创建 thread list adapter
+  const threadListAdapter = useMemo(() => {
+    const adapter = createThreadListAdapter();
+    adapter.unstable_Provider = HistoryAdapterProvider;
+    return adapter;
+  }, []);
+
+  // 使用 useRemoteThreadListRuntime 包装，支持会话持久化
+  const runtime = useRemoteThreadListRuntime({
+    runtimeHook: () =>
+      useChatRuntime({
+        transport: new AssistantChatTransport({
+          api: `${import.meta.env.VITE_API_URL}/api/chat`,
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: {
+            sessionId: user?.id,
+          },
+        }),
+        sendAutomaticallyWhen: (options) => {
+          if (!lastAssistantMessageIsCompleteWithToolCalls(options)) {
+            return false;
+          }
+          const lastMsg = options.messages.at(-1);
+          const toolPart = lastMsg?.parts.find(
+            (part) =>
+              part.type === "tool-create-record" &&
+              part.state === "output-available",
+          ) as { toolCallId: string } | undefined;
+          if (toolPart) {
+            const toolCallId = toolPart.toolCallId;
+            if (!processedToolCalls.current.has(toolCallId)) {
+              processedToolCalls.current.add(toolCallId);
+              return true;
+            }
+          }
+          return false;
+        },
+      }),
+    adapter: threadListAdapter,
   });
 
   return (

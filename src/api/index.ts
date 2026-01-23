@@ -1,6 +1,7 @@
 export { client, setToken, clearToken } from "./client";
 export { adminApi } from "./admin";
 export { authApi } from "./auth";
+export { chatApi } from "./chat";
 export { customerApi } from "./customer";
 export { homeApi } from "./home";
 export { orderApi } from "./order";

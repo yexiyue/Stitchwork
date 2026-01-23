@@ -1,13 +1,8 @@
 use axum::{routing::get, Router};
-use rig::providers::anthropic;
 use sea_orm::Database;
-use std::collections::HashMap;
-use std::sync::Arc;
 use stitchwork_server::{
-    chat::session_manager::SessionManager, init_super_admin, s3::S3Config, service, AppState,
-    Notifier, S3Client,
+    anthropic, init_super_admin, s3::S3Config, service, AppState, S3Client,
 };
-use tokio::sync::RwLock;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::level_filters::LevelFilter;
 
@@ -18,6 +13,7 @@ async fn main() {
         .init();
     dotenvy::dotenv().ok();
 
+    // 数据库连接
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     let mut opt = sea_orm::ConnectOptions::new(&database_url);
     opt.sqlx_logging(true);
@@ -42,40 +38,30 @@ async fn main() {
         tracing::info!("S3 client initialized");
     }
 
+    // AI 客户端
     let rig_client = anthropic::Client::builder()
-        // .http_client(client)
         .base_url(&std::env::var("RIG_BASE_URL").expect("RIG_BASE_URL must be set"))
         .api_key(&std::env::var("RIG_API_KEY").expect("RIG_API_KEY must be set"))
         .build()
         .unwrap();
 
-    
-    // let embedding_model = rig_client.embedding_model(openai::TEXT_EMBEDDING_3_SMALL);
+    // 应用状态
+    let state = AppState::new(db, s3, rig_client);
 
-    // let knowledge_base = KnowledgeBase::new("./docs", embedding_model).await.unwrap();
-
-    let state = Arc::new(AppState {
-        db: db.clone(),
-        invite_codes: Arc::new(RwLock::new(HashMap::new())),
-        s3,
-        notifier: Arc::new(Notifier::new()),
-        rig_client: Arc::new(rig_client),
-        session_manager: SessionManager::default(), // knowledge_base,
-    });
-
+    // CORS
     let cors = CorsLayer::new()
         .allow_origin(Any)
         .allow_methods(Any)
         .allow_headers(Any);
 
-    // 注意: 限流已移至 Pingora 代理层
-
+    // 路由
     let app = Router::new()
         .route("/health", get(|| async { "OK" }))
         .merge(service::routes())
         .layer(cors)
         .with_state(state);
 
+    // 启动服务
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     tracing::info!("Server running on http://0.0.0.0:3000");
     axum::serve(listener, app).await.unwrap();

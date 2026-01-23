@@ -14,10 +14,8 @@ use entity::{
     workshop,
 };
 use crate::error::{AppError, Result};
-use crate::service::notification::{Notification, SharedNotifier};
+use crate::service::notification::{Notification, Notifier};
 use crate::service::workshop::service::to_response;
-
-use std::sync::Arc;
 
 use super::dto::{
     ChangePasswordRequest, LoginRequest, LoginResponse, LoginUser, RegisterRequest,
@@ -65,7 +63,7 @@ pub async fn login(db: &DbConn, req: LoginRequest) -> Result<LoginResponse> {
     })
 }
 
-pub async fn register(db: &DbConn, notifier: &SharedNotifier, req: RegisterRequest) -> Result<Uuid> {
+pub async fn register(db: &DbConn, notifier: &Notifier, req: RegisterRequest) -> Result<Uuid> {
     // 验证注册码
     let code = register_code::Entity::find()
         .filter(register_code::Column::Code.eq(&req.register_code))
@@ -118,6 +116,7 @@ pub async fn register(db: &DbConn, notifier: &SharedNotifier, req: RegisterReque
         workshop_id: Set(None),
         is_super_admin: Set(false),
         created_at: Set(chrono::Utc::now()),
+        ..Default::default()
     };
 
     let user = user.insert(db).await?;
@@ -141,8 +140,8 @@ pub async fn register(db: &DbConn, notifier: &SharedNotifier, req: RegisterReque
 
 pub async fn register_staff(
     db: &DbConn,
-    invite_codes: &Arc<InviteCodes>,
-    notifier: &SharedNotifier,
+    invite_codes: &InviteCodes,
+    notifier: &Notifier,
     req: RegisterStaffRequest,
 ) -> Result<LoginResponse> {
     // 验证邀请码
@@ -193,6 +192,7 @@ pub async fn register_staff(
         workshop_id: Set(Some(workshop_id)),
         is_super_admin: Set(false),
         created_at: Set(chrono::Utc::now()),
+        ..Default::default()
     };
 
     let user = new_user.insert(db).await?;
