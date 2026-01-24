@@ -31,6 +31,8 @@ import {
 } from "lucide-react";
 import type { FC } from "react";
 import { Reasoning, ReasoningGroup } from "./reasoning";
+import { DynamicSuggestions } from "./dynamic-suggestions";
+import { useAuthStore, selectIsBoss } from "@/stores/auth";
 
 export const Thread: FC = () => {
   return (
@@ -97,7 +99,7 @@ const ThreadWelcome: FC = () => {
   );
 };
 
-const SUGGESTIONS = [
+const BOSS_SUGGESTIONS = [
   {
     title: "查询今日产量",
     label: "和收入统计",
@@ -108,12 +110,48 @@ const SUGGESTIONS = [
     label: "进度和状态",
     prompt: "帮我查看本月订单的进度和状态",
   },
+  {
+    title: "查看员工工资",
+    label: "统计汇总",
+    prompt: "帮我查看员工工资统计汇总",
+  },
+  {
+    title: "查看客户订单",
+    label: "汇总分析",
+    prompt: "帮我查看客户订单汇总分析",
+  },
+] as const;
+
+const STAFF_SUGGESTIONS = [
+  {
+    title: "查询我的产量",
+    label: "和今日收入",
+    prompt: "帮我查询我今日的产量和收入",
+  },
+  {
+    title: "查看计件记录",
+    label: "本月明细",
+    prompt: "帮我查看本月的计件记录明细",
+  },
+  {
+    title: "查看工资明细",
+    label: "本月统计",
+    prompt: "帮我查看本月的工资明细",
+  },
+  {
+    title: "查看待完成",
+    label: "任务列表",
+    prompt: "帮我查看待完成的任务列表",
+  },
 ] as const;
 
 const ThreadSuggestions: FC = () => {
+  const isBoss = useAuthStore(selectIsBoss);
+  const suggestions = isBoss ? BOSS_SUGGESTIONS : STAFF_SUGGESTIONS;
+
   return (
     <div className="aui-thread-welcome-suggestions grid w-full @md:grid-cols-2 gap-2 pb-4">
-      {SUGGESTIONS.map((suggestion, index) => (
+      {suggestions.map((suggestion, index) => (
         <div
           key={suggestion.prompt}
           className="aui-thread-welcome-suggestion-display fade-in slide-in-from-bottom-2 @md:nth-[n+3]:block nth-[n+3]:hidden animate-in fill-mode-both duration-200"
@@ -227,6 +265,10 @@ const AssistantMessage: FC = () => {
         <BranchPicker />
         <AssistantActionBar />
       </div>
+
+      <AssistantIf condition={({ message, thread }) => message.isLast && !thread.isRunning}>
+        <DynamicSuggestions />
+      </AssistantIf>
     </MessagePrimitive.Root>
   );
 };

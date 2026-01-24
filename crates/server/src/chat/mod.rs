@@ -132,7 +132,7 @@ impl ChatSession {
         };
 
         let agent = client
-            .agent("glm-4.7")
+            .agent("glm-4.6")
             .max_tokens(10000)
             .tools((&forwarded_tools).into())
             // .dynamic_context(3, index)

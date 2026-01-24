@@ -30,6 +30,11 @@ import {
 import { CreateRecordTool } from "@/components/tools/crate-record";
 import { lastAssistantMessageIsCompleteWithToolCalls } from "ai";
 import { createThreadListAdapter, useHistoryAdapter } from "@/lib/chat";
+import { suggestion } from "@/lib/chat/suggestion-adapter";
+import {
+  SuggestionProvider,
+  useSuggestions,
+} from "@/lib/chat/suggestion-context";
 
 export const Route = createFileRoute("/chat")({
   beforeLoad: () => {
@@ -56,10 +61,19 @@ function HistoryAdapterProvider({ children }: { children?: React.ReactNode }) {
 }
 
 function ChatPage() {
+  return (
+    <SuggestionProvider>
+      <ChatPageContent />
+    </SuggestionProvider>
+  );
+}
+
+function ChatPageContent() {
   const navigate = useNavigate();
   const [token, user] = useAuthStore((state) => [state.token, state.user]);
   const processedToolCalls = useRef(new Set<string>());
   const [threadListOpen, setThreadListOpen] = useState(false);
+  const { addSuggestion, clearSuggestions, setIsLoading } = useSuggestions();
 
   // 创建 thread list adapter
   const threadListAdapter = useMemo(() => {
@@ -100,6 +114,21 @@ function ChatPage() {
             }
           }
           return false;
+        },
+        onFinish: async (props) => {
+          const { messages } = props;
+          setIsLoading(true);
+          clearSuggestions();
+          try {
+            const prompts = suggestion(messages);
+            for await (const promptList of prompts) {
+              for (const p of promptList) {
+                addSuggestion(p);
+              }
+            }
+          } finally {
+            setIsLoading(false);
+          }
         },
         // history adapter 通过 unstable_Provider -> RuntimeAdapterProvider 自动注入
       }),

@@ -112,6 +112,60 @@ pub async fn generate_title(
     ))
 }
 
+#[derive(TypedPath)]
+#[typed_path("/chat/suggestion")]
+pub struct SuggestionPath;
+
+#[derive(Debug, Deserialize)]
+pub struct SuggestionRequest {
+    messages: Vec<UIMessage>,
+}
+
+pub async fn suggestion(
+    _: SuggestionPath,
+    State(app_state): State<Arc<AppState>>,
+    Extension(_): Extension<Claims>,
+    Json(req): Json<SuggestionRequest>,
+) -> Result<impl IntoResponse> {
+    let model = app_state.rig_client.completion_model("glm-4.6");
+    let (prompt, history) = rig_ai_sdk::extract_prompt_and_history(&req.messages)?;
+
+    let request = CompletionRequestBuilder::new(model.clone(), prompt)
+        .preamble(r#"你是一个智能助手，负责根据对话上下文生成用户可能想问的后续问题建议。
+
+要求：
+1. 生成 2-3 个简短的问题建议，每个不超过 20 字
+2. 问题之间用换行分隔
+3. 问题要与当前对话主题相关且有实际价值
+4. 只输出问题列表，不要有任何其他内容
+
+示例输出格式：
+如何查看本月工资明细？
+最近有哪些待处理的订单？
+怎么录入今天的计件记录？"#.into())
+        .max_tokens(100)
+        .messages(history)
+        .build();
+    let mut rig_stream = model.stream(request).await.map_err(|e| anyhow!(e))?;
+
+    let stream = async_stream::stream! {
+        while let Some(res) = rig_stream.next().await {
+            match res {
+                Ok(StreamedAssistantContent::Text(text)) => {
+                    yield Ok::<_, Infallible>(Event::default().data(text.text));
+                }
+                Err(e) => {
+                    yield Ok(Event::default().data(format!("[ERROR] {}", e)));
+                    break;
+                }
+                _ => {}
+            }
+        }
+    };
+
+    Ok(Sse::new(stream).keep_alive(KeepAlive::default()))
+}
+
 /// 将 rig 流式响应转换为 UI Message Stream Protocol 格式，并在完成后保存标题
 /// 格式: data: {json}\n\n
 /// 结束: data: [DONE]\n\n
@@ -187,5 +241,8 @@ where
 }
 
 pub fn router() -> Router<Arc<AppState>> {
-    Router::new().typed_post(chat).typed_post(generate_title)
+    Router::new()
+        .typed_post(chat)
+        .typed_post(generate_title)
+        .typed_post(suggestion)
 }

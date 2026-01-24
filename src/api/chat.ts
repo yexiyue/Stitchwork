@@ -1,3 +1,4 @@
+import { UIMessage } from "ai";
 import { client } from "./client";
 import type { ListData, QueryParams } from "@/types";
 
@@ -35,6 +36,11 @@ export interface UpdateThreadDto {
   archived?: boolean;
 }
 
+export interface GenerateTitleDto {
+  threadId: string;
+  messages: UIMessage[];
+}
+
 export const chatApi = {
   // 会话管理
   listThreads: (params?: QueryParams) =>
@@ -55,4 +61,8 @@ export const chatApi = {
 
   addMessage: (threadId: string, dto: AddMessageDto) =>
     client.post<ChatMessage>(`/api/threads/${threadId}/messages`, dto),
+  generateTitle: (dto: GenerateTitleDto) =>
+    client.post<string>(`/api/chat/generate-title`, dto),
+  suggestion: (dto: Pick<GenerateTitleDto, "messages">) =>
+    client.post<string>(`/api/chat/suggestion`, dto),
 };

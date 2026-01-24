@@ -11,7 +11,7 @@ import { chatApi } from "@/api";
 import { useAuthStore } from "@/stores/auth";
 
 /** 将 ThreadMessage 转换为后端期望的 UIMessage 格式 */
-function toUIMessages(messages: readonly ThreadMessage[]) {
+export function toUIMessages(messages: readonly ThreadMessage[]) {
   return messages.map((msg) => ({
     id: msg.id,
     role: msg.role,
