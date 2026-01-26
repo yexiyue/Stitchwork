@@ -5,6 +5,7 @@ import {
   AssistantRuntimeProvider,
   RuntimeAdapterProvider,
   unstable_useRemoteThreadListRuntime as useRemoteThreadListRuntime,
+  WebSpeechDictationAdapter,
 } from "@assistant-ui/react";
 import {
   useChatRuntime,
@@ -129,6 +130,13 @@ function ChatPageContent() {
           } finally {
             setIsLoading(false);
           }
+        },
+        adapters: {
+          dictation: new WebSpeechDictationAdapter({
+            language: "zh-CN",
+            continuous: true,
+            interimResults: true,
+          }),
         },
         // history adapter 通过 unstable_Provider -> RuntimeAdapterProvider 自动注入
       }),
