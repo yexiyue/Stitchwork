@@ -137,26 +137,18 @@ fn to_user_content(part: &UIMessagePart) -> Option<UserContent> {
         UIMessagePart::Tool(p) => {
             match p.state {
                 ToolState::OutputAvailable => {
-                    if let Some(output) = &p.output {
-                        Some(UserContent::ToolResult(ToolResult {
+                    p.output.as_ref().map(|output| UserContent::ToolResult(ToolResult {
                             id: p.tool_call_id.clone(),
                             call_id: Some(p.tool_call_id.clone()),
                             content: OneOrMany::one(ToolResultContent::text(json_to_string(output))),
                         }))
-                    } else {
-                        None
-                    }
                 }
                 ToolState::OutputError => {
-                    if let Some(error_text) = &p.error_text {
-                        Some(UserContent::ToolResult(ToolResult {
+                    p.error_text.as_ref().map(|error_text| UserContent::ToolResult(ToolResult {
                             id: p.tool_call_id.clone(),
                             call_id: Some(p.tool_call_id.clone()),
                             content: OneOrMany::one(ToolResultContent::text(error_text.clone())),
                         }))
-                    } else {
-                        None
-                    }
                 }
                 // InputStreaming and InputAvailable don't convert to UserContent
                 _ => None,
@@ -210,8 +202,7 @@ fn to_assistant_content(part: &UIMessagePart) -> Option<AssistantContent> {
 
             match p.state {
                 ToolState::InputAvailable | ToolState::OutputAvailable => {
-                    if let Some(input) = &p.input {
-                        Some(AssistantContent::ToolCall(
+                    p.input.as_ref().map(|input| AssistantContent::ToolCall(
                             ToolCall::new(
                                 p.tool_call_id.clone(),
                                 ToolFunction {
@@ -221,9 +212,6 @@ fn to_assistant_content(part: &UIMessagePart) -> Option<AssistantContent> {
                             )
                             .with_call_id(p.tool_call_id.clone()),
                         ))
-                    } else {
-                        None
-                    }
                 }
                 ToolState::InputStreaming => {
                     p.input.as_ref().map(|i| {

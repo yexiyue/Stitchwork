@@ -31,7 +31,7 @@ use async_stream::stream;
 use futures::{Stream, StreamExt};
 use rig::agent::MultiTurnStreamItem;
 use rig::streaming::{StreamedAssistantContent, StreamedUserContent, ToolCallDeltaContent};
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap};
 use std::fmt::Display;
 
 /// 前端工具取消的特殊标记（与 server 端保持一致）

@@ -40,8 +40,8 @@ async fn main() {
 
     // AI 客户端
     let rig_client = anthropic::Client::builder()
-        .base_url(&std::env::var("RIG_BASE_URL").expect("RIG_BASE_URL must be set"))
-        .api_key(&std::env::var("RIG_API_KEY").expect("RIG_API_KEY must be set"))
+        .base_url(std::env::var("RIG_BASE_URL").expect("RIG_BASE_URL must be set"))
+        .api_key(std::env::var("RIG_API_KEY").expect("RIG_API_KEY must be set"))
         .build()
         .unwrap();
 

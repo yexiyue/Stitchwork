@@ -251,7 +251,7 @@ impl StaffMcp {
         let staff = user::Entity::find_by_id(self.claims.sub)
             .one(&self.db)
             .await
-            .map_err(|e| crate::error::AppError::Database(e.into()))?
+            .map_err(crate::error::AppError::Database)?
             .ok_or_else(|| crate::error::AppError::NotFound("用户不存在".into()))?;
 
         let workshop_id = staff
@@ -261,7 +261,7 @@ impl StaffMcp {
         let ws = workshop::Entity::find_by_id(workshop_id)
             .one(&self.db)
             .await
-            .map_err(|e| crate::error::AppError::Database(e.into()))?
+            .map_err(crate::error::AppError::Database)?
             .ok_or_else(|| crate::error::AppError::NotFound("工坊不存在".into()))?;
 
         // 查询进行中的订单

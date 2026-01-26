@@ -43,7 +43,7 @@ impl ChatSession {
         forwarded_tools: Option<ForwardedTools>,
     ) -> Result<Self> {
         let (client_io, server_io) = duplex(1024 * 1024); // 1MB buffer for large tool responses
-        let role = claims.role.clone();
+        let role = claims.role;
 
         let mcp_client = match role {
             Role::Boss => {

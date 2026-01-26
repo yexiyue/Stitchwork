@@ -298,11 +298,10 @@ impl BossMcp {
                     .unwrap_or_else(|| user.username.clone());
 
                 // 如果有名称筛选，检查是否匹配
-                if let Some(ref filter) = name_filter {
-                    if !name.to_lowercase().contains(filter) {
+                if let Some(ref filter) = name_filter
+                    && !name.to_lowercase().contains(filter) {
                         return None;
                     }
-                }
 
                 Some(UnpaidSummaryItem {
                     user_id,

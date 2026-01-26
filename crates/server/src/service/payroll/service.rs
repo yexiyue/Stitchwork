@@ -29,16 +29,14 @@ pub async fn list(
         query = query.filter(Column::BossId.eq(bid));
     }
 
-    if let Some(ref start) = params.start_date {
-        if let Ok(date) = NaiveDate::parse_from_str(start, "%Y-%m-%d") {
+    if let Some(ref start) = params.start_date
+        && let Ok(date) = NaiveDate::parse_from_str(start, "%Y-%m-%d") {
             query = query.filter(Column::PaidAt.gte(date.and_hms_opt(0, 0, 0).unwrap()));
         }
-    }
-    if let Some(ref end) = params.end_date {
-        if let Ok(date) = NaiveDate::parse_from_str(end, "%Y-%m-%d") {
+    if let Some(ref end) = params.end_date
+        && let Ok(date) = NaiveDate::parse_from_str(end, "%Y-%m-%d") {
             query = query.filter(Column::PaidAt.lte(date.and_hms_opt(23, 59, 59).unwrap()));
         }
-    }
 
     let order_dir = if params.sort_order == "asc" {
         sea_orm::Order::Asc
