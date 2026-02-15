@@ -13,7 +13,7 @@ import {
   User,
   Key,
   Shield,
-  BotIcon,
+  // BotIcon,
 } from "lucide-react";
 import { useAuthStore, selectIsBoss, selectIsSuperAdmin } from "@/stores/auth";
 import { useNotify } from "@/hooks/useNotify";
@@ -71,7 +71,7 @@ function AuthLayout() {
     "/shares": "/profile",
   };
   const mappedPath = Object.entries(subPageMap).find(([prefix]) =>
-    location.pathname.startsWith(prefix)
+    location.pathname.startsWith(prefix),
   )?.[1];
 
   // 优先精确匹配，再做前缀匹配（按路径长度降序，避免 /admin 先于 /admin/register-codes 匹配）
@@ -99,14 +99,14 @@ function AuthLayout() {
         ))}
       </TabBar>
       {/* 右下角悬浮助手按钮（超管不显示） */}
-      {!isSuperAdmin && (
+      {/* {!isSuperAdmin && (
         <button
           onClick={() => navigate({ to: "/chat" })}
           className="fixed bottom-16 right-6 z-10 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform active:scale-95"
         >
           <BotIcon size={26} />
         </button>
-      )}
+      )} */}
     </div>
   );
 }

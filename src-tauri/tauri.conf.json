@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "stitchwork",
-  "version": "0.1.7",
-  "identifier": "com.gy.stitchwork",
+  "version": "0.1.8",
+  "identifier": "com.yexiyue.stitchwork",
   "build": {
     "beforeDevCommand": "pnpm dev --host",
     "devUrl": "http://localhost:1420",

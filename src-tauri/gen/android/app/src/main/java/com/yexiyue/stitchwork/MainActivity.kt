@@ -1,4 +1,4 @@
-package com.gy.stitchwork
+package com.yexiyue.stitchwork
 
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
