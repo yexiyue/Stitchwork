@@ -25,11 +25,16 @@ pnpm tauri android dev    # Run Android app in dev mode
 pnpm tauri android build  # Build Android APK/AAB
 
 # Backend (Rust + Axum)
-cd server && cargo run    # API server on port 3000
-cd server && cargo build  # Build server
-cd server && cargo check  # Fast type checking
-cd server && cargo test   # Run tests
-cd server && cargo clippy # Lint Rust code
+cd crates/server && cargo run    # API server on port 3000
+cd crates/server && cargo build  # Build server
+cd crates/server && cargo check  # Fast type checking
+cd crates/server && cargo test   # Run tests
+cd crates/server && cargo clippy # Lint Rust code
+
+# Workspace (all crates)
+cargo build --workspace   # Build all crates
+cargo test --workspace    # Test all crates
+cargo clippy --workspace  # Lint all crates
 ```
 
 ## Architecture
@@ -48,11 +53,15 @@ StitchWork/
 │       ├── lib.rs          # App entry, plugin setup, command registration
 │       ├── sse.rs          # SSE client for realtime notifications
 │       └── image.rs        # Image compression + blake3 dedup
-└── server/                 # Axum backend
-    └── src/
-        ├── entity/         # SeaORM entities (Entity First)
-        ├── service/        # Feature modules (dto, controller, service)
-        └── main.rs         # App entry, schema sync
+└── crates/                 # Rust workspace crates
+    ├── entity/             # SeaORM entities (shared)
+    ├── server/             # Axum backend
+    │   └── src/
+    │       ├── service/    # Feature modules (dto, controller, service)
+    │       ├── chat/       # AI chat service with MCP tools
+    │       └── main.rs     # App entry, schema sync
+    ├── rig-ai-sdk/         # AI SDK adapter for Vercel AI SDK protocol
+    └── proxy/              # Pingora reverse proxy
 ```
 
 ## Key Patterns
@@ -91,7 +100,7 @@ StitchWork/
 
 ### Backend
 
-- **Entity First ORM**: Define entities in `server/src/entity/`, schema auto-syncs on startup via `db.get_schema_registry("stitchwork_server::entity::*").sync(&db)`
+- **Entity First ORM**: Define entities in `crates/entity/src/`, schema auto-syncs on startup via `db.get_schema_registry("entity::*").sync(&db)`
 - **Service structure**: Each feature has `mod.rs`, `dto.rs`, `controller.rs`, `service.rs`
 - **Auth**: JWT tokens, Argon2 password hashing
 - **API response format**: `{ code: 0, message: "", data: T }` where code 0 = success
@@ -130,15 +139,29 @@ client.patch<T>(path, body?)
 client.delete<T>(path)
 ```
 
+## AI Chat & MCP
+
+The application includes an AI assistant with Human-in-the-Loop capabilities:
+
+- **rig-core**: AI agent framework for tool use and streaming
+- **rmcp**: Model Context Protocol for tool definitions
+- **rig-ai-sdk**: Custom crate adapting Rig to Vercel AI SDK protocol (supports SSE streaming with Axum)
+
+MCP tools are defined in `crates/server/src/mcp/` and include operations like creating piece records, querying orders, etc. The AI can prompt users for confirmation before executing actions.
+
 ## Environment Variables
 
 ```bash
 # Frontend (.env)
 VITE_API_URL=http://localhost:3000
 
-# Backend (server/.env)
+# Backend (crates/server/.env)
 DATABASE_URL=postgres://user:pass@localhost/stitchwork
 JWT_SECRET=your-secret
+# AI Configuration (Rig framework)
+RIG_BASE_URL=https://api.anthropic.com/v1/messages
+RIG_API_KEY=your-api-key
+RIG_MODEL=claude-3-5-sonnet-20241022
 # Object Storage (Aliyun OSS via S3-compatible API)
 AWS_REGION=
 AWS_ACCESS_KEY_ID=

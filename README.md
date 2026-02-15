@@ -11,6 +11,22 @@
 - **AI 助手** - 智能对话，支持语音录入计件、查询统计
 - **多端支持** - 移动端 (Android)、Web 浏览器
 
+## 应用图标
+
+采用天蓝色渐变设计，Lucide 衣服图标：
+
+```bash
+# 生成所有平台图标
+pnpm tauri icon public/app-icon.svg -o src-tauri/icons
+```
+
+生成的图标包括：
+- **Windows**: `.ico`, `Square*.png`, `StoreLogo.png`
+- **macOS**: `.icns`
+- **Linux**: `icon.png`, `32x32.png` - `128x128@2x.png`
+- **iOS**: `ios/AppIcon-*.png` (20个尺寸)
+- **Android**: `mipmap-hdpi` - `mipmap-xxxhdpi`
+
 ## 用户角色
 
 | 角色       | 说明                                   |
@@ -176,8 +192,3 @@ Copyright © 2026. All Rights Reserved.
 未经授权，禁止商业使用。如需商业授权，请联系作者。
 
 
-## todo
-
-- [ ] 修复移动端键盘输入对话框遮挡问题
-- [ ] 修复对话界面没有 overflow-x 属性
-- [ ] 创建计件记录时，ai 没有传递正确的uuid参数
