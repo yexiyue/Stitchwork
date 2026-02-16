@@ -68,6 +68,10 @@ jobs:
           ANDROID_NDK_ROOT: ${{ env.ANDROID_NDK_LATEST_HOME }}
           # Fix aws-lc-sys compilation with NDK 29
           AWS_LC_SYS_CMAKE_BUILDER: 1
+          # UpgradeLink credentials for in-app update check
+          UPGRADE_APP_KEY: ${{ secrets.UPGRADE_LINK_APP_KEY }}
+          UPGRADE_ACCESS_KEY: ${{ secrets.UPGRADE_LINK_ACCESS_KEY }}
+          UPGRADE_SECRET_KEY: ${{ secrets.UPGRADE_LINK_ACCESS_SECRET }}
 
       - name: Get version
         id: version

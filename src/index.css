@@ -6,7 +6,7 @@
 html,
 body,
 #root {
-  height: 100vh;
+  height: 100dvh;
 }
 
 .adm-pull-to-refresh-content,
@@ -85,6 +85,10 @@ body,
 }
 
 :root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);

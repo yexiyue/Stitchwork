@@ -19,3 +19,15 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# AppUpdate - keep Activity and Service
+-keep public class * extends android.app.Activity
+-keep public class * extends android.app.Service
+
+# UpgradeLink SDK - keep models for Gson serialization
+-keep class com.toolsetlink.upgradelink.api.models.** { *; }
+-keep class com.toolsetlink.upgradelink.api.Client { *; }
+
+# OkHttp (used by UpgradeLink SDK)
+-dontwarn okhttp3.**
+-dontwarn okio.**

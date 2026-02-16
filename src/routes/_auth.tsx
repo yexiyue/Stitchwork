@@ -88,7 +88,7 @@ function AuthLayout() {
       <div className="flex-1 overflow-auto">
         <Outlet />
       </div>
-      <TabBar activeKey={activeKey}>
+      <TabBar activeKey={activeKey} className="pb-(--sab)">
         {tabs.map((tab) => (
           <TabBar.Item
             key={tab.key}
