@@ -11,7 +11,7 @@ use crate::AppState;
 
 use super::dto::{
     ChangePasswordRequest, LoginRequest, LoginResponse, LoginUser, RegisterRequest,
-    RegisterStaffRequest, UpdateProfileRequest,
+    UpdateProfileRequest,
 };
 use super::jwt::Claims;
 use super::service;
@@ -20,7 +20,6 @@ pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/login", post(login))
         .route("/register", post(register))
-        .route("/register-staff", post(register_staff))
 }
 
 pub fn protected_router() -> Router<Arc<AppState>> {
@@ -40,16 +39,8 @@ async fn login(
 async fn register(
     State(state): State<Arc<AppState>>,
     AppJson(req): AppJson<RegisterRequest>,
-) -> Result<ApiResponse<serde_json::Value>> {
-    let user_id = service::register(&state.db, &state.notifier, req).await?;
-    Ok(ApiResponse::ok(serde_json::json!({ "userId": user_id })))
-}
-
-async fn register_staff(
-    State(state): State<Arc<AppState>>,
-    AppJson(req): AppJson<RegisterStaffRequest>,
 ) -> Result<ApiResponse<LoginResponse>> {
-    let res = service::register_staff(&state.db, &state.invite_codes, &state.notifier, req).await?;
+    let res = service::register(&state.db, &state.notifier, req).await?;
     Ok(ApiResponse::ok(res))
 }
 

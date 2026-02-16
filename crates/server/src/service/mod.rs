@@ -8,6 +8,7 @@ pub mod order;
 pub mod payroll;
 pub mod piece_record;
 pub mod process;
+pub mod register_code;
 pub mod share;
 pub mod stats;
 pub mod upload;
@@ -34,6 +35,7 @@ pub fn routes() -> Router<Arc<AppState>> {
         .merge(share::router())
         .merge(upload::router())
         .merge(workshop::router())
+        .merge(register_code::router())
         // .merge(mcp_router(db))
         .merge(chat::router())
         .merge(chat_thread::router())

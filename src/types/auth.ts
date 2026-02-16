@@ -35,23 +35,7 @@ export interface RegisterRequest {
   username: string;
   password: string;
   phone: string;
-  registerCode: string;
-}
-
-export interface RegisterStaffRequest {
-  username: string;
-  password: string;
-  phone: string;
-  inviteCode: string;
-}
-
-export interface InviteCodeResponse {
   code: string;
-  expiresAt: number;
-}
-
-export interface BindWorkshopRequest {
-  inviteCode: string;
 }
 
 export interface UpdateProfileRequest {

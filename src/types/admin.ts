@@ -3,7 +3,8 @@ import type { Role } from "./auth";
 export interface RegisterCode {
   id: string;
   code: string;
-  isActive: boolean;
+  createdBy?: string;
+  workshopId?: string;
   usedBy?: string;
   usedAt?: string;
   createdAt: string;
@@ -38,7 +39,6 @@ export interface AdminStats {
   totalCodes: number;
   usedCodes: number;
   availableCodes: number;
-  disabledCodes: number;
 
   // 平台活跃度
   todayOrders: number;

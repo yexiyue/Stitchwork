@@ -24,6 +24,7 @@ import { Route as AuthAdminIndexRouteImport } from './routes/_auth/admin/index'
 import { Route as AuthAdminUsersRouteImport } from './routes/_auth/admin/users'
 import { Route as AuthAdminRegisterCodesRouteImport } from './routes/_auth/admin/register-codes'
 import { Route as AuthBossWorkshopRouteImport } from './routes/_auth/_boss/workshop'
+import { Route as AuthBossRegisterCodesRouteImport } from './routes/_auth/_boss/register-codes'
 import { Route as AuthBossPendingRouteImport } from './routes/_auth/_boss/pending'
 import { Route as AuthStaffMyRecordsIndexRouteImport } from './routes/_auth/_staff/my-records/index'
 import { Route as AuthStaffMyPayrollsIndexRouteImport } from './routes/_auth/_staff/my-payrolls/index'
@@ -121,6 +122,11 @@ const AuthAdminRegisterCodesRoute = AuthAdminRegisterCodesRouteImport.update({
 const AuthBossWorkshopRoute = AuthBossWorkshopRouteImport.update({
   id: '/workshop',
   path: '/workshop',
+  getParentRoute: () => AuthBossRoute,
+} as any)
+const AuthBossRegisterCodesRoute = AuthBossRegisterCodesRouteImport.update({
+  id: '/register-codes',
+  path: '/register-codes',
   getParentRoute: () => AuthBossRoute,
 } as any)
 const AuthBossPendingRoute = AuthBossPendingRouteImport.update({
@@ -265,6 +271,7 @@ export interface FileRoutesByFullPath {
   '/share/$token': typeof ShareTokenRoute
   '/': typeof AuthIndexRoute
   '/pending': typeof AuthBossPendingRoute
+  '/register-codes': typeof AuthBossRegisterCodesRoute
   '/workshop': typeof AuthBossWorkshopRoute
   '/admin/register-codes': typeof AuthAdminRegisterCodesRoute
   '/admin/users': typeof AuthAdminUsersRoute
@@ -304,6 +311,7 @@ export interface FileRoutesByTo {
   '/share/$token': typeof ShareTokenRoute
   '/': typeof AuthIndexRoute
   '/pending': typeof AuthBossPendingRoute
+  '/register-codes': typeof AuthBossRegisterCodesRoute
   '/workshop': typeof AuthBossWorkshopRoute
   '/admin/register-codes': typeof AuthAdminRegisterCodesRoute
   '/admin/users': typeof AuthAdminUsersRoute
@@ -348,6 +356,7 @@ export interface FileRoutesById {
   '/share/$token': typeof ShareTokenRoute
   '/_auth/': typeof AuthIndexRoute
   '/_auth/_boss/pending': typeof AuthBossPendingRoute
+  '/_auth/_boss/register-codes': typeof AuthBossRegisterCodesRoute
   '/_auth/_boss/workshop': typeof AuthBossWorkshopRoute
   '/_auth/admin/register-codes': typeof AuthAdminRegisterCodesRoute
   '/_auth/admin/users': typeof AuthAdminUsersRoute
@@ -390,6 +399,7 @@ export interface FileRouteTypes {
     | '/share/$token'
     | '/'
     | '/pending'
+    | '/register-codes'
     | '/workshop'
     | '/admin/register-codes'
     | '/admin/users'
@@ -429,6 +439,7 @@ export interface FileRouteTypes {
     | '/share/$token'
     | '/'
     | '/pending'
+    | '/register-codes'
     | '/workshop'
     | '/admin/register-codes'
     | '/admin/users'
@@ -472,6 +483,7 @@ export interface FileRouteTypes {
     | '/share/$token'
     | '/_auth/'
     | '/_auth/_boss/pending'
+    | '/_auth/_boss/register-codes'
     | '/_auth/_boss/workshop'
     | '/_auth/admin/register-codes'
     | '/_auth/admin/users'
@@ -617,6 +629,13 @@ declare module '@tanstack/react-router' {
       path: '/workshop'
       fullPath: '/workshop'
       preLoaderRoute: typeof AuthBossWorkshopRouteImport
+      parentRoute: typeof AuthBossRoute
+    }
+    '/_auth/_boss/register-codes': {
+      id: '/_auth/_boss/register-codes'
+      path: '/register-codes'
+      fullPath: '/register-codes'
+      preLoaderRoute: typeof AuthBossRegisterCodesRouteImport
       parentRoute: typeof AuthBossRoute
     }
     '/_auth/_boss/pending': {
@@ -806,6 +825,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthBossRouteChildren {
   AuthBossPendingRoute: typeof AuthBossPendingRoute
+  AuthBossRegisterCodesRoute: typeof AuthBossRegisterCodesRoute
   AuthBossWorkshopRoute: typeof AuthBossWorkshopRoute
   AuthBossCustomersIdRoute: typeof AuthBossCustomersIdRoute
   AuthBossCustomersNewRoute: typeof AuthBossCustomersNewRoute
@@ -830,6 +850,7 @@ interface AuthBossRouteChildren {
 
 const AuthBossRouteChildren: AuthBossRouteChildren = {
   AuthBossPendingRoute: AuthBossPendingRoute,
+  AuthBossRegisterCodesRoute: AuthBossRegisterCodesRoute,
   AuthBossWorkshopRoute: AuthBossWorkshopRoute,
   AuthBossCustomersIdRoute: AuthBossCustomersIdRoute,
   AuthBossCustomersNewRoute: AuthBossCustomersNewRoute,

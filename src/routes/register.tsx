@@ -21,13 +21,6 @@ interface RegisterFormValues {
 
 const phonePattern = /^1\d{10}$/;
 
-/**
- * 判断是否为老板注册码（B-XXXXXXXX 格式）
- */
-function isBossCode(code: string): boolean {
-  return code.startsWith("B-");
-}
-
 function RegisterPage() {
   const navigate = useNavigate();
   const { code: initialCode } = Route.useSearch();
@@ -57,31 +50,16 @@ function RegisterPage() {
 
     setLoading(true);
     try {
-      const code = values.code.trim();
-
-      if (isBossCode(code)) {
-        // 老板注册：使用 B- 前缀的注册码
-        await authApi.register({
-          username: values.username,
-          password: values.password,
-          phone: values.phone,
-          registerCode: code,
-        });
-        Toast.show({ content: "注册成功", icon: "success" });
-        navigate({ to: "/login" });
-      } else {
-        // 员工注册：使用邀请码
-        const res = await authApi.registerStaff({
-          username: values.username,
-          password: values.password,
-          phone: values.phone,
-          inviteCode: code,
-        });
-        // 员工注册成功后自动登录
-        useAuthStore.setState({ token: res.token, user: res.user });
-        Toast.show({ content: "注册成功", icon: "success" });
-        navigate({ to: "/" });
-      }
+      const res = await authApi.register({
+        code: values.code.trim(),
+        username: values.username,
+        password: values.password,
+        phone: values.phone,
+      });
+      // 注册成功后自动登录
+      useAuthStore.setState({ token: res.token, user: res.user });
+      Toast.show({ content: "注册成功", icon: "success" });
+      navigate({ to: "/" });
     } catch (e) {
       Dialog.alert({
         content: e instanceof Error ? e.message : "注册失败，请稍后重试",
@@ -116,7 +94,7 @@ function RegisterPage() {
             label="注册码"
             rules={[{ required: true, message: "请输入注册码" }]}
           >
-            <Input placeholder="请输入注册码或邀请码" clearable />
+            <Input placeholder="请输入注册码" clearable />
           </Form.Item>
           <Form.Item
             name="username"

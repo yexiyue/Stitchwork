@@ -4,26 +4,6 @@ use uuid::Uuid;
 
 use entity::user::Role;
 
-/// 注册码详情响应
-#[derive(Debug, Serialize, JsonSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct RegisterCodeResponse {
-    /// 注册码ID
-    pub id: Uuid,
-    /// 注册码（8位）
-    pub code: String,
-    /// 是否启用
-    pub is_active: bool,
-    /// 使用者ID
-    pub used_by: Option<Uuid>,
-    /// 使用时间
-    pub used_at: Option<chrono::DateTime<chrono::Utc>>,
-    /// 创建时间
-    pub created_at: chrono::DateTime<chrono::Utc>,
-    /// 使用者用户名
-    pub used_by_username: Option<String>,
-}
-
 /// 管理后台统计数据
 #[derive(Debug, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
@@ -55,8 +35,6 @@ pub struct AdminStats {
     pub used_codes: i64,
     /// 可用注册码数
     pub available_codes: i64,
-    /// 已禁用注册码数
-    pub disabled_codes: i64,
 
     // 平台活跃度
     /// 今日订单数

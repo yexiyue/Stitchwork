@@ -4,9 +4,6 @@ import type {
   LoginResponse,
   LoginUser,
   RegisterRequest,
-  RegisterStaffRequest,
-  InviteCodeResponse,
-  BindWorkshopRequest,
   UpdateProfileRequest,
   ChangePasswordRequest,
   Staff,
@@ -23,17 +20,11 @@ export const authApi = {
     setToken(res.token);
     return res;
   },
-  register: (data: RegisterRequest) =>
-    client.post<{ userId: string }>("/api/register", data),
-  registerStaff: async (data: RegisterStaffRequest) => {
-    const res = await client.post<LoginResponse>("/api/register-staff", data);
+  register: async (data: RegisterRequest) => {
+    const res = await client.post<LoginResponse>("/api/register", data);
     setToken(res.token);
     return res;
   },
-  generateInviteCode: () =>
-    client.post<InviteCodeResponse>("/api/invite-code"),
-  bindWorkshop: (data: BindWorkshopRequest) =>
-    client.post<void>("/api/bind-workshop", data),
   updateProfile: (data: UpdateProfileRequest) =>
     client.put<void>("/api/profile", data),
   changePassword: (data: ChangePasswordRequest) =>

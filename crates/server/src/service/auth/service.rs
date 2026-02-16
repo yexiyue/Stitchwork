@@ -19,10 +19,9 @@ use crate::service::workshop::service::to_response;
 
 use super::dto::{
     ChangePasswordRequest, LoginRequest, LoginResponse, LoginUser, RegisterRequest,
-    RegisterStaffRequest, UpdateProfileRequest, WorkshopResponse,
+    UpdateProfileRequest, WorkshopResponse,
 };
 use super::jwt::create_token;
-use crate::InviteCodes;
 
 pub async fn login(db: &DbConn, req: LoginRequest) -> Result<LoginResponse> {
     // 支持用户名或手机号登录
@@ -63,17 +62,17 @@ pub async fn login(db: &DbConn, req: LoginRequest) -> Result<LoginResponse> {
     })
 }
 
-pub async fn register(db: &DbConn, notifier: &Notifier, req: RegisterRequest) -> Result<Uuid> {
+pub async fn register(
+    db: &DbConn,
+    notifier: &Notifier,
+    req: RegisterRequest,
+) -> Result<LoginResponse> {
     // 验证注册码
     let code = register_code::Entity::find()
-        .filter(register_code::Column::Code.eq(&req.register_code))
+        .filter(register_code::Column::Code.eq(&req.code))
         .one(db)
         .await?
         .ok_or_else(|| AppError::BadRequest("注册码无效".to_string()))?;
-
-    if !code.is_active {
-        return Err(AppError::BadRequest("注册码已禁用".to_string()));
-    }
 
     if code.used_by.is_some() {
         return Err(AppError::BadRequest("注册码已被使用".to_string()));
@@ -101,95 +100,24 @@ pub async fn register(db: &DbConn, notifier: &Notifier, req: RegisterRequest) ->
 
     let password_hash = hash_password(&req.password)?;
     let user_id = Uuid::new_v4();
-
     let username = req.username.clone();
     let phone = req.phone.clone();
 
-    let user = user::ActiveModel {
+    // 根据 workshop_id 决定角色：有值 = Staff，无值 = Boss
+    let (role, workshop_id) = match code.workshop_id {
+        Some(wid) => (Role::Staff, Some(wid)),
+        None => (Role::Boss, None),
+    };
+
+    let new_user = user::ActiveModel {
         id: Set(user_id),
         username: Set(req.username),
         password_hash: Set(password_hash),
-        role: Set(Role::Boss),
+        role: Set(role),
         display_name: Set(None),
         phone: Set(req.phone),
         avatar: Set(None),
-        workshop_id: Set(None),
-        is_super_admin: Set(false),
-        created_at: Set(chrono::Utc::now()),
-        ..Default::default()
-    };
-
-    let user = user.insert(db).await?;
-
-    // 标记注册码为已使用
-    let mut code_active: register_code::ActiveModel = code.into();
-    code_active.used_by = Set(Some(user_id));
-    code_active.used_at = Set(Some(chrono::Utc::now()));
-    code_active.update(db).await?;
-
-    // 通知所有超管
-    let super_admins = user::Entity::find()
-        .filter(user::Column::IsSuperAdmin.eq(true))
-        .all(db)
-        .await?;
-    let admin_ids: Vec<Uuid> = super_admins.iter().map(|u| u.id).collect();
-    notifier.send_many(&admin_ids, Notification::UserRegistered { username, phone });
-
-    Ok(user.id)
-}
-
-pub async fn register_staff(
-    db: &DbConn,
-    invite_codes: &InviteCodes,
-    notifier: &Notifier,
-    req: RegisterStaffRequest,
-) -> Result<LoginResponse> {
-    // 验证邀请码
-    let mut codes = invite_codes.write().await;
-    let (workshop_id, expires_at) = codes
-        .remove(&req.invite_code)
-        .ok_or_else(|| AppError::BadRequest("邀请码无效".to_string()))?;
-
-    if chrono::Utc::now().timestamp() > expires_at {
-        return Err(AppError::BadRequest("邀请码已过期".to_string()));
-    }
-    drop(codes);
-
-    // 检查用户名是否已存在
-    if user::Entity::find()
-        .filter(user::Column::Username.eq(&req.username))
-        .one(db)
-        .await?
-        .is_some()
-    {
-        return Err(AppError::BadRequest("用户名已存在".to_string()));
-    }
-
-    // 检查手机号是否已存在
-    if user::Entity::find()
-        .filter(user::Column::Phone.eq(&req.phone))
-        .one(db)
-        .await?
-        .is_some()
-    {
-        return Err(AppError::BadRequest("手机号已被使用".to_string()));
-    }
-
-    let password_hash = hash_password(&req.password)?;
-
-    let username = req.username.clone();
-    let phone = req.phone.clone();
-
-    // 创建 Staff 用户并绑定工坊
-    let new_user = user::ActiveModel {
-        id: Set(Uuid::new_v4()),
-        username: Set(req.username.clone()),
-        password_hash: Set(password_hash),
-        role: Set(Role::Staff),
-        display_name: Set(None),
-        phone: Set(req.phone),
-        avatar: Set(None),
-        workshop_id: Set(Some(workshop_id)),
+        workshop_id: Set(workshop_id),
         is_super_admin: Set(false),
         created_at: Set(chrono::Utc::now()),
         ..Default::default()
@@ -197,20 +125,49 @@ pub async fn register_staff(
 
     let user = new_user.insert(db).await?;
 
-    // 生成 token
+    // 标记注册码为已使用
+    let mut code_active: register_code::ActiveModel = code.into();
+    code_active.used_by = Set(Some(user_id));
+    code_active.used_at = Set(Some(chrono::Utc::now()));
+    code_active.update(db).await?;
+
+    // 生成 token（统一自动登录）
     let token = create_token(user.id, user.role)
         .map_err(|_| AppError::Internal("Token生成失败".to_string()))?;
 
-    // 获取工坊信息
-    let ws = workshop::Entity::load()
-        .filter_by_id(workshop_id)
-        .one(db)
-        .await?;
-
-    // 通知工坊老板
-    if let Some(ref workshop) = ws {
-        notifier.send(workshop.owner_id, Notification::StaffJoined { username, phone });
-    }
+    // 获取工坊信息并发送通知
+    let ws = match workshop_id {
+        Some(wid) => {
+            let ws = workshop::Entity::load().filter_by_id(wid).one(db).await?;
+            // 通知工坊老板有新员工加入
+            if let Some(ref workshop) = ws {
+                notifier.send(
+                    workshop.owner_id,
+                    Notification::StaffJoined {
+                        username: username.clone(),
+                        phone: phone.clone(),
+                    },
+                );
+            }
+            ws
+        }
+        None => {
+            // 通知所有超管有新老板注册
+            let super_admins = user::Entity::find()
+                .filter(user::Column::IsSuperAdmin.eq(true))
+                .all(db)
+                .await?;
+            let admin_ids: Vec<Uuid> = super_admins.iter().map(|u| u.id).collect();
+            notifier.send_many(
+                &admin_ids,
+                Notification::UserRegistered {
+                    username: username.clone(),
+                    phone: phone.clone(),
+                },
+            );
+            None
+        }
+    };
 
     Ok(LoginResponse {
         token,

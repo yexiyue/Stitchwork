@@ -58,24 +58,6 @@ pub struct UpdateWorkshopRequest {
     pub business_label: Option<String>,
 }
 
-/// 邀请码响应
-#[derive(Debug, Serialize, JsonSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct InviteCodeResponse {
-    /// 邀请码
-    pub code: String,
-    /// 过期时间戳（秒）
-    pub expires_at: i64,
-}
-
-/// 绑定工坊请求
-#[derive(Debug, Deserialize, JsonSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct BindWorkshopRequest {
-    /// 邀请码
-    pub invite_code: String,
-}
-
 /// 员工信息响应
 #[derive(Debug, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]

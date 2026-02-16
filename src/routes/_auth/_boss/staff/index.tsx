@@ -6,14 +6,11 @@ import {
   SearchBar,
   SwipeAction,
   NavBar,
-  Button,
 } from "antd-mobile";
-import { Search, UserPlus, X, ChevronLeft, Copy } from "lucide-react";
+import { Search, UserPlus, X, ChevronLeft } from "lucide-react";
 import { Avatar, VirtualList, RelativeTime } from "@/components";
 import { authApi } from "@/api";
 import { useState } from "react";
-import { copyToClipboard } from "@/utils/clipboard";
-import { QRCodeSVG } from "qrcode.react";
 import { useInfiniteList, useDebouncedSearch } from "@/hooks";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -38,44 +35,6 @@ function StaffPage() {
         search: debouncedSearch || undefined,
       })
   );
-
-  const handleInvite = async () => {
-    try {
-      const data = await authApi.generateInviteCode();
-      // 使用 custom scheme deep link，扫码直接打开应用
-      const url = `stitchwork://register?code=${data.code}`;
-      Dialog.alert({
-        title: "邀请员工",
-        content: (
-          <div className="flex flex-col items-center py-4">
-            <QRCodeSVG value={url} size={180} />
-            <p className="mt-3 text-lg font-mono font-bold">{data.code}</p>
-            <Button
-              size="small"
-              className="mt-2"
-              onClick={() => {
-                copyToClipboard(data.code);
-                Toast.show({ content: "已复制" });
-              }}
-            >
-              <div className="flex items-center justify-center">
-                <Copy size={16} className="mr-1" />
-                复制
-              </div>
-            </Button>
-            <p className="mt-2 text-xs text-gray-400">
-              有效期至: {new Date(data.expiresAt).toLocaleString()}
-            </p>
-          </div>
-        ),
-        confirmText: "关闭",
-      });
-    } catch (e) {
-      Toast.show({
-        content: e instanceof Error ? e.message : "生成邀请码失败",
-      });
-    }
-  };
 
   const handleRemoveStaff = (staffId: string, staffName: string) => {
     Dialog.confirm({
@@ -136,7 +95,7 @@ function StaffPage() {
                 <UserPlus
                   size={20}
                   className="text-blue-500"
-                  onClick={handleInvite}
+                  onClick={() => navigate({ to: "/register-codes" })}
                 />
               </motion.div>
             )}

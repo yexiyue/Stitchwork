@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { List, Button, Dialog, Toast, Input, PullToRefresh } from "antd-mobile";
-import { Users, UserPlus, LogOut, Camera, Store, Phone, User as UserIcon, AtSign, Lock, ClipboardList, Wallet, Share2, Shield } from "lucide-react";
+import { Users, UserPlus, LogOut, Camera, Store, Phone, User as UserIcon, AtSign, Lock, ClipboardList, Wallet, Share2, Shield, KeyRound } from "lucide-react";
 import { useAuthStore, selectIsBoss, selectIsSuperAdmin } from "@/stores/auth";
 import { authApi } from "@/api";
 import { Avatar, useAvatarCropper } from "@/components";
@@ -234,6 +234,9 @@ function ProfilePage() {
             </List.Item>
             <List.Item prefix={<UserPlus size={20} />} onClick={() => navigate({ to: "/staff" })}>
               员工管理
+            </List.Item>
+            <List.Item prefix={<KeyRound size={20} />} onClick={() => navigate({ to: "/register-codes" })}>
+              注册码管理
             </List.Item>
             <List.Item prefix={<Wallet size={20} />} onClick={() => navigate({ to: "/payroll" })}>
               工资管理

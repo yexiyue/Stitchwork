@@ -15,3 +15,4 @@ export { DateRangeButton } from "./DateRangeButton";
 export { StatusTag } from "./StatusTag";
 export { EmptyState } from "./EmptyState";
 export { BiometricGuard } from "./BiometricGuard";
+export { RegisterCodeManager } from "./register-code-manager";

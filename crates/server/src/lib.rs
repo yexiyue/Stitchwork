@@ -15,4 +15,4 @@ pub mod traits;
 pub use bootstrap::init_super_admin;
 pub use s3::S3Client;
 pub use service::notification::{Notification, Notifier};
-pub use state::{anthropic, AppState, InviteCodes};
+pub use state::{anthropic, AppState};

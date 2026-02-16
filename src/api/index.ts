@@ -8,6 +8,7 @@ export { orderApi } from "./order";
 export { processApi } from "./process";
 export { pieceRecordApi } from "./piece-record";
 export { payrollApi } from "./payroll";
+export { registerCodeApi } from "./register-code";
 export { statsApi } from "./stats";
 export { shareApi } from "./share";
 export { uploadApi, getFileUrl } from "./upload";

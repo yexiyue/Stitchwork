@@ -1,6 +1,6 @@
 use axum::{
     extract::{Path, Query, State},
-    routing::{delete, get, post},
+    routing::{delete, get},
     Extension, Router,
 };
 use std::sync::Arc;
@@ -11,8 +11,7 @@ use crate::service::auth::Claims;
 use crate::AppState;
 
 use super::dto::{
-    BindWorkshopRequest, CreateWorkshopRequest, InviteCodeResponse, StaffResponse,
-    UpdateWorkshopRequest, WorkshopResponse,
+    CreateWorkshopRequest, StaffResponse, UpdateWorkshopRequest, WorkshopResponse,
 };
 use super::service;
 
@@ -24,8 +23,6 @@ pub fn router() -> Router<Arc<AppState>> {
         )
         .route("/staff", get(get_staff_list))
         .route("/staff/{id}", delete(remove_staff))
-        .route("/invite-code", post(generate_invite_code))
-        .route("/bind-workshop", post(bind_workshop))
 }
 
 async fn get_workshop(
@@ -55,24 +52,6 @@ async fn update_workshop(
     claims.require_boss()?;
     let ws = service::update_workshop(&state.db, claims.sub, req).await?;
     Ok(ApiResponse::ok(ws))
-}
-
-async fn generate_invite_code(
-    State(state): State<Arc<AppState>>,
-    Extension(claims): Extension<Claims>,
-) -> Result<ApiResponse<InviteCodeResponse>> {
-    claims.require_boss()?;
-    let res = service::generate_invite_code(&state.db, &state.invite_codes, claims.sub).await?;
-    Ok(ApiResponse::ok(res))
-}
-
-async fn bind_workshop(
-    State(state): State<Arc<AppState>>,
-    Extension(claims): Extension<Claims>,
-    AppJson(req): AppJson<BindWorkshopRequest>,
-) -> Result<ApiResponse<()>> {
-    service::bind_workshop(&state.db, &state.invite_codes, claims.sub, req).await?;
-    Ok(ApiResponse::ok(()))
 }
 
 async fn get_staff_list(

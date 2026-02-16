@@ -7,11 +7,9 @@ use uuid::Uuid;
 use crate::common::{ListData, QueryParams};
 use entity::{user, workshop};
 use crate::error::{AppError, Result};
-use crate::InviteCodes;
 
 use super::dto::{
-    BindWorkshopRequest, CreateWorkshopRequest, InviteCodeResponse, StaffResponse,
-    UpdateWorkshopRequest, WorkshopResponse,
+    CreateWorkshopRequest, StaffResponse, UpdateWorkshopRequest, WorkshopResponse,
 };
 
 // 辅助函数：获取老板的工坊
@@ -102,62 +100,6 @@ pub async fn update_workshop(
 
     let ws = active.update(db).await?;
     Ok(to_response(&ws))
-}
-
-// 生成邀请码
-pub async fn generate_invite_code(
-    db: &DbConn,
-    invite_codes: &InviteCodes,
-    boss_id: Uuid,
-) -> Result<InviteCodeResponse> {
-    let ws = get_boss_workshop(db, boss_id).await?;
-
-    // 使用 16 位邀请码增加安全性 (8位太短容易被暴力破解)
-    let code = Uuid::new_v4().to_string().replace("-", "")[..16].to_string();
-    let expires_at = chrono::Utc::now().timestamp() + 3600 * 24;
-
-    invite_codes
-        .write()
-        .await
-        .insert(code.clone(), (ws.id, expires_at));
-
-    Ok(InviteCodeResponse { code, expires_at })
-}
-
-// 员工绑定工坊
-pub async fn bind_workshop(
-    db: &DbConn,
-    invite_codes: &InviteCodes,
-    staff_id: Uuid,
-    req: BindWorkshopRequest,
-) -> Result<()> {
-    let mut codes = invite_codes.write().await;
-    let (workshop_id, expires_at) = codes
-        .remove(&req.invite_code)
-        .ok_or_else(|| AppError::BadRequest("邀请码无效".to_string()))?;
-
-    if chrono::Utc::now().timestamp() > expires_at {
-        return Err(AppError::BadRequest("邀请码已过期".to_string()));
-    }
-
-    let staff = user::Entity::load()
-        .filter_by_id(staff_id)
-        .one(db)
-        .await?
-        .ok_or_else(|| AppError::NotFound("用户不存在".to_string()))?;
-
-    if staff.workshop_id.is_some() {
-        return Err(AppError::BadRequest("已绑定工坊".to_string()));
-    }
-
-    if staff.role != user::Role::Staff {
-        return Err(AppError::BadRequest("用户角色错误".to_string()));
-    }
-
-    let active: user::ActiveModelEx = staff.into();
-    active.set_workshop_id(workshop_id).update(db).await?;
-
-    Ok(())
 }
 
 // 获取员工列表

@@ -44,7 +44,6 @@ function AdminIndexPage() {
           ? [
               { value: stats.usedCodes, name: "已使用", itemStyle: { color: "#94a3b8" } },
               { value: stats.availableCodes, name: "可用", itemStyle: { color: "#22c55e" } },
-              { value: stats.disabledCodes, name: "已禁用", itemStyle: { color: "#ef4444" } },
             ]
           : [],
       },

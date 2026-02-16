@@ -47,7 +47,7 @@ pub struct LoginResponse {
     pub user: LoginUser,
 }
 
-/// 老板注册请求参数
+/// 统一注册请求参数（Boss 和 Staff 共用）
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RegisterRequest {
@@ -57,8 +57,8 @@ pub struct RegisterRequest {
     pub password: String,
     /// 手机号
     pub phone: String,
-    /// 注册码（老板注册需要）
-    pub register_code: String,
+    /// 6位数字注册码
+    pub code: String,
 }
 
 /// 更新用户资料请求
@@ -83,16 +83,3 @@ pub struct ChangePasswordRequest {
     pub new_password: String,
 }
 
-/// 员工注册请求参数
-#[derive(Debug, Deserialize, JsonSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct RegisterStaffRequest {
-    /// 用户名
-    pub username: String,
-    /// 密码
-    pub password: String,
-    /// 手机号
-    pub phone: String,
-    /// 邀请码（员工注册需要）
-    pub invite_code: String,
-}
