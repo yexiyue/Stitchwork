@@ -82,6 +82,9 @@ dependencies {
     implementation("com.google.android.material:material:1.12.0")
     // ML Kit Barcode Scanning - bundled version (no runtime download needed)
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
+    // UpgradeLink 自动更新
+    implementation("io.github.azhon:appupdate:4.3.6")
+    implementation("com.github.toolsetlink:upgradelink-api-android:1.0.18")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.4")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.0")
