@@ -7,5 +7,8 @@ class MainActivity : TauriActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
+
+    // Check for app updates on launch
+    UpdateHelper.checkUpdate(this)
   }
 }
