@@ -8,6 +8,21 @@ export interface Payroll {
   paidAt: string;
 }
 
+export interface PayrollRecord {
+  id: string;
+  quantity: number;
+  amount: string;
+  recordedAt: string;
+  processName?: string;
+  orderName?: string;
+  orderImages?: string[];
+  piecePrice?: string;
+}
+
+export interface PayrollDetail extends Payroll {
+  records: PayrollRecord[];
+}
+
 export interface CreatePayrollDto {
   userId: string;
   amount: string;

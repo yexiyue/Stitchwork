@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Dialog, Toast, Dropdown, SwipeAction, Image } from "antd-mobile";
+import { Dialog, Toast, Dropdown, SwipeAction } from "antd-mobile";
 import {
   Filter,
   Plus,
@@ -15,7 +15,7 @@ import {
   VirtualList,
   StatusTag,
   DateRangeButton,
-  OssImage,
+  Image,
 } from "@/components";
 import { pieceRecordApi, orderApi } from "@/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -339,7 +339,7 @@ function RecordsPage() {
               >
                 <div className="shrink-0 h-20 aspect-square rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
                   {record.orderImage ? (
-                    <OssImage
+                    <Image
                       src={record.orderImage}
                       width="100%"
                       height="100%"

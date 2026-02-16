@@ -1,9 +1,15 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useAuthStore, selectIsBoss } from "@/stores/auth";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { useAuthStore, selectIsBoss, selectIsSuperAdmin } from "@/stores/auth";
 import { BossHome } from "./_boss/-home";
 import { StaffHome } from "./_staff/-home";
 
 export const Route = createFileRoute("/_auth/")({
+  beforeLoad: () => {
+    const isSuperAdmin = selectIsSuperAdmin(useAuthStore.getState());
+    if (isSuperAdmin) {
+      throw redirect({ to: "/admin" });
+    }
+  },
   component: HomePage,
 });
 

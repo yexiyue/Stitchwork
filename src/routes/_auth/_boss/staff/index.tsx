@@ -1,9 +1,18 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { List, Dialog, Toast, SearchBar, SwipeAction, NavBar } from "antd-mobile";
-import { Search, UserPlus, X, ChevronLeft } from "lucide-react";
+import {
+  List,
+  Dialog,
+  Toast,
+  SearchBar,
+  SwipeAction,
+  NavBar,
+  Button,
+} from "antd-mobile";
+import { Search, UserPlus, X, ChevronLeft, Copy } from "lucide-react";
 import { Avatar, VirtualList, RelativeTime } from "@/components";
 import { authApi } from "@/api";
 import { useState } from "react";
+import { copyToClipboard } from "@/utils/clipboard";
 import { QRCodeSVG } from "qrcode.react";
 import { useInfiniteList, useDebouncedSearch } from "@/hooks";
 import { motion, AnimatePresence } from "motion/react";
@@ -34,14 +43,27 @@ function StaffPage() {
     try {
       const data = await authApi.generateInviteCode();
       // 使用 custom scheme deep link，扫码直接打开应用
-      const url = `stitchwork://register-staff?code=${data.code}`;
+      const url = `stitchwork://register?code=${data.code}`;
       Dialog.alert({
         title: "邀请员工",
         content: (
           <div className="flex flex-col items-center py-4">
             <QRCodeSVG value={url} size={180} />
-            <p className="mt-3 text-sm text-gray-500">邀请码: {data.code}</p>
-            <p className="text-xs text-gray-400">
+            <p className="mt-3 text-lg font-mono font-bold">{data.code}</p>
+            <Button
+              size="small"
+              className="mt-2"
+              onClick={() => {
+                copyToClipboard(data.code);
+                Toast.show({ content: "已复制" });
+              }}
+            >
+              <div className="flex items-center justify-center">
+                <Copy size={16} className="mr-1" />
+                复制
+              </div>
+            </Button>
+            <p className="mt-2 text-xs text-gray-400">
               有效期至: {new Date(data.expiresAt).toLocaleString()}
             </p>
           </div>
@@ -83,7 +105,12 @@ function StaffPage() {
         right={
           <AnimatePresence mode="wait">
             {showSearch ? (
-              <motion.div key="close" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <motion.div
+                key="close"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
                 <X
                   size={20}
                   className="text-gray-500"
@@ -94,7 +121,13 @@ function StaffPage() {
                 />
               </motion.div>
             ) : (
-              <motion.div key="actions" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex justify-end gap-3">
+              <motion.div
+                key="actions"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex justify-end gap-3"
+              >
                 <Search
                   size={20}
                   className="text-gray-500"
@@ -112,7 +145,13 @@ function StaffPage() {
       >
         <AnimatePresence mode="wait">
           {showSearch ? (
-            <motion.div key="search" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.15 }}>
+            <motion.div
+              key="search"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.15 }}
+            >
               <SearchBar
                 ref={searchInputRef}
                 placeholder="搜索员工姓名"
@@ -121,7 +160,13 @@ function StaffPage() {
               />
             </motion.div>
           ) : (
-            <motion.div key="title" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.15 }}>
+            <motion.div
+              key="title"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.15 }}
+            >
               员工管理
             </motion.div>
           )}
@@ -138,7 +183,7 @@ function StaffPage() {
           keyExtractor={(s) => s.id}
           emptyText="暂无员工"
           searchEmpty={!!debouncedSearch && !list.length}
-          estimateSize={72}
+          estimateSize={54}
           renderItem={(staff) => (
             <SwipeAction
               rightActions={[
@@ -155,6 +200,7 @@ function StaffPage() {
               ]}
             >
               <List.Item
+                className="border-b border-gray-100"
                 prefix={
                   <div className="flex h-full items-center mr-2">
                     <Avatar
@@ -173,7 +219,9 @@ function StaffPage() {
                   )
                 }
               >
-                {staff.displayName || staff.username}
+                <span className="text-base">
+                  {staff.displayName || staff.username}
+                </span>
               </List.Item>
             </SwipeAction>
           )}

@@ -1,13 +1,14 @@
 import { client } from "./client";
 
 interface PresignResponse {
-  uploadUrl: string;
+  uploadUrl: string | null;
   key: string;
+  exists: boolean;
 }
 
 export const uploadApi = {
-  presign: (filename: string, contentType: string) =>
-    client.post<PresignResponse>("/api/upload/presign", { filename, contentType }),
+  presign: (filename: string, contentType: string, hash?: string) =>
+    client.post<PresignResponse>("/api/upload/presign", { filename, contentType, hash }),
 };
 
 /** 根据 key 生成图片访问 URL（通过后端重定向） */

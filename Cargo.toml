@@ -1,3 +1,9 @@
 [workspace]
-members = ["server", "./src-tauri"]
+members = [
+    "./src-tauri",
+    "crates/entity",
+    "crates/server",
+    "crates/proxy",
+    "crates/rig-ai-sdk",
+]
 resolver = "2"

@@ -1,0 +1,76 @@
+name: Deploy Proxy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "crates/proxy/**"
+  workflow_dispatch:
+
+env:
+  BINARY_NAME: stitchwork-proxy
+  ECS_HOST: 47.115.172.218
+  ECS_USER: root
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+
+      - name: Install musl tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools musl-dev cmake clang llvm
+
+      - name: Add musl target
+        run: rustup target add x86_64-unknown-linux-musl
+
+      - name: Build release
+        run: cargo build --release --target x86_64-unknown-linux-musl -p ${{ env.BINARY_NAME }}
+        env:
+          CC_x86_64_unknown_linux_musl: clang
+          CXX_x86_64_unknown_linux_musl: clang++
+          AR_x86_64_unknown_linux_musl: llvm-ar
+          CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_RUSTFLAGS: "-C linker=rust-lld"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BINARY_NAME }}
+          path: target/x86_64-unknown-linux-musl/release/${{ env.BINARY_NAME }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BINARY_NAME }}
+
+      - name: Deploy to ECS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ env.ECS_HOST }}
+          username: ${{ env.ECS_USER }}
+          key: ${{ secrets.ECS_SSH_KEY }}
+          source: ${{ env.BINARY_NAME }}
+          target: /opt/stitchwork/
+
+      - name: Restart service
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ env.ECS_HOST }}
+          username: ${{ env.ECS_USER }}
+          key: ${{ secrets.ECS_SSH_KEY }}
+          script: |
+            chmod +x /opt/stitchwork/${{ env.BINARY_NAME }}
+            systemctl restart stitchwork-proxy || true

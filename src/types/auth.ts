@@ -11,6 +11,8 @@ export interface Workshop {
   desc?: string;
   address?: string;
   image?: string;
+  pieceUnit: string;
+  businessLabel: string;
 }
 
 export interface LoginUser {
@@ -18,8 +20,9 @@ export interface LoginUser {
   username: string;
   role: Role;
   displayName?: string;
-  phone?: string;
+  phone: string;
   avatar?: string;
+  isSuperAdmin: boolean;
   workshop?: Workshop;
 }
 
@@ -31,11 +34,14 @@ export interface LoginResponse {
 export interface RegisterRequest {
   username: string;
   password: string;
+  phone: string;
+  registerCode: string;
 }
 
 export interface RegisterStaffRequest {
   username: string;
   password: string;
+  phone: string;
   inviteCode: string;
 }
 
@@ -64,6 +70,8 @@ export interface CreateWorkshopRequest {
   desc?: string;
   address?: string;
   image?: string;
+  pieceUnit?: string;
+  businessLabel?: string;
 }
 
 export interface UpdateWorkshopRequest {
@@ -71,6 +79,8 @@ export interface UpdateWorkshopRequest {
   desc?: string;
   address?: string;
   image?: string;
+  pieceUnit?: string;
+  businessLabel?: string;
 }
 
 export interface Staff {

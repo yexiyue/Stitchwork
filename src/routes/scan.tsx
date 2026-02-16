@@ -5,9 +5,8 @@ import { X, Image } from "lucide-react";
 import {
   scan,
   Format,
-  checkPermissions,
-  requestPermissions,
   cancel,
+  requestPermissions,
 } from "@tauri-apps/plugin-barcode-scanner";
 import jsQR from "jsqr";
 
@@ -25,10 +24,11 @@ function ScanPage() {
     try {
       const url = new URL(content);
       const path = url.pathname.replace(/^\//, "") || url.host;
-      if (path === "register-staff") {
+      // 兼容 register 和旧的 register-staff 路径
+      if (path === "register" || path === "register-staff") {
         const code = url.searchParams.get("code");
         if (code) {
-          navigate({ to: "/register-staff", search: { code } });
+          navigate({ to: "/register", search: { code } });
           return true;
         }
       }
@@ -48,18 +48,7 @@ function ScanPage() {
       scanning.current = true;
 
       try {
-        // 检查并请求相机权限
-        let permission = await checkPermissions();
-        if (permission !== "granted") {
-          permission = await requestPermissions();
-          if (permission !== "granted") {
-            Toast.show({ content: "需要相机权限才能扫码", icon: "fail" });
-            navigate({ to: "/login" });
-            return;
-          }
-        }
-
-        // 开始扫描
+        await requestPermissions();
         const result = await scan({ formats: [Format.QRCode], windowed: true });
 
         // 恢复背景

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-StitchWork is a garment workshop management system (服装加工流程管理系统) for tracking orders, piece-work records, and payroll. Full-stack app with Tauri desktop client, React frontend, and Rust backend.
+StitchWork is a garment workshop management system (服装加工流程管理系统) for tracking orders, piece-work records, and payroll. Full-stack app with Tauri mobile client (Android), React frontend (browser), and Rust backend.
 
 ## Environment Requirements
 
@@ -18,17 +18,23 @@ StitchWork is a garment workshop management system (服装加工流程管理系�
 # Frontend (React + Vite)
 pnpm dev              # Dev server on port 1420
 pnpm build            # TypeScript check + Vite build
-pnpm tauri dev        # Run Tauri desktop app in dev mode
-pnpm tauri build      # Build desktop app
+pnpm tsc --noEmit     # TypeScript check only (no build)
 
 # Android
 pnpm tauri android dev    # Run Android app in dev mode
 pnpm tauri android build  # Build Android APK/AAB
 
 # Backend (Rust + Axum)
-cd server && cargo run    # API server on port 3000
-cd server && cargo build  # Build server
-cd server && cargo check  # Fast type checking
+cd crates/server && cargo run    # API server on port 3000
+cd crates/server && cargo build  # Build server
+cd crates/server && cargo check  # Fast type checking
+cd crates/server && cargo test   # Run tests
+cd crates/server && cargo clippy # Lint Rust code
+
+# Workspace (all crates)
+cargo build --workspace   # Build all crates
+cargo test --workspace    # Test all crates
+cargo clippy --workspace  # Lint all crates
 ```
 
 ## Architecture
@@ -42,13 +48,20 @@ StitchWork/
 │   ├── routes/             # TanStack Router file-based routes
 │   ├── stores/             # Zustand state (auth, app)
 │   └── types/              # TypeScript types
-├── src-tauri/              # Tauri desktop wrapper
-│   └── src/sse.rs          # SSE client for realtime notifications
-└── server/                 # Axum backend
-    └── src/
-        ├── entity/         # SeaORM entities (Entity First)
-        ├── service/        # Feature modules (dto, controller, service)
-        └── main.rs         # App entry, schema sync
+├── src-tauri/              # Tauri mobile wrapper (Android)
+│   └── src/
+│       ├── lib.rs          # App entry, plugin setup, command registration
+│       ├── sse.rs          # SSE client for realtime notifications
+│       └── image.rs        # Image compression + blake3 dedup
+└── crates/                 # Rust workspace crates
+    ├── entity/             # SeaORM entities (shared)
+    ├── server/             # Axum backend
+    │   └── src/
+    │       ├── service/    # Feature modules (dto, controller, service)
+    │       ├── chat/       # AI chat service with MCP tools
+    │       └── main.rs     # App entry, schema sync
+    ├── rig-ai-sdk/         # AI SDK adapter for Vercel AI SDK protocol
+    └── proxy/              # Pingora reverse proxy
 ```
 
 ## Key Patterns
@@ -66,20 +79,32 @@ StitchWork/
 
 **Plugins:**
 
-- **notification**: System local notifications
+- **notification**: System local notifications (Android uses high-priority channels)
+- **os**: Platform detection (`platform()` returns "android", "ios", etc.)
 - **deep-link**: Custom URI scheme `stitchwork://` for staff invitation QR codes
-- **barcode-scanner**: QR code scanning on mobile (Android/iOS only)
+- **barcode-scanner**: QR code scanning on mobile (Android/iOS only). Request permission in login page before navigating to scan page.
+- **biometric**: Fingerprint/face authentication (Android/iOS only)
+- **store**: Persistent key-value storage
 - **opener**: Open external URLs
 
-**SSE Client** (`src-tauri/src/sse.rs`): Rust-native SSE client for realtime notifications. Runs in background, maintains connection when app is backgrounded, sends local notifications and emits events to frontend.
+**Custom Commands** (registered in `lib.rs`): `connect_sse`, `disconnect_sse` (SSE connection management), `upload_image` (image compression + blake3 dedup upload)
+
+**SSE Client** (`src-tauri/src/sse.rs`): Rust-native SSE client for realtime notifications. Uses `Authorization: Bearer <token>` header. Runs in background, maintains connection when app is backgrounded, sends local notifications and emits events to frontend.
+
+**Browser Compatibility**: The app runs in both Tauri and browser environments. Use `isTauri()` from `@/utils/platform` to detect runtime. Key patterns:
+
+- Dynamic import Tauri modules to avoid browser errors
+- `TauriStoreState` falls back to localStorage in browser
+- Biometric auth auto-passes in browser
+- SSE notifications use native `EventSource` with query parameter auth (`?token=<jwt>`)
 
 ### Backend
 
-- **Entity First ORM**: Define entities in `server/src/entity/`, schema auto-syncs on startup via `db.get_schema_registry("stitchwork_server::entity::*").sync(&db)`
+- **Entity First ORM**: Define entities in `crates/entity/src/`, schema auto-syncs on startup via `db.get_schema_registry("entity::*").sync(&db)`
 - **Service structure**: Each feature has `mod.rs`, `dto.rs`, `controller.rs`, `service.rs`
 - **Auth**: JWT tokens, Argon2 password hashing
 - **API response format**: `{ code: 0, message: "", data: T }` where code 0 = success
-- **Realtime notifications**: SSE endpoint at `GET /api/sse/events?token=<jwt>`, Notifier service uses DashMap + tokio broadcast channels
+- **Realtime notifications**: SSE endpoint at `GET /api/sse/events`. Supports `Authorization: Bearer <token>` header (Tauri) or `?token=<jwt>` query param (browser). Notifier service uses DashMap + tokio broadcast channels
 - **Relation queries**: Choose pattern based on use case:
 
   - `.load().with()` (ModelEx): 单条记录或不分页列表，直接访问关联
@@ -114,27 +139,46 @@ client.patch<T>(path, body?)
 client.delete<T>(path)
 ```
 
+## AI Chat & MCP
+
+The application includes an AI assistant with Human-in-the-Loop capabilities:
+
+- **rig-core**: AI agent framework for tool use and streaming
+- **rmcp**: Model Context Protocol for tool definitions
+- **rig-ai-sdk**: Custom crate adapting Rig to Vercel AI SDK protocol (supports SSE streaming with Axum)
+
+MCP tools are defined in `crates/server/src/mcp/` and include operations like creating piece records, querying orders, etc. The AI can prompt users for confirmation before executing actions.
+
 ## Environment Variables
 
 ```bash
 # Frontend (.env)
 VITE_API_URL=http://localhost:3000
 
-# Backend (server/.env)
+# Backend (crates/server/.env)
 DATABASE_URL=postgres://user:pass@localhost/stitchwork
 JWT_SECRET=your-secret
-# Optional S3
+# AI Configuration (Rig framework)
+RIG_BASE_URL=https://api.anthropic.com/v1/messages
+RIG_API_KEY=your-api-key
+RIG_MODEL=claude-3-5-sonnet-20241022
+# Object Storage (Aliyun OSS via S3-compatible API)
 AWS_REGION=
 AWS_ACCESS_KEY_ID=
 AWS_SECRET_ACCESS_KEY=
 S3_BUCKET=
+S3_ENDPOINT=  # e.g., https://oss-cn-hangzhou.aliyuncs.com
 ```
 
 ## Business Domain
 
-- **Roles**: Boss (老板) manages everything; Staff (员工) views own records
+- **Roles**:
+  - **Super Admin (超管)**: Platform-level admin, manages registration codes and all users. Not associated with any workshop. Access via `/admin/*` routes.
+  - **Boss (老板)**: Workshop owner, manages orders, processes, staff, and payroll within their workshop.
+  - **Staff (员工)**: Workshop employee, views own piece-work records and payroll.
+- **Registration**: Boss registration requires a valid registration code (8-char, one-time use). Phone number is required and must be unique. Login supports both username and phone number.
 - **Flow**: 拿货 → 创建订单 → 添加工序 → 分配任务 → 计件录入 → 出货/工资发放
-- **Entities**: user, workshop, customer, order, process, piece_record, payroll, share
+- **Entities**: user, workshop, customer, order, process, piece_record, payroll, share, register_code
 
 ## Documentation
 
@@ -142,7 +186,17 @@ S3_BUCKET=
 - `docs/database.md` - ER diagrams
 - `docs/seaorm-entity-first.md` - SeaORM 2.0 patterns (dense format, schema sync, relations)
 - `docs/ui-components.md` - Ant Design Mobile component patterns (Form, Picker, VirtualList)
-- `docs/dev-notes/` - Development notes (realtime-notifications, etc.)
+- `docs/image-upload.md` - Image upload and compression patterns
+- `docs/dev-notes/` - Development notes:
+  - `realtime-notifications.md` - SSE + local notifications (Tauri & browser)
+  - `biometric-auth.md` - Tauri biometric authentication
+  - `browser-compatibility.md` - Tauri/browser dual-environment patterns
+  - `barcode-scanner.md` - QR code scanning
+  - `image-upload-optimization.md` - Tauri Rust image compression + blake3 dedup
+  - `tauri-notification.md` - Tauri notification plugin setup
+  - `jwt-auth.md` - JWT authentication implementation
+  - `entity-refactor-employment.md` - Entity relationship refactoring notes
+  - `pingora-proxy.md` - Pingora reverse proxy tutorial (Cloudflare's Rust proxy)
 
 **Diagrams**: Use Mermaid format (`\`\`\`mermaid`) for all diagrams in documentation.
 

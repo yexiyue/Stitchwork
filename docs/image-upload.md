@@ -1,132 +1,356 @@
-# 图片上传功能调研
+# 文件上传技术方案
 
-## 1. 使用场景
+基于 Presigned URL 的前端直传方案，支持阿里云 OSS / AWS S3 等 S3 兼容存储。
 
-- 订单拿货时拍照记录款式
-- 计件完成时拍照存档
-- 其他业务凭证
+## 架构概览
 
-## 2. 技术方案对比
+```mermaid
+sequenceDiagram
+    participant C as 客户端
+    participant B as 后端 (Axum)
+    participant S as OSS/S3
 
-| 方案 | 优点 | 缺点 | 成本 |
-|------|------|------|------|
-| 本地文件存储 | 简单、无额外费用 | 磁盘空间有限、备份麻烦 | 低 |
-| 阿里云 OSS | 稳定、CDN加速、无限扩展 | 需要额外配置和费用 | 中 |
-| 数据库存储 | 事务一致性好 | 性能差、数据库膨胀 | 不推荐 |
-
-**推荐方案：阿里云 OSS**（你已经用阿里云 ECS，OSS 集成方便）
-
-## 3. 实现方案
-
-### 3.1 后端依赖
-
-```toml
-# Cargo.toml 新增
-axum = { version = "0.8.8", features = ["macros", "multipart"] }
-tokio = { version = "1", features = ["full", "fs"] }
-
-# 方案A: 本地存储（无需额外依赖）
-
-# 方案B: 阿里云 OSS
-aliyun-oss-rust-sdk = "0.10"
+    C->>B: POST /api/upload/presign<br/>{filename, contentType, hash?}
+    B->>S: HeadObject (检查 hash 是否存在)
+    alt 文件已存在 (秒传)
+        B-->>C: {key, exists: true}
+    else 文件不存在
+        B-->>C: {uploadUrl, key, exists: false}
+        C->>S: PUT uploadUrl (直传文件)
+        S-->>C: 200 OK
+    end
+    C->>B: 保存 key 到业务表
 ```
 
-### 3.2 API 设计
+**核心设计：**
+- **前端直传**：客户端直接上传到 OSS，后端不经手文件流量
+- **Presigned URL**：后端生成带签名的临时上传链接，15 分钟有效
+- **Hash 去重**：基于内容 hash 的秒传，相同文件不重复上传
 
-```text
-POST   /api/images              # 上传图片，返回 image_id
-GET    /api/images/:id          # 获取图片
-DELETE /api/images/:id          # 删除图片
+## 后端实现
+
+### 配置 (server/.env)
+
+```bash
+# S3 兼容存储配置
+AWS_REGION=oss-cn-hangzhou
+AWS_ACCESS_KEY_ID=your-access-key
+AWS_SECRET_ACCESS_KEY=your-secret-key
+S3_BUCKET=your-bucket
+S3_ENDPOINT=https://oss-cn-hangzhou.aliyuncs.com  # 阿里云 OSS
 ```
 
-### 3.3 数据库设计
-
-```sql
-CREATE TABLE image (
-    id UUID PRIMARY KEY,
-    filename VARCHAR(255) NOT NULL,
-    content_type VARCHAR(100) NOT NULL,
-    storage_path VARCHAR(500) NOT NULL,  -- 本地路径或 OSS key
-    size_bytes BIGINT NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
-);
-
--- 订单关联图片（可选）
-ALTER TABLE "order" ADD COLUMN images UUID[] DEFAULT '{}';
-```
-
-### 3.4 核心代码示例
+### S3 客户端初始化
 
 ```rust
-// routes/image.rs
-use axum::{
-    extract::Multipart,
-    response::Json,
-};
-use uuid::Uuid;
+// server/src/common/s3.rs
+pub struct S3Client {
+    pub client: aws_sdk_s3::Client,
+    pub bucket: String,
+}
 
-pub async fn upload(mut multipart: Multipart) -> Result<Json<ImageResponse>, AppError> {
-    while let Some(field) = multipart.next_field().await? {
-        let filename = field.file_name().unwrap_or("unknown").to_string();
-        let content_type = field.content_type().unwrap_or("application/octet-stream").to_string();
-        let data = field.bytes().await?;
+impl S3Client {
+    pub async fn new() -> Option<Self> {
+        let region = env::var("AWS_REGION").ok()?;
+        let bucket = env::var("S3_BUCKET").ok()?;
+        let endpoint = env::var("S3_ENDPOINT").ok();
 
-        let id = Uuid::new_v4();
-        let path = format!("uploads/{}/{}", id, filename);
+        let mut config_loader = aws_config::defaults(BehaviorVersion::latest())
+            .region(Region::new(region));
 
-        // 保存文件
-        tokio::fs::create_dir_all("uploads").await?;
-        tokio::fs::write(&path, &data).await?;
+        if let Some(endpoint) = endpoint {
+            config_loader = config_loader.endpoint_url(endpoint);
+        }
 
-        // 保存记录到数据库
-        // ...
+        let config = config_loader.load().await;
+        let client = aws_sdk_s3::Client::new(&config);
 
-        return Ok(Json(ImageResponse { id, url: format!("/api/images/{}", id) }));
+        Some(Self { client, bucket })
     }
-    Err(AppError::BadRequest("No file uploaded".into()))
+
+    /// 生成预签名下载 URL
+    pub async fn get_presigned_url(&self, key: &str, expires_secs: u64) -> Result<String, String> {
+        let presigning_config = PresigningConfig::expires_in(Duration::from_secs(expires_secs))
+            .map_err(|e| e.to_string())?;
+
+        let presigned = self.client
+            .get_object()
+            .bucket(&self.bucket)
+            .key(key)
+            .presigned(presigning_config)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        Ok(presigned.uri().to_string())
+    }
 }
 ```
 
-### 3.5 前端（React）
+### API 接口
+
+#### 1. 获取上传凭证
+
+```rust
+// POST /api/upload/presign
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PresignRequest {
+    pub filename: String,
+    pub content_type: String,
+    pub hash: Option<String>,  // 可选，用于秒传
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PresignResponse {
+    pub upload_url: Option<String>,  // None 表示秒传
+    pub key: String,
+    pub exists: bool,
+}
+
+async fn presign(
+    State(state): State<Arc<AppState>>,
+    Extension(claims): Extension<Claims>,
+    AppJson(req): AppJson<PresignRequest>,
+) -> Result<ApiResponse<PresignResponse>> {
+    let s3 = state.s3.as_ref()
+        .ok_or(AppError::Internal("S3 not configured".into()))?;
+
+    let ext = req.filename.rsplit('.').next().unwrap_or("bin");
+
+    // 有 hash 则用 hash 作为文件名（支持秒传）
+    if let Some(ref hash) = req.hash {
+        let key = format!("uploads/{}.{}", hash, ext);
+
+        // 检查是否已存在
+        let exists = s3.client
+            .head_object()
+            .bucket(&s3.bucket)
+            .key(&key)
+            .send()
+            .await
+            .is_ok();
+
+        if exists {
+            return Ok(ApiResponse::ok(PresignResponse {
+                upload_url: None,
+                key,
+                exists: true,
+            }));
+        }
+
+        // 生成上传 URL
+        let presigned = generate_presigned_put(&s3, &key, &req.content_type).await?;
+        return Ok(ApiResponse::ok(PresignResponse {
+            upload_url: Some(presigned),
+            key,
+            exists: false,
+        }));
+    }
+
+    // 无 hash，用 UUID 作为文件名
+    let key = format!("uploads/{}.{}", Uuid::new_v4(), ext);
+    let presigned = generate_presigned_put(&s3, &key, &req.content_type).await?;
+
+    Ok(ApiResponse::ok(PresignResponse {
+        upload_url: Some(presigned),
+        key,
+        exists: false,
+    }))
+}
+
+async fn generate_presigned_put(s3: &S3Client, key: &str, content_type: &str) -> Result<String> {
+    let presigning_config = PresigningConfig::expires_in(Duration::from_secs(900))?;
+
+    let presigned = s3.client
+        .put_object()
+        .bucket(&s3.bucket)
+        .key(key)
+        .content_type(content_type)
+        .presigned(presigning_config)
+        .await?;
+
+    Ok(presigned.uri().to_string())
+}
+```
+
+#### 2. 文件访问（重定向）
+
+```rust
+// GET /api/files/{*key}
+async fn redirect_to_file(
+    State(state): State<Arc<AppState>>,
+    Path(key): Path<String>,
+) -> impl IntoResponse {
+    let s3 = match state.s3.as_ref() {
+        Some(s3) => s3,
+        None => return StatusCode::SERVICE_UNAVAILABLE.into_response(),
+    };
+
+    match s3.get_presigned_url(&key, 3600).await {
+        Ok(url) => Redirect::temporary(&url).into_response(),
+        Err(_) => StatusCode::NOT_FOUND.into_response(),
+    }
+}
+```
+
+### 路由注册
+
+```rust
+// 需要认证
+Router::new().route("/upload/presign", post(presign))
+
+// 公开访问
+Router::new().route("/files/{*key}", get(redirect_to_file))
+```
+
+## 前端实现
+
+### API 封装
+
+```typescript
+// src/api/upload.ts
+interface PresignResponse {
+  uploadUrl: string | null;
+  key: string;
+  exists: boolean;
+}
+
+export const uploadApi = {
+  presign: (filename: string, contentType: string, hash?: string) =>
+    client.post<PresignResponse>("/api/upload/presign", {
+      filename,
+      contentType,
+      hash,
+    }),
+};
+
+/** 根据 key 生成访问 URL */
+export function getFileUrl(key: string): string {
+  if (!key) return "";
+  return `${import.meta.env.VITE_API_URL}/api/files/${key}`;
+}
+```
+
+### 上传函数
+
+```typescript
+// src/utils/upload.ts
+export async function uploadFile(
+  file: File,
+  options?: { hash?: string }
+): Promise<string> {
+  const { uploadUrl, key, exists } = await uploadApi.presign(
+    file.name,
+    file.type,
+    options?.hash
+  );
+
+  // 秒传：文件已存在
+  if (exists) {
+    return key;
+  }
+
+  // 直传到 OSS
+  await fetch(uploadUrl!, {
+    method: "PUT",
+    body: file,
+    headers: { "Content-Type": file.type },
+  });
+
+  return key;
+}
+```
+
+### 使用示例
 
 ```tsx
-const uploadImage = async (file: File) => {
-  const formData = new FormData();
-  formData.append('file', file);
-
-  const res = await fetch('/api/images', {
-    method: 'POST',
-    body: formData,
-  });
-  return res.json();
+// 上传并保存 key
+const handleUpload = async (file: File) => {
+  const key = await uploadFile(file);
+  await orderApi.update(orderId, { imageKey: key });
 };
+
+// 显示图片
+<img src={getFileUrl(order.imageKey)} alt="订单图片" />
 ```
 
-## 4. 安全考虑
+## Tauri 优化（可选）
 
-- 限制文件大小（建议 5MB）
-- 限制文件类型（仅 image/jpeg, image/png）
-- 生成随机文件名防止路径遍历
-- 图片访问权限控制
+移动端使用 Rust 处理图片，提升性能：
 
-## 5. 实施步骤
-
-1. 添加 `axum` multipart 特性
-2. 创建 image 表
-3. 实现上传/获取/删除 API
-4. 前端集成拍照/选图功能
-5. （可选）迁移到 OSS
-
-## 6. 阿里云 OSS 配置（后续扩展）
-
-```rust
-// 使用预签名 URL 方式，前端直传 OSS
-// 后端只负责生成签名，减轻服务器压力
-
-pub async fn get_upload_url() -> Json<PresignedUrl> {
-    // 生成 OSS 预签名上传 URL
-    // 前端拿到 URL 后直接 PUT 到 OSS
+```typescript
+// Tauri 环境：Rust 压缩 + 直接上传
+if (isTauri()) {
+  const result = await invoke<UploadResult>("upload_image", {
+    imageData: Array.from(new Uint8Array(await file.arrayBuffer())),
+    apiUrl: API_URL,
+    token: getToken(),
+    options: { maxDimension: 2560, quality: 88 },
+  });
+  return result.key;
 }
 ```
 
-费用参考：OSS 标准存储 0.12 元/GB/月，流量另计
+详见 [dev-notes/image-upload-optimization.md](dev-notes/image-upload-optimization.md)
+
+## 存储结构
+
+```
+bucket/
+└── uploads/
+    ├── {uuid}.jpg           # 无 hash 上传
+    ├── {blake3-hash}.jpg    # 有 hash 上传（支持秒传）
+    └── ...
+```
+
+## 数据库存储
+
+业务表只存 key，不存完整 URL：
+
+```rust
+// order 表
+pub struct Order {
+    // ...
+    pub image_key: Option<String>,  // 存储 "uploads/xxx.jpg"
+}
+```
+
+显示时通过 `getFileUrl(key)` 转换为完整 URL。
+
+## 安全考虑
+
+| 风险 | 措施 |
+|------|------|
+| 未授权上传 | Presign API 需要 JWT 认证 |
+| URL 泄露 | Presigned URL 15 分钟过期 |
+| 文件覆盖 | 使用 UUID/hash 作为文件名 |
+| 恶意文件 | 前端限制类型，后端校验 Content-Type |
+| 大文件攻击 | 前端压缩，OSS 配额限制 |
+
+## 依赖
+
+### 后端
+
+```toml
+[dependencies]
+aws-sdk-s3 = "1"
+aws-config = { version = "1", features = ["behavior-version-latest"] }
+```
+
+### 前端
+
+```bash
+# 图片压缩（浏览器环境）
+pnpm add browser-image-compression
+```
+
+## 成本参考（阿里云 OSS）
+
+| 项目 | 价格 |
+|------|------|
+| 存储 | 0.12 元/GB/月 |
+| 外网下行 | 0.50 元/GB |
+| PUT/GET 请求 | 0.01 元/万次 |
+
+小型应用每月几元即可。

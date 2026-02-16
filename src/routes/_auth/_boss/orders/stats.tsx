@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { statsApi } from "@/api";
 import { useState, useMemo } from "react";
 import { Chart, StatsCard, StatsGrid, DateRangeButton } from "@/components";
-import { useDateRange } from "@/hooks";
+import { useDateRange, useWorkshopSettings } from "@/hooks";
 import type { EChartsOption } from "echarts";
 
 export const Route = createFileRoute("/_auth/_boss/orders/stats")({
@@ -17,6 +17,7 @@ type TrendMode = "daily" | "monthly";
 function OrderStatsPage() {
   const navigate = useNavigate();
   const [trendMode, setTrendMode] = useState<TrendMode>("daily");
+  const { pieceUnit } = useWorkshopSettings();
 
   // 日期范围
   const {
@@ -306,7 +307,7 @@ function OrderStatsPage() {
                         }}
                       />
                       <div className="flex items-center justify-between mt-1 text-xs text-gray-500">
-                        <span>{order.completedQuantity} / {order.totalQuantity} 件</span>
+                        <span>{order.completedQuantity} / {order.totalQuantity} {pieceUnit}</span>
                         <span>{(order.progress * 100).toFixed(0)}%</span>
                       </div>
                     </div>

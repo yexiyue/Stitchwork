@@ -1,6 +1,6 @@
 # 实时通知系统实现
 
-基于 SSE (Server-Sent Events) 实现的实时消息推送系统，用于计件审批、工资发放等业务场景的即时通知。
+基于 SSE (Server-Sent Events) 实现的实时消息推送系统，用于计件审批、工资发放、用户注册等业务场景的即时通知。
 
 ## 架构概览
 
@@ -11,8 +11,12 @@ flowchart LR
     end
 
     subgraph Tauri["Tauri Rust"]
-        SSE["SSE Client"]
+        SSE_T["SSE Client<br/>(Authorization header)"]
         Notify["Local Notification<br/>(system tray)"]
+    end
+
+    subgraph Browser["Browser"]
+        SSE_B["EventSource<br/>(?token=xxx)"]
     end
 
     subgraph Frontend["Frontend (React)"]
@@ -20,26 +24,41 @@ flowchart LR
         Toast["Toast + Query<br/>Invalidation"]
     end
 
-    Backend -->|SSE| SSE
-    SSE --> Notify
-    SSE -->|"emit()"| Hook
+    Backend -->|SSE| SSE_T
+    Backend -->|SSE| SSE_B
+    SSE_T --> Notify
+    SSE_T -->|"emit()"| Hook
+    SSE_B --> Hook
     Hook --> Toast
 ```
 
-**为什么用 Rust SSE 客户端而不是前端 JS？**
+**双环境支持：**
+
+| 环境 | SSE 客户端 | 认证方式 | 通知方式 |
+|------|-----------|---------|---------|
+| Tauri | Rust `reqwest_eventsource` | `Authorization: Bearer <token>` | 系统通知 + Toast |
+| 浏览器 | 原生 `EventSource` | `?token=<jwt>` (query param) | Toast |
+
+**为什么 Tauri 用 Rust SSE 客户端？**
 
 - App 后台时 WebView 可能暂停，Rust 层持续运行
 - 可直接调用系统通知 API（`tauri-plugin-notification`）
+- 支持 Authorization header（原生 EventSource 不支持）
 - 自动重连逻辑更可控
 
 ## 通知类型
 
 ```rust
 pub enum Notification {
+    // 计件相关
     RecordSubmitted { user_name, process_name, quantity }  // 员工提交 → 老板
     RecordApproved { process_name, quantity, amount }      // 老板通过 → 员工
     RecordRejected { process_name, quantity }              // 老板拒绝 → 员工
     PayrollReceived { amount }                             // 发工资 → 员工
+
+    // 用户注册
+    UserRegistered { username, phone }                     // 新用户注册 → 超管
+    StaffJoined { username, phone }                        // 员工加入 → 老板
 }
 ```
 
@@ -63,10 +82,17 @@ impl Notifier {
             .subscribe()
     }
 
-    /// 发送通知
+    /// 发送通知给单个用户
     pub fn send(&self, user_id: Uuid, notification: Notification) {
         if let Some(sender) = self.channels.get(&user_id) {
             let _ = sender.send(notification);
+        }
+    }
+
+    /// 发送通知给多个用户
+    pub fn send_many(&self, user_ids: &[Uuid], notification: Notification) {
+        for user_id in user_ids {
+            self.send(*user_id, notification.clone());
         }
     }
 }
@@ -76,19 +102,30 @@ impl Notifier {
 - 每个用户一个 broadcast channel，容量 16
 - 懒初始化：首次订阅时创建 channel
 - `send()` 忽略无订阅者的情况（用户不在线）
+- `send_many()` 用于通知多个用户（如所有超管）
 
 ### 2. SSE 端点 (`server/src/service/notification/controller.rs`)
 
 ```rust
-/// GET /api/sse/events?token=<jwt>
+/// GET /api/sse/events
+/// 认证方式（优先级从高到低）：
+/// 1. Authorization: Bearer <token>
+/// 2. ?token=<jwt>
 async fn sse_events(
     State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
     Query(query): Query<SseQuery>,
 ) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, AppError> {
-    // Token 验证（不走中间件，因为 EventSource 不支持自定义 Header）
-    let claims = verify_token(&query.token)?;
+    // 优先从 Authorization header 获取 token
+    let token = headers
+        .get("authorization")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.strip_prefix("Bearer "))
+        .map(|s| s.to_string())
+        .or(query.token)
+        .ok_or(AppError::Unauthorized)?;
 
-    // 订阅通知
+    let claims = verify_token(&token)?;
     let mut rx = state.notifier.subscribe(claims.sub);
 
     let stream = async_stream::stream! {
@@ -111,15 +148,47 @@ async fn sse_events(
 ```
 
 **关键点：**
-- Token 通过 Query 参数传递（EventSource 限制）
+- 支持 Authorization header（Tauri）和 query parameter（浏览器）两种认证
 - 30 秒心跳防止连接超时
 - `Lagged` 错误时跳过积压消息继续接收
 
 ### 3. 触发通知
 
-在业务 Controller 中调用 `notifier.send()`：
+在业务 Service 中调用 `notifier.send()`：
 
 ```rust
+// auth/service.rs - 老板注册
+pub async fn register(db, notifier, req) -> Result<Uuid> {
+    let user = create_user(db, req).await?;
+
+    // 通知所有超管
+    let super_admins = user::Entity::find()
+        .filter(user::Column::IsSuperAdmin.eq(true))
+        .all(db).await?;
+    let admin_ids: Vec<Uuid> = super_admins.iter().map(|u| u.id).collect();
+    notifier.send_many(&admin_ids, Notification::UserRegistered {
+        username: user.username.clone(),
+        phone: user.phone.clone(),
+    });
+
+    Ok(user.id)
+}
+
+// auth/service.rs - 员工注册
+pub async fn register_staff(db, invite_codes, notifier, req) -> Result<LoginResponse> {
+    let user = create_staff(db, req).await?;
+
+    // 通知工坊老板
+    if let Some(ref workshop) = ws {
+        notifier.send(workshop.owner_id, Notification::StaffJoined {
+            username: user.username.clone(),
+            phone: user.phone.clone(),
+        });
+    }
+
+    Ok(response)
+}
+
 // piece_record/controller.rs - 员工提交计件
 pub async fn create(...) {
     let record = service::create(db, dto, claims.sub).await?;
@@ -131,14 +200,6 @@ pub async fn create(...) {
         quantity: record.quantity,
     });
 }
-
-// piece_record/controller.rs - 老板审批
-pub async fn approve(...) {
-    let record = service::approve(db, id, claims.sub).await?;
-
-    // 通知员工
-    state.notifier.send(record.user_id, Notification::RecordApproved { ... });
-}
 ```
 
 ## Tauri 客户端
@@ -147,10 +208,14 @@ pub async fn approve(...) {
 
 ```rust
 async fn start_sse(app_handle, api_url, token, cancel_rx) {
-    let url = format!("{}/api/sse/events?token={}", api_url, token);
+    let url = format!("{}/api/sse/events", api_url);
+    let client = reqwest::Client::new();
 
     loop {
-        let mut es = EventSource::get(&url);
+        let request = client
+            .get(&url)
+            .header("Authorization", format!("Bearer {}", token));
+        let mut es = EventSource::new(request).unwrap();
 
         loop {
             tokio::select! {
@@ -185,6 +250,7 @@ async fn start_sse(app_handle, api_url, token, cancel_rx) {
 ```
 
 **关键点：**
+- 使用 Authorization header 认证（更安全，token 不暴露在 URL）
 - 自动重连（5 秒间隔）
 - `tokio::select!` 同时监听取消信号和 SSE 事件
 - 双重通知：系统托盘 + 前端事件
@@ -203,30 +269,22 @@ pub async fn disconnect_sse(state) -> Result<(), String>
 
 ### useNotify Hook (`src/hooks/useNotify.ts`)
 
+支持 Tauri 和浏览器两种环境：
+
 ```typescript
 export function useNotify() {
   const token = useAuthStore((s) => s.token);
   const queryClient = useQueryClient();
 
+  // Tauri 环境
   useEffect(() => {
-    if (!token) return;
+    if (!token || !isTauri()) return;
 
     const setup = async () => {
-      // 连接 SSE
-      await invoke("connect_sse", { apiUrl, token });
+      await invoke("connect_sse", { apiUrl, token, channelId: CHANNEL_ID });
 
-      // 监听 Rust 层事件
       unlisten = await listen<NotificationPayload>("notification", (event) => {
-        // 显示 Toast
-        Toast.show({ content: event.payload.title });
-
-        // 刷新相关查询
-        switch (event.payload.type) {
-          case "record_submitted":
-            queryClient.invalidateQueries({ queryKey: ["piece-records"] });
-            break;
-          // ...
-        }
+        handleNotification(event.payload, queryClient);
       });
     };
 
@@ -236,6 +294,45 @@ export function useNotify() {
       unlisten?.();
     };
   }, [token]);
+
+  // 浏览器环境
+  useEffect(() => {
+    if (!token || isTauri()) return;
+
+    // 浏览器 EventSource 不支持自定义 headers，使用 query parameter
+    const url = `${apiUrl}/api/sse/events?token=${encodeURIComponent(token)}`;
+    let eventSource = new EventSource(url);
+
+    eventSource.onmessage = (event) => {
+      const payload = JSON.parse(event.data);
+      handleNotification(payload, queryClient);
+    };
+
+    eventSource.onerror = () => {
+      eventSource.close();
+      // 5 秒后重连
+      setTimeout(connect, 5000);
+    };
+
+    return () => eventSource.close();
+  }, [token]);
+}
+
+function handleNotification(payload, queryClient) {
+  Toast.show({ content: payload.title });
+
+  switch (payload.type) {
+    case "record_submitted":
+      queryClient.invalidateQueries({ queryKey: ["piece-records"] });
+      break;
+    case "user_registered":
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      break;
+    case "staff_joined":
+      queryClient.invalidateQueries({ queryKey: ["staff"] });
+      break;
+    // ...
+  }
 }
 ```
 
@@ -274,21 +371,34 @@ pnpm add @tauri-apps/plugin-notification
 
 ```mermaid
 flowchart TD
-    A["员工提交计件"] --> B["piece_record::create()"]
-    B --> C["notifier.send(boss_id, RecordSubmitted)"]
+    A["用户注册/员工提交"] --> B["service function"]
+    B --> C["notifier.send()"]
     C --> D["broadcast channel"]
-    D --> E["SSE stream (老板)"]
-    E --> F["Tauri SSE client"]
-    F --> G["system notification (托盘)"]
-    F --> H["emit('notification')"]
-    H --> I["useNotify hook"]
-    I --> J["Toast.show()"]
-    I --> K["invalidateQueries(['piece-records'])"]
+    D --> E["SSE stream"]
+
+    E --> F{"环境?"}
+    F -->|Tauri| G["Rust SSE client"]
+    F -->|Browser| H["EventSource"]
+
+    G --> I["system notification"]
+    G --> J["emit('notification')"]
+    H --> K["useNotify hook"]
+    J --> K
+
+    K --> L["Toast.show()"]
+    K --> M["invalidateQueries()"]
 ```
 
 ## 注意事项
 
-1. **Token 安全**：SSE URL 包含 JWT，日志中注意脱敏
+1. **Token 安全**：
+   - Tauri 使用 Authorization header，更安全
+   - 浏览器使用 query parameter（EventSource 限制），日志中注意脱敏
+
 2. **重连策略**：当前固定 5 秒，可优化为指数退避
+
 3. **消息丢失**：broadcast channel 容量 16，超出会 lag，当前策略是跳过
+
 4. **Android 后台**：需要前台服务保持 App 活跃，否则可能被杀
+
+5. **浏览器兼容**：原生 EventSource 不支持自定义 headers，只能用 query parameter

@@ -16,14 +16,19 @@ val tauriProperties = Properties().apply {
 
 android {
     compileSdk = 36
-    namespace = "com.gy.stitchwork"
+    namespace = "com.yexiyue.stitchwork"
     defaultConfig {
         manifestPlaceholders["usesCleartextTraffic"] = "false"
-        applicationId = "com.gy.stitchwork"
+        applicationId = "com.yexiyue.stitchwork"
         minSdk = 24
         targetSdk = 36
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
         versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0")
+
+        // UpgradeLink credentials (from env vars or gradle properties)
+        buildConfigField("String", "UPGRADE_APP_KEY", "\"${findProperty("UPGRADE_APP_KEY") ?: System.getenv("UPGRADE_APP_KEY") ?: ""}\"")
+        buildConfigField("String", "UPGRADE_ACCESS_KEY", "\"${findProperty("UPGRADE_ACCESS_KEY") ?: System.getenv("UPGRADE_ACCESS_KEY") ?: ""}\"")
+        buildConfigField("String", "UPGRADE_SECRET_KEY", "\"${findProperty("UPGRADE_SECRET_KEY") ?: System.getenv("UPGRADE_SECRET_KEY") ?: ""}\"")
     }
     signingConfigs {
         create("release") {
@@ -69,6 +74,11 @@ android {
     buildFeatures {
         buildConfig = true
     }
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
 }
 
 rust {
@@ -82,6 +92,10 @@ dependencies {
     implementation("com.google.android.material:material:1.12.0")
     // ML Kit Barcode Scanning - bundled version (no runtime download needed)
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
+    // App Update
+    implementation("io.github.azhon:appupdate:4.3.6")
+    // UpgradeLink API SDK
+    implementation("com.github.toolsetlink:upgradelink-api-android:2.3.0")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.4")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.0")

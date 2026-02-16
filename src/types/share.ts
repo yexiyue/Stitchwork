@@ -2,6 +2,7 @@ export interface Share {
   id: string;
   bossId: string;
   title: string;
+  description?: string;
   token: string;
   orderIds: string[];
   processIds: string[];
@@ -12,23 +13,17 @@ export interface Share {
 
 export interface CreateShareRequest {
   title: string;
+  description?: string;
   orderIds: string[];
   processIds: string[];
 }
 
 export interface UpdateShareRequest {
   title?: string;
+  description?: string;
   orderIds?: string[];
   processIds?: string[];
   isActive?: boolean;
-}
-
-export interface PublicOrderInfo {
-  id: string;
-  productName: string;
-  description?: string;
-  images?: unknown;
-  quantity: number;
 }
 
 export interface PublicProcessInfo {
@@ -37,13 +32,19 @@ export interface PublicProcessInfo {
   description?: string;
   piecePrice: string;
   orderProductName: string;
+  orderImages: string[];
+  remainingQuantity: number;
 }
 
 export interface PublicShareResponse {
   title: string;
+  description?: string;
   workshopName?: string;
   workshopDesc?: string;
+  workshopAddress?: string;
+  workshopImage?: string;
+  pieceUnit: string;
+  bossPhone?: string;
   avatar?: string;
-  orders: PublicOrderInfo[];
   processes: PublicProcessInfo[];
 }

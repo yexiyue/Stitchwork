@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   NavBar,
-  Image,
   Tag,
   Button,
   Dialog,
@@ -13,9 +12,10 @@ import {
 import { ImageIcon, Edit2, Trash2, ChevronLeft } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { pieceRecordApi, orderApi } from "@/api";
-import { OssImage, RelativeTime } from "@/components";
+import { Image, RelativeTime } from "@/components";
 import { RECORD_STATUS_MAP } from "@/constants";
 import { useState } from "react";
+import { useWorkshopSettings } from "@/hooks";
 
 export const Route = createFileRoute("/_auth/_boss/records/$id")({
   component: RecordDetailPage,
@@ -25,6 +25,7 @@ function RecordDetailPage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { pieceUnit } = useWorkshopSettings();
   const [editPopupVisible, setEditPopupVisible] = useState(false);
   const [editQuantity, setEditQuantity] = useState("");
 
@@ -59,8 +60,7 @@ function RecordDetailPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (quantity: number) =>
-      pieceRecordApi.update(id, { quantity }),
+    mutationFn: (quantity: number) => pieceRecordApi.update(id, { quantity }),
     onSuccess: () => {
       Toast.show({ content: "修改成功" });
       setEditPopupVisible(false);
@@ -124,7 +124,12 @@ function RecordDetailPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col h-full">
-        <NavBar onBack={() => navigate({ to: "/records" })} backIcon={<ChevronLeft size={24} />}>计件详情</NavBar>
+        <NavBar
+          onBack={() => navigate({ to: "/records" })}
+          backIcon={<ChevronLeft size={24} />}
+        >
+          计件详情
+        </NavBar>
         <div className="flex-1 flex items-center justify-center">加载中...</div>
       </div>
     );
@@ -133,7 +138,12 @@ function RecordDetailPage() {
   if (!record) {
     return (
       <div className="flex flex-col h-full">
-        <NavBar onBack={() => navigate({ to: "/records" })} backIcon={<ChevronLeft size={24} />}>计件详情</NavBar>
+        <NavBar
+          onBack={() => navigate({ to: "/records" })}
+          backIcon={<ChevronLeft size={24} />}
+        >
+          计件详情
+        </NavBar>
         <div className="flex-1 flex items-center justify-center text-gray-500">
           记录不存在
         </div>
@@ -141,7 +151,8 @@ function RecordDetailPage() {
     );
   }
 
-  const images = order?.images || (record.orderImage ? [record.orderImage] : []);
+  const images =
+    order?.images || (record.orderImage ? [record.orderImage] : []);
   const piecePrice = record.piecePrice ? parseFloat(record.piecePrice) : null;
 
   return (
@@ -167,7 +178,7 @@ function RecordDetailPage() {
               {images.map((img, idx) => (
                 <Swiper.Item key={idx}>
                   <div className="h-64 flex items-center justify-center bg-gray-100">
-                    <OssImage src={img} fit="contain" height="100%" />
+                    <Image src={img} fit="contain" height="100%" />
                   </div>
                 </Swiper.Item>
               ))}
@@ -215,7 +226,7 @@ function RecordDetailPage() {
             <div>
               <div className="text-2xl font-bold text-blue-600">
                 {record.quantity}{" "}
-                <span className="text-base font-normal">件</span>
+                <span className="text-base font-normal">{pieceUnit}</span>
               </div>
               <div className="text-lg text-green-600 mt-1">
                 ¥{record.amount}

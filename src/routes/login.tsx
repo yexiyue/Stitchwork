@@ -1,8 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Form, Input, Button, Card, Dialog } from "antd-mobile";
+import { Form, Input, Button, Card, Dialog, Toast } from "antd-mobile";
 import { ScanLine } from "lucide-react";
-import { useAuthStore } from "@/stores/auth";
+import { useAuthStore, selectIsSuperAdmin } from "@/stores/auth";
 import { useState, useEffect } from "react";
+import { isTauri } from "@/utils/platform";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -12,19 +13,52 @@ function LoginPage() {
   const navigate = useNavigate();
   const login = useAuthStore((s) => s.login);
   const isAuthenticated = useAuthStore((s) => !!s.token);
+  const isSuperAdmin = useAuthStore(selectIsSuperAdmin);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate({ to: "/" });
+      navigate({ to: isSuperAdmin ? "/admin" : "/" });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, isSuperAdmin, navigate]);
+
+  // 扫码前先请求相机权限
+  const handleScanClick = async () => {
+    if (!isTauri()) {
+      Toast.show({
+        content: "请在 App 中使用扫码功能",
+        icon: "fail",
+      });
+      return;
+    }
+
+    try {
+      const { checkPermissions, requestPermissions } = await import(
+        "@tauri-apps/plugin-barcode-scanner"
+      );
+
+      let permission = await checkPermissions();
+      if (permission !== "granted") {
+        permission = await requestPermissions();
+      }
+
+      if (permission === "granted") {
+        navigate({ to: "/scan" });
+      } else {
+        Toast.show({ content: "需要相机权限才能扫码", icon: "fail" });
+      }
+    } catch (e) {
+      console.error("Failed to check camera permission:", e);
+      Toast.show({ content: "无法访问相机", icon: "fail" });
+    }
+  };
 
   const onFinish = async (values: { username: string; password: string }) => {
     setLoading(true);
     try {
       await login(values.username, values.password);
-      navigate({ to: "/" });
+      const state = useAuthStore.getState();
+      navigate({ to: state.user?.isSuperAdmin ? "/admin" : "/" });
     } catch (e) {
       Dialog.alert({
         content:
@@ -73,7 +107,7 @@ function LoginPage() {
           <span className="text-gray-500">没有账号？</span>
           <a
             className="text-blue-500 ml-1"
-            onClick={() => navigate({ to: "/register" })}
+            onClick={() => navigate({ to: "/register", search: { code: "" } })}
           >
             立即注册
           </a>
@@ -82,12 +116,12 @@ function LoginPage() {
           <Button
             block
             fill="none"
-            onClick={() => navigate({ to: "/scan" })}
+            onClick={handleScanClick}
             className="text-gray-600"
           >
             <div className="flex items-center justify-center gap-2">
               <ScanLine size={20} />
-              <span>扫描邀请码加入工坊</span>
+              <span>扫码注册</span>
             </div>
           </Button>
         </div>

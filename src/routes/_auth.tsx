@@ -1,8 +1,23 @@
-import { createFileRoute, Outlet, redirect, useNavigate, useLocation } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Outlet,
+  redirect,
+  useNavigate,
+  useLocation,
+} from "@tanstack/react-router";
 import { TabBar } from "antd-mobile";
-import { Home, ClipboardList, FileEdit, User } from "lucide-react";
-import { useAuthStore, selectIsBoss } from "@/stores/auth";
+import {
+  Home,
+  ClipboardList,
+  FileEdit,
+  User,
+  Key,
+  Shield,
+  // BotIcon,
+} from "lucide-react";
+import { useAuthStore, selectIsBoss, selectIsSuperAdmin } from "@/stores/auth";
 import { useNotify } from "@/hooks/useNotify";
+import { useBiometricTimeout } from "@/hooks";
 
 export const Route = createFileRoute("/_auth")({
   beforeLoad: () => {
@@ -13,6 +28,13 @@ export const Route = createFileRoute("/_auth")({
   },
   component: AuthLayout,
 });
+
+const adminTabs = [
+  { key: "/admin", title: "首页", icon: <Home size={24} /> },
+  { key: "/admin/register-codes", title: "注册码", icon: <Key size={24} /> },
+  { key: "/admin/users", title: "用户", icon: <Shield size={24} /> },
+  { key: "/profile", title: "我的", icon: <User size={24} /> },
+];
 
 const bossTabs = [
   { key: "/", title: "首页", icon: <Home size={24} /> },
@@ -31,10 +53,14 @@ function AuthLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const isBoss = useAuthStore(selectIsBoss);
-  const tabs = isBoss ? bossTabs : staffTabs;
+  const isSuperAdmin = useAuthStore(selectIsSuperAdmin);
+  const tabs = isSuperAdmin ? adminTabs : isBoss ? bossTabs : staffTabs;
 
   // 启用实时通知
   useNotify();
+
+  // 启用生物识别后台超时处理
+  useBiometricTimeout();
 
   // 子页面映射到对应的 tab
   const subPageMap: Record<string, string> = {
@@ -42,27 +68,45 @@ function AuthLayout() {
     "/staff": "/profile",
     "/workshop": "/profile",
     "/payroll": "/profile",
+    "/shares": "/profile",
   };
   const mappedPath = Object.entries(subPageMap).find(([prefix]) =>
-    location.pathname.startsWith(prefix)
+    location.pathname.startsWith(prefix),
   )?.[1];
 
-  const activeKey = tabs.find((t) =>
-    t.key === location.pathname ||
-    t.key === mappedPath ||
-    (t.key !== "/" && location.pathname.startsWith(t.key))
-  )?.key || "/";
+  // 优先精确匹配，再做前缀匹配（按路径长度降序，避免 /admin 先于 /admin/register-codes 匹配）
+  const activeKey =
+    tabs.find((t) => t.key === location.pathname || t.key === mappedPath)
+      ?.key ||
+    [...tabs]
+      .sort((a, b) => b.key.length - a.key.length)
+      .find((t) => t.key !== "/" && location.pathname.startsWith(t.key))?.key ||
+    "/";
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex-1 overflow-auto">
         <Outlet />
       </div>
-      <TabBar activeKey={activeKey} onChange={(key) => navigate({ to: key })}>
+      <TabBar activeKey={activeKey} className="pb-(--sab)">
         {tabs.map((tab) => (
-          <TabBar.Item key={tab.key} icon={tab.icon} title={tab.title} />
+          <TabBar.Item
+            key={tab.key}
+            icon={tab.icon}
+            title={tab.title}
+            onClick={() => navigate({ to: tab.key })}
+          />
         ))}
       </TabBar>
+      {/* 右下角悬浮助手按钮（超管不显示） */}
+      {/* {!isSuperAdmin && (
+        <button
+          onClick={() => navigate({ to: "/chat" })}
+          className="fixed bottom-16 right-6 z-10 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform active:scale-95"
+        >
+          <BotIcon size={26} />
+        </button>
+      )} */}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { ImageUploader as AdmImageUploader, Toast } from "antd-mobile";
 import type { ImageUploadItem } from "antd-mobile/es/components/image-uploader";
-import imageCompression from "browser-image-compression";
-import { uploadApi, getFileUrl } from "@/api";
+import { getFileUrl } from "@/api";
+import { uploadImage } from "@/utils/upload";
 
 interface ImageUploaderSingleProps {
   value?: string;
@@ -36,23 +36,7 @@ export function ImageUploader({
   };
 
   const upload = async (file: File): Promise<ImageUploadItem & { key: string }> => {
-    const compressed = await imageCompression(file, {
-      maxSizeMB: 0.5,
-      maxWidthOrHeight: 1920,
-      useWebWorker: true,
-    });
-
-    const { uploadUrl, key } = await uploadApi.presign(
-      file.name,
-      compressed.type || "image/jpeg"
-    );
-
-    await fetch(uploadUrl, {
-      method: "PUT",
-      body: compressed,
-      headers: { "Content-Type": compressed.type || "image/jpeg" },
-    });
-
+    const key = await uploadImage(file);
     return { key, url: getFileUrl(key) };
   };
 

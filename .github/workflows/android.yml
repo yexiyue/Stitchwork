@@ -1,0 +1,119 @@
+name: Build Android
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev pkg-config
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Setup Android signing
+        run: |
+          cd src-tauri/gen/android
+          echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" > keystore.properties
+          echo "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" >> keystore.properties
+          echo "storePassword=${{ secrets.ANDROID_KEY_PASSWORD }}" >> keystore.properties
+          base64 -d <<< "${{ secrets.ANDROID_KEY_BASE64 }}" > $RUNNER_TEMP/keystore.jks
+          echo "storeFile=$RUNNER_TEMP/keystore.jks" >> keystore.properties
+
+      - name: Build APK
+        run: pnpm tauri android build --apk true
+        env:
+          NDK_HOME: ${{ env.ANDROID_NDK_LATEST_HOME }}
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_LATEST_HOME }}
+          ANDROID_NDK_ROOT: ${{ env.ANDROID_NDK_LATEST_HOME }}
+          # Fix aws-lc-sys compilation with NDK 29
+          AWS_LC_SYS_CMAKE_BUILDER: 1
+          # UpgradeLink credentials for in-app update check
+          UPGRADE_APP_KEY: ${{ secrets.UPGRADE_LINK_APP_KEY }}
+          UPGRADE_ACCESS_KEY: ${{ secrets.UPGRADE_LINK_ACCESS_KEY }}
+          UPGRADE_SECRET_KEY: ${{ secrets.UPGRADE_LINK_ACCESS_SECRET }}
+
+      - name: Get version
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
+          tag_name: ${{ steps.version.outputs.version }}
+          name: Release ${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get APK filename
+        id: apk
+        run: |
+          APK_NAME=$(basename src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk)
+          echo "name=$APK_NAME" >> $GITHUB_OUTPUT
+
+      - name: Upload to UpgradeLink
+        uses: toolsetlink/upgradelink-action@3.0.2
+        with:
+          access_key: ${{ secrets.UPGRADE_LINK_ACCESS_KEY }}
+          access_secret: ${{ secrets.UPGRADE_LINK_ACCESS_SECRET }}
+          config: |
+            {
+              "app_type": "apk",
+              "request": {
+                "app_key": "${{ secrets.UPGRADE_LINK_APP_KEY }}",
+                "version": "${{ steps.version.outputs.version }}",
+                "url": "https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.version }}/${{ steps.apk.outputs.name }}",
+                "prompt_upgrade_content": "新版本 ${{ steps.version.outputs.version }} 已发布"
+              }
+            }

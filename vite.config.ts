@@ -23,6 +23,16 @@ export default defineConfig(async () => ({
     },
   },
 
+  // 支持顶层 await
+  build: {
+    target: "esnext",
+  },
+
+  // esbuild 也需要支持顶层 await
+  esbuild: {
+    target: "esnext",
+  },
+
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
   // 1. prevent Vite from obscuring rust errors

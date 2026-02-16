@@ -1,4 +1,4 @@
-import { ImageProps } from "antd-mobile";
+import { ImageProps, Image as AntMImage } from "antd-mobile";
 import { getFileUrl } from "@/api";
 
 interface OssImageProps extends Omit<ImageProps, "src"> {
@@ -9,6 +9,11 @@ interface OssImageProps extends Omit<ImageProps, "src"> {
 export function OssImage({ src, ...props }: OssImageProps) {
   if (!src) return null;
   return <img src={getFileUrl(src)} {...props} />;
+}
+
+export function Image({ src, ...props }: OssImageProps) {
+  if (!src) return null;
+  return <AntMImage src={getFileUrl(src)} {...props} />;
 }
 
 /** 批量转换 keys 为 URLs */

@@ -1,10 +1,18 @@
 import { useNavigate } from "@tanstack/react-router";
-import { Card, Badge, ProgressBar } from "antd-mobile";
-import { FileEdit, Store, Package, Users, TrendingUp, ImageIcon } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Card, Badge, ProgressBar, PullToRefresh } from "antd-mobile";
+import {
+  FileEdit,
+  Store,
+  Package,
+  Users,
+  TrendingUp,
+  ImageIcon,
+} from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { homeApi, statsApi } from "@/api";
 import { useAuthStore } from "@/stores/auth";
-import { MiniChart, RelativeTime, Chart, OssImage } from "@/components";
+import { useWorkshopSettings } from "@/hooks";
+import { MiniChart, RelativeTime, Chart, Image, OssImage } from "@/components";
 import type { BossOverview, Activity } from "@/types";
 import type { EChartsOption } from "echarts";
 import dayjs from "dayjs";
@@ -12,7 +20,19 @@ import { useMemo } from "react";
 
 export function BossHome() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
+  const { pieceUnit } = useWorkshopSettings();
+
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["home-overview"] });
+    await queryClient.invalidateQueries({ queryKey: ["home-activities"] });
+    await queryClient.invalidateQueries({ queryKey: ["daily-stats-mini"] });
+    await queryClient.invalidateQueries({ queryKey: ["home-order-overview"] });
+    await queryClient.invalidateQueries({ queryKey: ["home-customer-contribution"] });
+    await queryClient.invalidateQueries({ queryKey: ["home-worker-production"] });
+    await queryClient.invalidateQueries({ queryKey: ["home-order-progress"] });
+  };
 
   const { data: overview } = useQuery({
     queryKey: ["home-overview"],
@@ -92,7 +112,7 @@ export function BossHome() {
     ].filter((d) => d.value > 0);
 
     return {
-      tooltip: { trigger: "item", formatter: "{b}: {c} ({d}%)" },
+      tooltip: { trigger: "item", formatter: "{b}: {c}单 ({d}%)" },
       legend: { show: false },
       series: [
         {
@@ -131,7 +151,8 @@ export function BossHome() {
   }, [customers]);
 
   return (
-    <div className="p-3 pb-20 space-y-3">
+    <PullToRefresh onRefresh={handleRefresh}>
+      <div className="p-3 pb-20 space-y-3">
       {user?.workshop ? (
         <div
           className="p-4 bg-gray-50 rounded-lg"
@@ -249,7 +270,7 @@ export function BossHome() {
                   {i + 1}
                 </span>
                 <span className="flex-1 truncate">{w.userName}</span>
-                <span className="text-gray-500">{w.totalQuantity}件</span>
+                <span className="text-gray-500">{w.totalQuantity}{pieceUnit}</span>
                 <span className="text-green-600 font-medium">
                   ¥{parseFloat(w.totalAmount).toFixed(0)}
                 </span>
@@ -298,7 +319,7 @@ export function BossHome() {
                 />
                 <div className="flex items-center justify-between text-xs text-gray-400 mt-0.5">
                   <span>
-                    {order.completedQuantity}/{order.totalQuantity}件
+                    {order.completedQuantity}/{order.totalQuantity}{pieceUnit}
                   </span>
                   <span>{(order.progress * 100).toFixed(0)}%</span>
                 </div>
@@ -350,7 +371,7 @@ export function BossHome() {
                 <div className="flex items-center gap-3">
                   <div className="shrink-0 w-10 h-10 rounded overflow-hidden bg-gray-100 flex items-center justify-center">
                     {act.orderImage ? (
-                      <OssImage
+                      <Image
                         src={act.orderImage}
                         width="100%"
                         height="100%"
@@ -383,7 +404,7 @@ export function BossHome() {
                     </div>
                     <div className="flex items-center justify-between text-xs text-gray-400 mt-1">
                       <span>
-                        {act.processName} · {act.quantity}件
+                        {act.processName} · {act.quantity}{pieceUnit}
                       </span>
                       <RelativeTime date={act.createdAt} />
                     </div>
@@ -394,6 +415,7 @@ export function BossHome() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </PullToRefresh>
   );
 }

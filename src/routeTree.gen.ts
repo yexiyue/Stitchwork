@@ -10,19 +10,25 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ScanRouteImport } from './routes/scan'
-import { Route as RegisterStaffRouteImport } from './routes/register-staff'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ChatRouteImport } from './routes/chat'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AuthIndexRouteImport } from './routes/_auth/index'
+import { Route as ShareTokenRouteImport } from './routes/share/$token'
 import { Route as AuthProfileRouteImport } from './routes/_auth/profile'
+import { Route as AuthAdminRouteImport } from './routes/_auth/admin'
 import { Route as AuthStaffRouteImport } from './routes/_auth/_staff'
 import { Route as AuthBossRouteImport } from './routes/_auth/_boss'
+import { Route as AuthAdminIndexRouteImport } from './routes/_auth/admin/index'
+import { Route as AuthAdminUsersRouteImport } from './routes/_auth/admin/users'
+import { Route as AuthAdminRegisterCodesRouteImport } from './routes/_auth/admin/register-codes'
 import { Route as AuthBossWorkshopRouteImport } from './routes/_auth/_boss/workshop'
 import { Route as AuthBossPendingRouteImport } from './routes/_auth/_boss/pending'
 import { Route as AuthStaffMyRecordsIndexRouteImport } from './routes/_auth/_staff/my-records/index'
 import { Route as AuthStaffMyPayrollsIndexRouteImport } from './routes/_auth/_staff/my-payrolls/index'
 import { Route as AuthBossStaffIndexRouteImport } from './routes/_auth/_boss/staff/index'
+import { Route as AuthBossSharesIndexRouteImport } from './routes/_auth/_boss/shares/index'
 import { Route as AuthBossRecordsIndexRouteImport } from './routes/_auth/_boss/records/index'
 import { Route as AuthBossPayrollIndexRouteImport } from './routes/_auth/_boss/payroll/index'
 import { Route as AuthBossOrdersIndexRouteImport } from './routes/_auth/_boss/orders/index'
@@ -31,6 +37,8 @@ import { Route as AuthStaffMyRecordsStatsRouteImport } from './routes/_auth/_sta
 import { Route as AuthStaffMyRecordsNewRouteImport } from './routes/_auth/_staff/my-records/new'
 import { Route as AuthStaffMyRecordsIdRouteImport } from './routes/_auth/_staff/my-records/$id'
 import { Route as AuthStaffMyPayrollsIdRouteImport } from './routes/_auth/_staff/my-payrolls/$id'
+import { Route as AuthBossSharesNewRouteImport } from './routes/_auth/_boss/shares/new'
+import { Route as AuthBossSharesIdRouteImport } from './routes/_auth/_boss/shares/$id'
 import { Route as AuthBossRecordsStatsRouteImport } from './routes/_auth/_boss/records/stats'
 import { Route as AuthBossRecordsNewRouteImport } from './routes/_auth/_boss/records/new'
 import { Route as AuthBossRecordsIdRouteImport } from './routes/_auth/_boss/records/$id'
@@ -48,11 +56,6 @@ const ScanRoute = ScanRouteImport.update({
   path: '/scan',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RegisterStaffRoute = RegisterStaffRouteImport.update({
-  id: '/register-staff',
-  path: '/register-staff',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
@@ -61,6 +64,11 @@ const RegisterRoute = RegisterRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChatRoute = ChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -72,9 +80,19 @@ const AuthIndexRoute = AuthIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthRoute,
 } as any)
+const ShareTokenRoute = ShareTokenRouteImport.update({
+  id: '/share/$token',
+  path: '/share/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthProfileRoute = AuthProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthAdminRoute = AuthAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => AuthRoute,
 } as any)
 const AuthStaffRoute = AuthStaffRouteImport.update({
@@ -84,6 +102,21 @@ const AuthStaffRoute = AuthStaffRouteImport.update({
 const AuthBossRoute = AuthBossRouteImport.update({
   id: '/_boss',
   getParentRoute: () => AuthRoute,
+} as any)
+const AuthAdminIndexRoute = AuthAdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthAdminRoute,
+} as any)
+const AuthAdminUsersRoute = AuthAdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AuthAdminRoute,
+} as any)
+const AuthAdminRegisterCodesRoute = AuthAdminRegisterCodesRouteImport.update({
+  id: '/register-codes',
+  path: '/register-codes',
+  getParentRoute: () => AuthAdminRoute,
 } as any)
 const AuthBossWorkshopRoute = AuthBossWorkshopRouteImport.update({
   id: '/workshop',
@@ -109,6 +142,11 @@ const AuthStaffMyPayrollsIndexRoute =
 const AuthBossStaffIndexRoute = AuthBossStaffIndexRouteImport.update({
   id: '/staff/',
   path: '/staff/',
+  getParentRoute: () => AuthBossRoute,
+} as any)
+const AuthBossSharesIndexRoute = AuthBossSharesIndexRouteImport.update({
+  id: '/shares/',
+  path: '/shares/',
   getParentRoute: () => AuthBossRoute,
 } as any)
 const AuthBossRecordsIndexRoute = AuthBossRecordsIndexRouteImport.update({
@@ -150,6 +188,16 @@ const AuthStaffMyPayrollsIdRoute = AuthStaffMyPayrollsIdRouteImport.update({
   id: '/my-payrolls/$id',
   path: '/my-payrolls/$id',
   getParentRoute: () => AuthStaffRoute,
+} as any)
+const AuthBossSharesNewRoute = AuthBossSharesNewRouteImport.update({
+  id: '/shares/new',
+  path: '/shares/new',
+  getParentRoute: () => AuthBossRoute,
+} as any)
+const AuthBossSharesIdRoute = AuthBossSharesIdRouteImport.update({
+  id: '/shares/$id',
+  path: '/shares/$id',
+  getParentRoute: () => AuthBossRoute,
 } as any)
 const AuthBossRecordsStatsRoute = AuthBossRecordsStatsRouteImport.update({
   id: '/records/stats',
@@ -208,14 +256,19 @@ const AuthBossOrdersIdEditRoute = AuthBossOrdersIdEditRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
+  '/chat': typeof ChatRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/register-staff': typeof RegisterStaffRoute
   '/scan': typeof ScanRoute
+  '/admin': typeof AuthAdminRouteWithChildren
   '/profile': typeof AuthProfileRoute
+  '/share/$token': typeof ShareTokenRoute
   '/': typeof AuthIndexRoute
   '/pending': typeof AuthBossPendingRoute
   '/workshop': typeof AuthBossWorkshopRoute
+  '/admin/register-codes': typeof AuthAdminRegisterCodesRoute
+  '/admin/users': typeof AuthAdminUsersRoute
+  '/admin/': typeof AuthAdminIndexRoute
   '/customers/$id': typeof AuthBossCustomersIdRoute
   '/customers/new': typeof AuthBossCustomersNewRoute
   '/orders/new': typeof AuthBossOrdersNewRoute
@@ -225,6 +278,8 @@ export interface FileRoutesByFullPath {
   '/records/$id': typeof AuthBossRecordsIdRoute
   '/records/new': typeof AuthBossRecordsNewRoute
   '/records/stats': typeof AuthBossRecordsStatsRoute
+  '/shares/$id': typeof AuthBossSharesIdRoute
+  '/shares/new': typeof AuthBossSharesNewRoute
   '/my-payrolls/$id': typeof AuthStaffMyPayrollsIdRoute
   '/my-records/$id': typeof AuthStaffMyRecordsIdRoute
   '/my-records/new': typeof AuthStaffMyRecordsNewRoute
@@ -233,6 +288,7 @@ export interface FileRoutesByFullPath {
   '/orders': typeof AuthBossOrdersIndexRoute
   '/payroll': typeof AuthBossPayrollIndexRoute
   '/records': typeof AuthBossRecordsIndexRoute
+  '/shares': typeof AuthBossSharesIndexRoute
   '/staff': typeof AuthBossStaffIndexRoute
   '/my-payrolls': typeof AuthStaffMyPayrollsIndexRoute
   '/my-records': typeof AuthStaffMyRecordsIndexRoute
@@ -240,14 +296,18 @@ export interface FileRoutesByFullPath {
   '/orders/$id': typeof AuthBossOrdersIdIndexRoute
 }
 export interface FileRoutesByTo {
+  '/chat': typeof ChatRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/register-staff': typeof RegisterStaffRoute
   '/scan': typeof ScanRoute
   '/profile': typeof AuthProfileRoute
+  '/share/$token': typeof ShareTokenRoute
   '/': typeof AuthIndexRoute
   '/pending': typeof AuthBossPendingRoute
   '/workshop': typeof AuthBossWorkshopRoute
+  '/admin/register-codes': typeof AuthAdminRegisterCodesRoute
+  '/admin/users': typeof AuthAdminUsersRoute
+  '/admin': typeof AuthAdminIndexRoute
   '/customers/$id': typeof AuthBossCustomersIdRoute
   '/customers/new': typeof AuthBossCustomersNewRoute
   '/orders/new': typeof AuthBossOrdersNewRoute
@@ -257,6 +317,8 @@ export interface FileRoutesByTo {
   '/records/$id': typeof AuthBossRecordsIdRoute
   '/records/new': typeof AuthBossRecordsNewRoute
   '/records/stats': typeof AuthBossRecordsStatsRoute
+  '/shares/$id': typeof AuthBossSharesIdRoute
+  '/shares/new': typeof AuthBossSharesNewRoute
   '/my-payrolls/$id': typeof AuthStaffMyPayrollsIdRoute
   '/my-records/$id': typeof AuthStaffMyRecordsIdRoute
   '/my-records/new': typeof AuthStaffMyRecordsNewRoute
@@ -265,6 +327,7 @@ export interface FileRoutesByTo {
   '/orders': typeof AuthBossOrdersIndexRoute
   '/payroll': typeof AuthBossPayrollIndexRoute
   '/records': typeof AuthBossRecordsIndexRoute
+  '/shares': typeof AuthBossSharesIndexRoute
   '/staff': typeof AuthBossStaffIndexRoute
   '/my-payrolls': typeof AuthStaffMyPayrollsIndexRoute
   '/my-records': typeof AuthStaffMyRecordsIndexRoute
@@ -274,16 +337,21 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_auth': typeof AuthRouteWithChildren
+  '/chat': typeof ChatRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/register-staff': typeof RegisterStaffRoute
   '/scan': typeof ScanRoute
   '/_auth/_boss': typeof AuthBossRouteWithChildren
   '/_auth/_staff': typeof AuthStaffRouteWithChildren
+  '/_auth/admin': typeof AuthAdminRouteWithChildren
   '/_auth/profile': typeof AuthProfileRoute
+  '/share/$token': typeof ShareTokenRoute
   '/_auth/': typeof AuthIndexRoute
   '/_auth/_boss/pending': typeof AuthBossPendingRoute
   '/_auth/_boss/workshop': typeof AuthBossWorkshopRoute
+  '/_auth/admin/register-codes': typeof AuthAdminRegisterCodesRoute
+  '/_auth/admin/users': typeof AuthAdminUsersRoute
+  '/_auth/admin/': typeof AuthAdminIndexRoute
   '/_auth/_boss/customers/$id': typeof AuthBossCustomersIdRoute
   '/_auth/_boss/customers/new': typeof AuthBossCustomersNewRoute
   '/_auth/_boss/orders/new': typeof AuthBossOrdersNewRoute
@@ -293,6 +361,8 @@ export interface FileRoutesById {
   '/_auth/_boss/records/$id': typeof AuthBossRecordsIdRoute
   '/_auth/_boss/records/new': typeof AuthBossRecordsNewRoute
   '/_auth/_boss/records/stats': typeof AuthBossRecordsStatsRoute
+  '/_auth/_boss/shares/$id': typeof AuthBossSharesIdRoute
+  '/_auth/_boss/shares/new': typeof AuthBossSharesNewRoute
   '/_auth/_staff/my-payrolls/$id': typeof AuthStaffMyPayrollsIdRoute
   '/_auth/_staff/my-records/$id': typeof AuthStaffMyRecordsIdRoute
   '/_auth/_staff/my-records/new': typeof AuthStaffMyRecordsNewRoute
@@ -301,6 +371,7 @@ export interface FileRoutesById {
   '/_auth/_boss/orders/': typeof AuthBossOrdersIndexRoute
   '/_auth/_boss/payroll/': typeof AuthBossPayrollIndexRoute
   '/_auth/_boss/records/': typeof AuthBossRecordsIndexRoute
+  '/_auth/_boss/shares/': typeof AuthBossSharesIndexRoute
   '/_auth/_boss/staff/': typeof AuthBossStaffIndexRoute
   '/_auth/_staff/my-payrolls/': typeof AuthStaffMyPayrollsIndexRoute
   '/_auth/_staff/my-records/': typeof AuthStaffMyRecordsIndexRoute
@@ -310,14 +381,19 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/chat'
     | '/login'
     | '/register'
-    | '/register-staff'
     | '/scan'
+    | '/admin'
     | '/profile'
+    | '/share/$token'
     | '/'
     | '/pending'
     | '/workshop'
+    | '/admin/register-codes'
+    | '/admin/users'
+    | '/admin/'
     | '/customers/$id'
     | '/customers/new'
     | '/orders/new'
@@ -327,6 +403,8 @@ export interface FileRouteTypes {
     | '/records/$id'
     | '/records/new'
     | '/records/stats'
+    | '/shares/$id'
+    | '/shares/new'
     | '/my-payrolls/$id'
     | '/my-records/$id'
     | '/my-records/new'
@@ -335,6 +413,7 @@ export interface FileRouteTypes {
     | '/orders'
     | '/payroll'
     | '/records'
+    | '/shares'
     | '/staff'
     | '/my-payrolls'
     | '/my-records'
@@ -342,14 +421,18 @@ export interface FileRouteTypes {
     | '/orders/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/chat'
     | '/login'
     | '/register'
-    | '/register-staff'
     | '/scan'
     | '/profile'
+    | '/share/$token'
     | '/'
     | '/pending'
     | '/workshop'
+    | '/admin/register-codes'
+    | '/admin/users'
+    | '/admin'
     | '/customers/$id'
     | '/customers/new'
     | '/orders/new'
@@ -359,6 +442,8 @@ export interface FileRouteTypes {
     | '/records/$id'
     | '/records/new'
     | '/records/stats'
+    | '/shares/$id'
+    | '/shares/new'
     | '/my-payrolls/$id'
     | '/my-records/$id'
     | '/my-records/new'
@@ -367,6 +452,7 @@ export interface FileRouteTypes {
     | '/orders'
     | '/payroll'
     | '/records'
+    | '/shares'
     | '/staff'
     | '/my-payrolls'
     | '/my-records'
@@ -375,16 +461,21 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_auth'
+    | '/chat'
     | '/login'
     | '/register'
-    | '/register-staff'
     | '/scan'
     | '/_auth/_boss'
     | '/_auth/_staff'
+    | '/_auth/admin'
     | '/_auth/profile'
+    | '/share/$token'
     | '/_auth/'
     | '/_auth/_boss/pending'
     | '/_auth/_boss/workshop'
+    | '/_auth/admin/register-codes'
+    | '/_auth/admin/users'
+    | '/_auth/admin/'
     | '/_auth/_boss/customers/$id'
     | '/_auth/_boss/customers/new'
     | '/_auth/_boss/orders/new'
@@ -394,6 +485,8 @@ export interface FileRouteTypes {
     | '/_auth/_boss/records/$id'
     | '/_auth/_boss/records/new'
     | '/_auth/_boss/records/stats'
+    | '/_auth/_boss/shares/$id'
+    | '/_auth/_boss/shares/new'
     | '/_auth/_staff/my-payrolls/$id'
     | '/_auth/_staff/my-records/$id'
     | '/_auth/_staff/my-records/new'
@@ -402,6 +495,7 @@ export interface FileRouteTypes {
     | '/_auth/_boss/orders/'
     | '/_auth/_boss/payroll/'
     | '/_auth/_boss/records/'
+    | '/_auth/_boss/shares/'
     | '/_auth/_boss/staff/'
     | '/_auth/_staff/my-payrolls/'
     | '/_auth/_staff/my-records/'
@@ -411,10 +505,11 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AuthRoute: typeof AuthRouteWithChildren
+  ChatRoute: typeof ChatRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
-  RegisterStaffRoute: typeof RegisterStaffRoute
   ScanRoute: typeof ScanRoute
+  ShareTokenRoute: typeof ShareTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -424,13 +519,6 @@ declare module '@tanstack/react-router' {
       path: '/scan'
       fullPath: '/scan'
       preLoaderRoute: typeof ScanRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/register-staff': {
-      id: '/register-staff'
-      path: '/register-staff'
-      fullPath: '/register-staff'
-      preLoaderRoute: typeof RegisterStaffRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/register': {
@@ -447,6 +535,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/chat': {
+      id: '/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof ChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_auth': {
       id: '/_auth'
       path: ''
@@ -461,11 +556,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthIndexRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/share/$token': {
+      id: '/share/$token'
+      path: '/share/$token'
+      fullPath: '/share/$token'
+      preLoaderRoute: typeof ShareTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_auth/profile': {
       id: '/_auth/profile'
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof AuthProfileRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/admin': {
+      id: '/_auth/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthAdminRouteImport
       parentRoute: typeof AuthRoute
     }
     '/_auth/_staff': {
@@ -481,6 +590,27 @@ declare module '@tanstack/react-router' {
       fullPath: ''
       preLoaderRoute: typeof AuthBossRouteImport
       parentRoute: typeof AuthRoute
+    }
+    '/_auth/admin/': {
+      id: '/_auth/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AuthAdminIndexRouteImport
+      parentRoute: typeof AuthAdminRoute
+    }
+    '/_auth/admin/users': {
+      id: '/_auth/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AuthAdminUsersRouteImport
+      parentRoute: typeof AuthAdminRoute
+    }
+    '/_auth/admin/register-codes': {
+      id: '/_auth/admin/register-codes'
+      path: '/register-codes'
+      fullPath: '/admin/register-codes'
+      preLoaderRoute: typeof AuthAdminRegisterCodesRouteImport
+      parentRoute: typeof AuthAdminRoute
     }
     '/_auth/_boss/workshop': {
       id: '/_auth/_boss/workshop'
@@ -515,6 +645,13 @@ declare module '@tanstack/react-router' {
       path: '/staff'
       fullPath: '/staff'
       preLoaderRoute: typeof AuthBossStaffIndexRouteImport
+      parentRoute: typeof AuthBossRoute
+    }
+    '/_auth/_boss/shares/': {
+      id: '/_auth/_boss/shares/'
+      path: '/shares'
+      fullPath: '/shares'
+      preLoaderRoute: typeof AuthBossSharesIndexRouteImport
       parentRoute: typeof AuthBossRoute
     }
     '/_auth/_boss/records/': {
@@ -572,6 +709,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/my-payrolls/$id'
       preLoaderRoute: typeof AuthStaffMyPayrollsIdRouteImport
       parentRoute: typeof AuthStaffRoute
+    }
+    '/_auth/_boss/shares/new': {
+      id: '/_auth/_boss/shares/new'
+      path: '/shares/new'
+      fullPath: '/shares/new'
+      preLoaderRoute: typeof AuthBossSharesNewRouteImport
+      parentRoute: typeof AuthBossRoute
+    }
+    '/_auth/_boss/shares/$id': {
+      id: '/_auth/_boss/shares/$id'
+      path: '/shares/$id'
+      fullPath: '/shares/$id'
+      preLoaderRoute: typeof AuthBossSharesIdRouteImport
+      parentRoute: typeof AuthBossRoute
     }
     '/_auth/_boss/records/stats': {
       id: '/_auth/_boss/records/stats'
@@ -665,10 +816,13 @@ interface AuthBossRouteChildren {
   AuthBossRecordsIdRoute: typeof AuthBossRecordsIdRoute
   AuthBossRecordsNewRoute: typeof AuthBossRecordsNewRoute
   AuthBossRecordsStatsRoute: typeof AuthBossRecordsStatsRoute
+  AuthBossSharesIdRoute: typeof AuthBossSharesIdRoute
+  AuthBossSharesNewRoute: typeof AuthBossSharesNewRoute
   AuthBossCustomersIndexRoute: typeof AuthBossCustomersIndexRoute
   AuthBossOrdersIndexRoute: typeof AuthBossOrdersIndexRoute
   AuthBossPayrollIndexRoute: typeof AuthBossPayrollIndexRoute
   AuthBossRecordsIndexRoute: typeof AuthBossRecordsIndexRoute
+  AuthBossSharesIndexRoute: typeof AuthBossSharesIndexRoute
   AuthBossStaffIndexRoute: typeof AuthBossStaffIndexRoute
   AuthBossOrdersIdEditRoute: typeof AuthBossOrdersIdEditRoute
   AuthBossOrdersIdIndexRoute: typeof AuthBossOrdersIdIndexRoute
@@ -686,10 +840,13 @@ const AuthBossRouteChildren: AuthBossRouteChildren = {
   AuthBossRecordsIdRoute: AuthBossRecordsIdRoute,
   AuthBossRecordsNewRoute: AuthBossRecordsNewRoute,
   AuthBossRecordsStatsRoute: AuthBossRecordsStatsRoute,
+  AuthBossSharesIdRoute: AuthBossSharesIdRoute,
+  AuthBossSharesNewRoute: AuthBossSharesNewRoute,
   AuthBossCustomersIndexRoute: AuthBossCustomersIndexRoute,
   AuthBossOrdersIndexRoute: AuthBossOrdersIndexRoute,
   AuthBossPayrollIndexRoute: AuthBossPayrollIndexRoute,
   AuthBossRecordsIndexRoute: AuthBossRecordsIndexRoute,
+  AuthBossSharesIndexRoute: AuthBossSharesIndexRoute,
   AuthBossStaffIndexRoute: AuthBossStaffIndexRoute,
   AuthBossOrdersIdEditRoute: AuthBossOrdersIdEditRoute,
   AuthBossOrdersIdIndexRoute: AuthBossOrdersIdIndexRoute,
@@ -721,9 +878,26 @@ const AuthStaffRouteWithChildren = AuthStaffRoute._addFileChildren(
   AuthStaffRouteChildren,
 )
 
+interface AuthAdminRouteChildren {
+  AuthAdminRegisterCodesRoute: typeof AuthAdminRegisterCodesRoute
+  AuthAdminUsersRoute: typeof AuthAdminUsersRoute
+  AuthAdminIndexRoute: typeof AuthAdminIndexRoute
+}
+
+const AuthAdminRouteChildren: AuthAdminRouteChildren = {
+  AuthAdminRegisterCodesRoute: AuthAdminRegisterCodesRoute,
+  AuthAdminUsersRoute: AuthAdminUsersRoute,
+  AuthAdminIndexRoute: AuthAdminIndexRoute,
+}
+
+const AuthAdminRouteWithChildren = AuthAdminRoute._addFileChildren(
+  AuthAdminRouteChildren,
+)
+
 interface AuthRouteChildren {
   AuthBossRoute: typeof AuthBossRouteWithChildren
   AuthStaffRoute: typeof AuthStaffRouteWithChildren
+  AuthAdminRoute: typeof AuthAdminRouteWithChildren
   AuthProfileRoute: typeof AuthProfileRoute
   AuthIndexRoute: typeof AuthIndexRoute
 }
@@ -731,6 +905,7 @@ interface AuthRouteChildren {
 const AuthRouteChildren: AuthRouteChildren = {
   AuthBossRoute: AuthBossRouteWithChildren,
   AuthStaffRoute: AuthStaffRouteWithChildren,
+  AuthAdminRoute: AuthAdminRouteWithChildren,
   AuthProfileRoute: AuthProfileRoute,
   AuthIndexRoute: AuthIndexRoute,
 }
@@ -739,10 +914,11 @@ const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRouteWithChildren,
+  ChatRoute: ChatRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
-  RegisterStaffRoute: RegisterStaffRoute,
   ScanRoute: ScanRoute,
+  ShareTokenRoute: ShareTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
