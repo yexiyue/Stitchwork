@@ -145,7 +145,7 @@ function ChatPageContent() {
 
   return (
     <AssistantRuntimeProvider runtime={runtime}>
-      <div className="flex h-full flex-col bg-background">
+      <div className="flex h-full flex-col bg-background pb-(--sab)">
         {/* 顶部导航栏 */}
         <div className="flex h-12 items-center justify-between border-b px-2">
           <div className="flex items-center">
