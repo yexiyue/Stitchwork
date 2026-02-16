@@ -12,5 +12,5 @@ export const adminApi = {
 
   // Users
   listUsers: (params?: QueryParams) =>
-    client.get<ListData<UserListItem>>("/api/admin/users", { params }),
+    client.get<ListData<UserListItem>>("/api/admin/users", params),
 };

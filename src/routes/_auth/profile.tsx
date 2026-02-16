@@ -1,10 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { List, Button, Dialog, Toast, Input, PullToRefresh } from "antd-mobile";
-import { Users, UserPlus, LogOut, Camera, Store, Phone, User as UserIcon, AtSign, Lock, ClipboardList, Wallet, Share2, Shield, KeyRound } from "lucide-react";
+import { Users, UserPlus, LogOut, Camera, Store, Phone, User as UserIcon, AtSign, Lock, ClipboardList, Wallet, Share2, Shield, KeyRound, RefreshCw } from "lucide-react";
 import { useAuthStore, selectIsBoss, selectIsSuperAdmin } from "@/stores/auth";
 import { authApi } from "@/api";
 import { Avatar, useAvatarCropper } from "@/components";
 import { uploadImage } from "@/utils/upload";
+import { isTauri } from "@/utils/platform";
+import { useState, useEffect } from "react";
 
 export const Route = createFileRoute("/_auth/profile")({
   component: ProfilePage,
@@ -17,6 +19,13 @@ function ProfilePage() {
   const updateUser = useAuthStore((s) => s.updateUser);
   const isBoss = useAuthStore(selectIsBoss);
   const isSuperAdmin = useAuthStore(selectIsSuperAdmin);
+  const [appVersion, setAppVersion] = useState("");
+
+  useEffect(() => {
+    if (isTauri()) {
+      import("@tauri-apps/api/app").then((m) => m.getVersion()).then(setAppVersion);
+    }
+  }, []);
 
   const { openFilePicker, FileInput, CropPopup } = useAvatarCropper({
     onConfirm: async (blob) => {
@@ -133,6 +142,27 @@ function ProfilePage() {
       navigate({ to: "/login" });
     } catch (e) {
       Toast.show({ content: e instanceof Error ? e.message : "修改失败" });
+    }
+  };
+
+  const handleCheckUpdate = () => {
+    if (isTauri()) {
+      const bridge = (window as any).NativeBridge;
+      if (bridge?.checkUpdate) {
+        Toast.show({ icon: "loading", content: "正在检查更新..." });
+        // 注册回调：如果没有更新，原生会调用此函数
+        (window as any).__onUpdateCheckResult = (hasUpdate: boolean) => {
+          if (!hasUpdate) {
+            Toast.show({ content: "已是最新版本" });
+          }
+          delete (window as any).__onUpdateCheckResult;
+        };
+        bridge.checkUpdate();
+      } else {
+        Toast.show({ content: `当前版本 v${appVersion}` });
+      }
+    } else {
+      Toast.show({ content: `当前版本 v${appVersion}` });
     }
   };
 
@@ -254,6 +284,18 @@ function ProfilePage() {
           <List header="我的">
             <List.Item prefix={<ClipboardList size={20} />} onClick={() => navigate({ to: "/my-records" })}>记件记录</List.Item>
             <List.Item prefix={<Wallet size={20} />} onClick={() => navigate({ to: "/my-payrolls" })}>工资记录</List.Item>
+          </List>
+        )}
+
+        {appVersion && (
+          <List header="关于">
+            <List.Item
+              prefix={<RefreshCw size={20} />}
+              onClick={handleCheckUpdate}
+              extra={`v${appVersion}`}
+            >
+              检查更新
+            </List.Item>
           </List>
         )}
 

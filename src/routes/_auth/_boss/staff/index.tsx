@@ -9,6 +9,7 @@ import {
 } from "antd-mobile";
 import { Search, UserPlus, X, ChevronLeft } from "lucide-react";
 import { Avatar, VirtualList, RelativeTime } from "@/components";
+import type { Staff } from "@/types";
 import { authApi } from "@/api";
 import { useState } from "react";
 import { useInfiniteList, useDebouncedSearch } from "@/hooks";
@@ -35,6 +36,45 @@ function StaffPage() {
         search: debouncedSearch || undefined,
       })
   );
+
+  const showStaffDetail = (staff: Staff) => {
+    Dialog.alert({
+      content: (
+        <div className="py-2">
+          <div className="flex flex-col items-center mb-4">
+            <Avatar
+              name={staff.displayName || staff.username}
+              src={staff.avatar}
+              size="lg"
+            />
+            <div className="mt-2 text-lg font-medium">
+              {staff.displayName || staff.username}
+            </div>
+            {staff.displayName && (
+              <div className="text-sm text-gray-400">@{staff.username}</div>
+            )}
+          </div>
+          <div className="space-y-2">
+            {staff.phone && (
+              <div className="flex justify-between">
+                <span className="text-gray-500">手机号</span>
+                <span>{staff.phone}</span>
+              </div>
+            )}
+            {staff.createdAt && (
+              <div className="flex justify-between">
+                <span className="text-gray-500">加入时间</span>
+                <span>
+                  <RelativeTime date={staff.createdAt} />
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      ),
+      confirmText: "关闭",
+    });
+  };
 
   const handleRemoveStaff = (staffId: string, staffName: string) => {
     Dialog.confirm({
@@ -160,6 +200,7 @@ function StaffPage() {
             >
               <List.Item
                 className="border-b border-gray-100"
+                onClick={() => showStaffDetail(staff)}
                 prefix={
                   <div className="flex h-full items-center mr-2">
                     <Avatar

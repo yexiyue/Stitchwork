@@ -11,13 +11,14 @@ import com.toolsetlink.upgradelink.api.models.Config
 object UpdateHelper {
     private const val TAG = "AppUpdate"
 
-    fun checkUpdate(activity: Activity) {
+    fun checkUpdate(activity: Activity, onResult: ((hasUpdate: Boolean) -> Unit)? = null) {
         val appKey = BuildConfig.UPGRADE_APP_KEY
         val accessKey = BuildConfig.UPGRADE_ACCESS_KEY
         val secretKey = BuildConfig.UPGRADE_SECRET_KEY
 
         if (appKey.isBlank() || accessKey.isBlank() || secretKey.isBlank()) {
             Log.w(TAG, "UpgradeLink credentials not configured, skipping update check")
+            onResult?.invoke(false)
             return
         }
 
@@ -40,16 +41,22 @@ object UpdateHelper {
             override fun onSuccess(result: ApkUpgradeResponse) {
                 Log.d(TAG, "Upgrade check response: $result")
 
-                val data = result.data ?: return
+                val data = result.data ?: run {
+                    onResult?.invoke(false)
+                    return
+                }
                 if (data.urlPath.isNullOrBlank()) {
                     Log.d(TAG, "No update available")
+                    onResult?.invoke(false)
                     return
                 }
                 if (data.versionCode == null || data.versionCode <= BuildConfig.VERSION_CODE) {
                     Log.d(TAG, "Already on latest version")
+                    onResult?.invoke(false)
                     return
                 }
 
+                onResult?.invoke(true)
                 activity.runOnUiThread {
                     startDownload(activity, data)
                 }
@@ -57,6 +64,7 @@ object UpdateHelper {
 
             override fun onFailure(e: Throwable) {
                 Log.e(TAG, "Update check failed: ${e.message}")
+                onResult?.invoke(false)
             }
         })
     }

@@ -153,11 +153,9 @@ export function RegisterCodeManager({ queryKey, onBack }: RegisterCodeManagerPro
         onBack={onBack}
         backIcon={onBack ? <ChevronLeft size={24} /> : null}
         right={
-          <Plus
-            size={20}
-            className="text-blue-500"
-            onClick={handleCreate}
-          />
+          <div className="w-full flex justify-end items-center">
+            <Plus size={20} className="text-blue-500" onClick={handleCreate} />
+          </div>
         }
       >
         注册码管理
