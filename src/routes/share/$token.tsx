@@ -218,14 +218,11 @@ function SharePage() {
                           <div className="text-xs text-gray-400 truncate mt-0.5">
                             {process.orderProductName}
                           </div>
-                          <div className="flex justify-between items-end mt-1 gap-2">
-                            <div className="text-xs text-gray-500 line-clamp-2">
-                              {process.description || ""}
+                          {process.description && (
+                            <div className="text-xs text-gray-500 line-clamp-2 mt-1">
+                              {process.description}
                             </div>
-                            <div className="text-xs text-blue-600 shrink-0">
-                              剩余{process.remainingQuantity}{data.pieceUnit}
-                            </div>
-                          </div>
+                          )}
                         </div>
                       </div>
                     </div>

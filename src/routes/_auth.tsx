@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 import { useAuthStore, selectIsBoss, selectIsSuperAdmin } from "@/stores/auth";
 import { useNotify } from "@/hooks/useNotify";
-import { useBiometricTimeout } from "@/hooks";
 
 export const Route = createFileRoute("/_auth")({
   beforeLoad: () => {
@@ -58,9 +57,6 @@ function AuthLayout() {
 
   // 启用实时通知
   useNotify();
-
-  // 启用生物识别后台超时处理
-  useBiometricTimeout();
 
   // 子页面映射到对应的 tab
   const subPageMap: Record<string, string> = {
