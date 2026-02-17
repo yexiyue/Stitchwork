@@ -58,6 +58,14 @@ pub struct UpdateWorkshopRequest {
     pub business_label: Option<String>,
 }
 
+/// 重置员工密码请求
+#[derive(Debug, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ResetStaffPasswordRequest {
+    /// 新密码
+    pub new_password: String,
+}
+
 /// 员工信息响应
 #[derive(Debug, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]

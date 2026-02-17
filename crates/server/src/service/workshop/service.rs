@@ -1,15 +1,17 @@
 use sea_orm::{
-    ColumnTrait, DbConn, EntityLoaderTrait, EntityTrait, ExprTrait, PaginatorTrait, QueryFilter,
-    QueryOrder, Set,
+    ActiveModelTrait, ColumnTrait, DbConn, EntityLoaderTrait, EntityTrait, ExprTrait,
+    PaginatorTrait, QueryFilter, QueryOrder, Set,
 };
 use uuid::Uuid;
 
 use crate::common::{ListData, QueryParams};
-use entity::{user, workshop};
+use entity::{user, user::Role, workshop};
 use crate::error::{AppError, Result};
+use crate::service::auth::hash_password;
 
 use super::dto::{
-    CreateWorkshopRequest, StaffResponse, UpdateWorkshopRequest, WorkshopResponse,
+    CreateWorkshopRequest, ResetStaffPasswordRequest, StaffResponse, UpdateWorkshopRequest,
+    WorkshopResponse,
 };
 
 // 辅助函数：获取老板的工坊
@@ -143,6 +145,40 @@ pub async fn get_staff_list(
         .collect();
 
     Ok(ListData { list, total })
+}
+
+// 重置员工密码
+pub async fn reset_staff_password(
+    db: &DbConn,
+    boss_id: Uuid,
+    staff_id: Uuid,
+    req: ResetStaffPasswordRequest,
+) -> Result<()> {
+    if req.new_password.is_empty() {
+        return Err(AppError::BadRequest("新密码不能为空".to_string()));
+    }
+
+    let ws = get_boss_workshop(db, boss_id).await?;
+
+    let staff = user::Entity::find_by_id(staff_id)
+        .one(db)
+        .await?
+        .ok_or_else(|| AppError::NotFound("员工不存在".to_string()))?;
+
+    if staff.workshop_id != Some(ws.id) {
+        return Err(AppError::NotFound("员工不存在".to_string()));
+    }
+
+    if staff.role != Role::Staff {
+        return Err(AppError::BadRequest("只能重置员工密码".to_string()));
+    }
+
+    let new_hash = hash_password(&req.new_password)?;
+    let mut active: user::ActiveModel = staff.into();
+    active.password_hash = Set(new_hash);
+    active.update(db).await?;
+
+    Ok(())
 }
 
 // 移除员工

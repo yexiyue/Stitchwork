@@ -32,6 +32,8 @@ export const authApi = {
   getStaffList: (params?: QueryParams) =>
     client.get<ListData<Staff>>("/api/staff", params),
   removeStaff: (staffId: string) => client.delete<void>(`/api/staff/${staffId}`),
+  resetStaffPassword: (staffId: string, newPassword: string) =>
+    client.put<void>(`/api/staff/${staffId}/password`, { newPassword }),
   getProfile: () => client.get<LoginUser>("/api/profile"),
   // Workshop
   getWorkshop: () => client.get<Workshop | null>("/api/workshop"),

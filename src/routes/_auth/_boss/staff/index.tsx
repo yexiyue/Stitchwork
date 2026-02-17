@@ -6,6 +6,7 @@ import {
   SearchBar,
   SwipeAction,
   NavBar,
+  Input,
 } from "antd-mobile";
 import { Search, UserPlus, X, ChevronLeft } from "lucide-react";
 import { Avatar, VirtualList, RelativeTime } from "@/components";
@@ -73,6 +74,38 @@ function StaffPage() {
         </div>
       ),
       confirmText: "关闭",
+    });
+  };
+
+  const handleResetPassword = (staffId: string, staffName: string) => {
+    let newPassword = "";
+    Dialog.confirm({
+      title: `重置「${staffName}」的密码`,
+      content: (
+        <div className="mt-2">
+          <Input
+            placeholder="请输入新密码"
+            type="password"
+            onChange={(v) => (newPassword = v)}
+          />
+        </div>
+      ),
+      confirmText: "确定",
+      cancelText: "取消",
+      onConfirm: async () => {
+        if (!newPassword.trim()) {
+          Toast.show({ content: "请输入新密码" });
+          return;
+        }
+        try {
+          await authApi.resetStaffPassword(staffId, newPassword);
+          Toast.show({ content: "密码重置成功" });
+        } catch (e) {
+          Toast.show({
+            content: e instanceof Error ? e.message : "重置失败",
+          });
+        }
+      },
     });
   };
 
@@ -186,6 +219,16 @@ function StaffPage() {
           renderItem={(staff) => (
             <SwipeAction
               rightActions={[
+                {
+                  key: "reset-password",
+                  text: "重置密码",
+                  color: "primary",
+                  onClick: () =>
+                    handleResetPassword(
+                      staff.id,
+                      staff.displayName || staff.username
+                    ),
+                },
                 {
                   key: "remove",
                   text: "移除",
