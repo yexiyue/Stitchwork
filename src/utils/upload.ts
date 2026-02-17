@@ -20,16 +20,18 @@ export async function uploadImage(
     { maxSizeMB, maxWidthOrHeight, useWebWorker: true }
   );
 
-  const { uploadUrl, key } = await uploadApi.presign(
+  const { uploadUrl, key, exists } = await uploadApi.presign(
     "image.jpg",
     compressed.type || "image/jpeg"
   );
 
-  await fetch(uploadUrl!, {
-    method: "PUT",
-    body: compressed,
-    headers: { "Content-Type": compressed.type || "image/jpeg" },
-  });
+  if (!exists && uploadUrl) {
+    await fetch(uploadUrl, {
+      method: "PUT",
+      body: compressed,
+      headers: { "Content-Type": compressed.type || "image/jpeg" },
+    });
+  }
 
   return key;
 }

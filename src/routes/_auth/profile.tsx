@@ -29,10 +29,14 @@ function ProfilePage() {
 
   const { openFilePicker, FileInput, CropPopup } = useAvatarCropper({
     onConfirm: async (blob) => {
-      const fileUrl = await uploadImage(blob, { maxWidthOrHeight: 512 });
-      await authApi.updateProfile({ avatar: fileUrl });
-      updateUser({ avatar: fileUrl });
-      Toast.show({ content: "头像已更新" });
+      try {
+        const fileUrl = await uploadImage(blob, { maxWidthOrHeight: 512 });
+        await authApi.updateProfile({ avatar: fileUrl });
+        updateUser({ avatar: fileUrl });
+        Toast.show({ content: "头像已更新" });
+      } catch (e) {
+        Toast.show({ content: e instanceof Error ? e.message : "头像上传失败" });
+      }
     },
   });
 

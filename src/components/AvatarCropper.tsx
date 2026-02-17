@@ -33,13 +33,21 @@ export function useAvatarCropper({ onConfirm }: AvatarCropperProps) {
   const handleCropConfirm = async () => {
     if (!imgRef.current || !crop) return;
     const canvas = document.createElement("canvas");
-    const scaleX = imgRef.current.naturalWidth / imgRef.current.width;
-    const scaleY = imgRef.current.naturalHeight / imgRef.current.height;
-    const size = Math.min(crop.width * scaleX, crop.height * scaleY);
+    const img = imgRef.current;
+    const scaleX = img.naturalWidth / img.width;
+    const scaleY = img.naturalHeight / img.height;
+
+    // crop 可能是 % 单位（未拖动时），需转换为像素
+    const cropX = (crop.unit === "%" ? (crop.x / 100) * img.width : crop.x) * scaleX;
+    const cropY = (crop.unit === "%" ? (crop.y / 100) * img.height : crop.y) * scaleY;
+    const cropW = (crop.unit === "%" ? (crop.width / 100) * img.width : crop.width) * scaleX;
+    const cropH = (crop.unit === "%" ? (crop.height / 100) * img.height : crop.height) * scaleY;
+
+    const size = Math.min(cropW, cropH);
     canvas.width = size;
     canvas.height = size;
     canvas.getContext("2d")!.drawImage(
-      imgRef.current, crop.x * scaleX, crop.y * scaleY, size, size, 0, 0, size, size
+      img, cropX, cropY, size, size, 0, 0, size, size
     );
 
     canvas.toBlob(async (blob) => {
