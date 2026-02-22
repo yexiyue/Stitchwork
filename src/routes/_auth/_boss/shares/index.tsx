@@ -31,7 +31,7 @@ function SharesPage() {
   const [selectedShare, setSelectedShare] = useState<Share | null>(null);
 
   const getShareUrl = (token: string) => {
-    const base = window.location.origin;
+    const base = import.meta.env.VITE_API_URL || window.location.origin;
     return `${base}/share/${token}`;
   };
 

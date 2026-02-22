@@ -4,7 +4,6 @@ import { useMutation } from "@tanstack/react-query";
 import type { RegisterCode } from "@/types";
 import { registerCodeApi } from "@/api";
 import { RelativeTime, VirtualList } from "@/components";
-import { QRCodeSVG } from "qrcode.react";
 import { useInfiniteList } from "@/hooks";
 import { copyToClipboard } from "@/utils/clipboard";
 
@@ -33,43 +32,14 @@ export function RegisterCodeManager({ queryKey, onBack }: RegisterCodeManagerPro
     },
   });
 
-  const showCodeQR = (code: string) => {
-    const url = `stitchwork://register?code=${code}`;
-    Dialog.alert({
-      title: "注册码二维码",
-      content: (
-        <div className="flex flex-col items-center py-4">
-          <QRCodeSVG value={url} size={180} />
-          <p className="mt-3 text-lg font-mono font-bold">{code}</p>
-          <Button
-            size="small"
-            className="mt-2"
-            onClick={() => {
-              copyToClipboard(code);
-              Toast.show({ content: "已复制" });
-            }}
-          >
-            <div className="flex items-center justify-center">
-              <Copy size={16} className="mr-1" />
-              复制
-            </div>
-          </Button>
-        </div>
-      ),
-      confirmText: "关闭",
-    });
-  };
-
   const handleCreate = async () => {
     try {
       const result = await createMutation.mutateAsync();
-      const url = `stitchwork://register?code=${result.code}`;
       Dialog.alert({
         title: "注册码已创建",
         content: (
           <div className="flex flex-col items-center py-4">
-            <QRCodeSVG value={url} size={180} />
-            <p className="mt-3 text-lg font-mono font-bold">{result.code}</p>
+            <p className="text-lg font-mono font-bold">{result.code}</p>
             <Button
               size="small"
               className="mt-2"
@@ -194,7 +164,7 @@ export function RegisterCodeManager({ queryKey, onBack }: RegisterCodeManagerPro
                     if (code.usedBy) {
                       showUserInfo(code);
                     } else {
-                      showCodeQR(code.code);
+                      handleCopy(code.code);
                     }
                   }}
                 >

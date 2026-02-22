@@ -1,7 +1,7 @@
 {
   "name": "stitchwork",
   "private": true,
-  "version": "0.2.4",
+  "version": "0.2.5",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -26,10 +26,8 @@
     "@tanstack/react-router": "^1.144.0",
     "@tanstack/react-virtual": "^3.13.14",
     "@tauri-apps/api": "^2",
-    "@tauri-apps/plugin-barcode-scanner": "~2",
     "@tauri-apps/plugin-biometric": "~2.3.2",
     "@tauri-apps/plugin-clipboard-manager": "~2.3.2",
-    "@tauri-apps/plugin-deep-link": "~2.4.5",
     "@tauri-apps/plugin-notification": "~2.3.3",
     "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-os": "~2.3.2",
@@ -45,7 +43,6 @@
     "echarts": "^6.0.0",
     "echarts-for-react": "^3.0.5",
     "html2canvas": "^1.4.1",
-    "jsqr": "^1.4.0",
     "lucide-react": "^0.562.0",
     "mermaid": "^11.12.2",
     "modern-screenshot": "^4.6.7",

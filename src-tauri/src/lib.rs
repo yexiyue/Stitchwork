@@ -10,13 +10,11 @@ pub fn run() {
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
-        .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
         .manage(Arc::new(Mutex::new(sse::SseState::default())) as sse::SharedSseState)
         .setup(|_app| {
             #[cfg(mobile)]
             {
-                _app.handle().plugin(tauri_plugin_barcode_scanner::init())?;
                 _app.handle().plugin(tauri_plugin_biometric::init())?;
             }
             Ok(())
