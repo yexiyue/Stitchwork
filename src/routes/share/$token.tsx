@@ -4,31 +4,17 @@ import { shareApi, getFileUrl } from "@/api";
 import { Phone, MapPin, Download, Loader2 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useRef, useState } from "react";
-import { Toast } from "antd-mobile";
-import { OssImage } from "@/components";
-import { motion, useScroll, useTransform } from "motion/react";
+import { ImageViewer, Toast } from "antd-mobile";
+import { OssImage, getOssUrls } from "@/components";
 
 export const Route = createFileRoute("/share/$token")({
   component: SharePage,
 });
 
-const HEADER_MAX = 200;
-const HEADER_MIN = 56;
-
 function SharePage() {
   const { token } = Route.useParams();
   const contentRef = useRef<HTMLDivElement>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
-
-  const { scrollY } = useScroll({ container: scrollRef });
-  const headerHeight = useTransform(
-    scrollY,
-    [0, HEADER_MAX - HEADER_MIN],
-    [HEADER_MAX, HEADER_MIN]
-  );
-  const headerOpacity = useTransform(scrollY, [0, 80], [1, 0]);
-  const titleBarOpacity = useTransform(scrollY, [60, 120], [0, 1]);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["public-share", token],
@@ -46,13 +32,26 @@ function SharePage() {
         backgroundColor: "#f5f5f5",
       });
 
-      const link = document.createElement("a");
-      link.download = `${data?.title || "招工信息"}.png`;
-      link.href = dataUrl;
-      link.click();
+      const fileName = `${data?.title || "招工信息"}.png`;
 
-      Toast.show({ content: "图片已保存" });
+      // 移动端优先使用 Web Share API（Tauri Android WebView 不支持 <a download>）
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const file = new File([blob], fileName, { type: "image/png" });
+
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file] });
+        Toast.show({ content: "图片已保存" });
+      } else {
+        const link = document.createElement("a");
+        link.download = fileName;
+        link.href = dataUrl;
+        link.click();
+        Toast.show({ content: "图片已保存" });
+      }
     } catch (e) {
+      // 用户取消分享不算错误
+      if (e instanceof Error && e.name === "AbortError") return;
       Toast.show({ content: "导出失败，请重试" });
       console.error(e);
     } finally {
@@ -71,29 +70,20 @@ function SharePage() {
 
   return (
     <div className="h-full bg-gray-100 flex flex-col">
-      {/* 可折叠头部 */}
-      <motion.div
-        className="relative overflow-hidden shrink-0"
-        style={{ height: data ? headerHeight : HEADER_MIN }}
-      >
-        {/* 背景图 */}
-        {bgImage ? (
-          <img
-            src={getFileUrl(bgImage)}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-        ) : (
-          <div className="absolute inset-0 bg-linear-to-r from-blue-500 to-blue-600" />
-        )}
-        <div className="absolute inset-0 bg-black/40" />
-
-        {/* 展开状态内容 */}
-        {data && (
-          <motion.div
-            className="absolute inset-0 flex flex-col justify-end p-4 text-white"
-            style={{ opacity: headerOpacity }}
-          >
+      {/* 头部 */}
+      {data && (
+        <div className="relative overflow-hidden shrink-0">
+          {bgImage ? (
+            <img
+              src={getFileUrl(bgImage)}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          ) : (
+            <div className="absolute inset-0 bg-linear-to-r from-blue-500 to-blue-600" />
+          )}
+          <div className="absolute inset-0 bg-black/40" />
+          <div className="relative flex flex-col justify-end p-4 text-white">
             <div className="flex items-center gap-3">
               {data.avatar ? (
                 <img
@@ -120,22 +110,12 @@ function SharePage() {
                 {data.workshopDesc}
               </div>
             )}
-          </motion.div>
-        )}
-
-        {/* 收起状态标题栏 */}
-        {data && (
-          <motion.div
-            className="absolute inset-0 flex items-center justify-center text-white"
-            style={{ opacity: titleBarOpacity }}
-          >
-            <div className="font-bold text-lg truncate px-4">{data.title}</div>
-          </motion.div>
-        )}
-      </motion.div>
+          </div>
+        </div>
+      )}
 
       {/* 滚动内容 */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
@@ -204,6 +184,12 @@ function SharePage() {
                           <OssImage
                             src={process.orderImages[0]}
                             className="w-16 h-16 rounded object-cover shrink-0"
+                            onClick={() =>
+                              ImageViewer.Multi.show({
+                                images: getOssUrls(process.orderImages),
+                                defaultIndex: 0,
+                              })
+                            }
                           />
                         )}
                         <div className="flex-1 min-w-0">
@@ -212,7 +198,7 @@ function SharePage() {
                               {process.name}
                             </div>
                             <div className="text-orange-500 font-bold shrink-0 ml-2">
-                              ¥{process.piecePrice}
+                              ¥{process.piecePrice}/{data.pieceUnit}
                             </div>
                           </div>
                           <div className="text-xs text-gray-400 truncate mt-0.5">
